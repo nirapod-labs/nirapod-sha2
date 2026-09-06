@@ -1,0 +1,14 @@
+# Build outputs
+/build/
+__pycache__/
+*.pyc
+*.o
+*.a
+*.so
+*.dylib
+
+# EasyCrypt caches
+*.eco
+
+# Toolchain checkout and build tree
+/toolchain/work/
