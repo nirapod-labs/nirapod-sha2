@@ -1,0 +1,118 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * hmac_mem.jinc
+ * =============
+ *
+ * One-shot HMAC-SHA-256 and HMAC-SHA-512 (FIPS 198-1 section 4) over a key
+ * and a message in caller memory, composed from the steps of hmac.jinc and
+ * the absorb function of sha256.jinc or sha512.jinc:
+ *
+ *     K0             _hmac_sha<x>_keyblock_mem      steps 1-3
+ *     inner, outer   __hmac_sha<x>_init             steps 4-5, 7-8
+ *     text           _sha<x>_absorb_mem on inner    step 6, total = B
+ *     tag            __hmac_sha<x>_finalize         step 9
+ *
+ * B is the block size, 64 or 128 bytes. The key may have any length below
+ * 2^61; a key longer than B is hashed first (step 2). The message must
+ * keep B + msglen below 2^61, the domain of the hash functions.
+ *
+ * Memory: key and msg are read only within keylen and msglen bytes and not
+ * at all when their length is 0; out is written once, at the end. out must
+ * not overlap key or msg; key and msg may overlap each other.
+ *
+ * Security: key, K0, the states, the message and the tag are secret.
+ * Lengths and pointers are public.
+ *
+ * Residue: the local K0, the padded key blocks, the states and the inner
+ * digest remain in this function's frame and its callees' (README.md,
+ * "Residue"). The exports that run this code clear their stack before
+ * returning.
+ */
+
+from Hash require "hmac.jinc"
+
+#[sct = "{ ptr: public, val: secret } × public × public × public × public × msf →
+         { ptr: public, val: secret } × msf"]
+fn _hmac_sha256_mem(
+  reg mut ptr u8[32] out,
+  reg u64 key keylen msg msglen,
+  reg u64 ms
+) -> reg ptr u8[32], reg u64
+{
+  stack u8[64] k0 buf;
+  stack u32[8] inner outer;
+  stack u8[32] mac;
+  reg u64 total t z;
+  inline int i;
+
+  () = #spill(out, msg, msglen);
+  k0, ms = _hmac_sha256_keyblock_mem(k0, key, keylen, ms);
+  inner, outer, ms = __hmac_sha256_init(inner, outer, k0, ms);
+  () = #unspill(msg, msglen);
+  msg = #protect(msg, ms);
+  msglen = #protect(msglen, ms);
+
+  /*
+   * Zeroed for the safety checker only, as in __sha256_mem_from; every
+   * byte the compressions read is written for this hash first.
+   */
+  z = 0;
+  for i = 0 to 8 {
+    buf[:u64 i] = z;
+  }
+  total = 64;
+  inner, buf, total, ms = _sha256_absorb_mem(inner, buf, total, msg, msglen, ms);
+  mac, inner, buf, ms = __hmac_sha256_finalize(mac, inner, buf, total, outer, ms);
+
+  () = #unspill(out);
+  out = #protect_ptr(out, ms);
+  for i = 0 to 4 {
+    t = mac[:u64 i];
+    out[:u64 i] = t;
+  }
+
+  return out, ms;
+}
+
+/* The SHA-512 form of _hmac_sha256_mem, with B = 128 and a 64-byte tag. */
+#[sct = "{ ptr: public, val: secret } × public × public × public × public × msf →
+         { ptr: public, val: secret } × msf"]
+fn _hmac_sha512_mem(
+  reg mut ptr u8[64] out,
+  reg u64 key keylen msg msglen,
+  reg u64 ms
+) -> reg ptr u8[64], reg u64
+{
+  stack u8[128] k0 buf;
+  stack u64[8] inner outer;
+  stack u8[64] mac;
+  reg u64 total t z;
+  inline int i;
+
+  () = #spill(out, msg, msglen);
+  k0, ms = _hmac_sha512_keyblock_mem(k0, key, keylen, ms);
+  inner, outer, ms = __hmac_sha512_init(inner, outer, k0, ms);
+  () = #unspill(msg, msglen);
+  msg = #protect(msg, ms);
+  msglen = #protect(msglen, ms);
+
+  /* Zeroed for the safety checker only, as in _hmac_sha256_mem. */
+  z = 0;
+  for i = 0 to 16 {
+    buf[:u64 i] = z;
+  }
+  total = 128;
+  inner, buf, total, ms = _sha512_absorb_mem(inner, buf, total, msg, msglen, ms);
+  mac, inner, buf, ms = __hmac_sha512_finalize(mac, inner, buf, total, outer, ms);
+
+  () = #unspill(out);
+  out = #protect_ptr(out, ms);
+  for i = 0 to 8 {
+    t = mac[:u64 i];
+    out[:u64 i] = t;
+  }
+
+  return out, ms;
+}
