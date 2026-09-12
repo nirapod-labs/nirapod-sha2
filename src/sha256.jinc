@@ -23,7 +23,7 @@
  *
  * The compression function comes from the Sha2Kernel include root
  * (sha256_compress.jinc): this directory for the portable scalar kernel, or
- * a variant directory under sha2/<arch>/ that provides the same entry
+ * a variant directory under src/<arch>/ that provides the same entry
  * points.
  *
  * Security: message, chaining value and digest are secret. Every branch,

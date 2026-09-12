@@ -6,7 +6,7 @@
  * ======================================
  *
  * Eight independent SHA-256 compressions in AVX2, with the entry point and
- * contract of the scalar 8-way kernel (sha2/sha256_x8_compress.jinc):
+ * contract of the scalar 8-way kernel (src/sha256_x8_compress.jinc):
  *
  *     _sha256_x8_compress(h8, blocks, ms)
  *
@@ -24,7 +24,7 @@
  * VPSHUFB then makes each dword big-endian (FIPS 180-4 section 3.1).
  *
  * Rounds: the round, schedule and slot-rotation structure of the scalar
- * kernel (sha2/sha256_compress.jinc), with every operation applied to the
+ * kernel (src/sha256_compress.jinc), with every operation applied to the
  * eight lanes. AVX2 has no 32-bit rotate, so ROTR by r is a right shift, a
  * left shift by 32 - r and an OR. K_t is broadcast from the shared table.
  *
@@ -37,7 +37,7 @@
  * removed); clearing is the export's obligation.
  */
 
-from Hash require "sha2/sha256_k.jinc"
+from Hash require "sha256_k.jinc"
 
 /* VPSHUFB mask reversing the bytes of each dword, in both 128-bit halves. */
 u32[8] SHA256_X8_BSWAP = {

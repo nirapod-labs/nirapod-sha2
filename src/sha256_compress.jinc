@@ -8,7 +8,7 @@
  * The SHA-256 compression function (FIPS 180-4 section 6.2.2, steps 1 to
  * 4), portable scalar kernel, reached through the Sha2Kernel include root.
  * Its two entry points are the kernel contract; kernel variants listed as
- * planned in src/hash/README.md are to provide the same two:
+ * planned in src/README.md are to provide the same two:
  *
  *     _sha256_compress(h, block, ms)       one block from a byte array
  *     _sha256_compress_blocks(h, p, n, ms) n blocks from caller memory
@@ -34,7 +34,7 @@
  */
 
 from HashWord require "word.jinc"
-from Hash require "sha2/sha256_k.jinc"
+from Hash require "sha256_k.jinc"
 
 
 /* FIPS 180-4 section 4.1.2, functions (4.4) to (4.7). */

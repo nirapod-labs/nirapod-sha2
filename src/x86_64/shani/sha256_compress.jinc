@@ -7,7 +7,7 @@
  *
  * The SHA-256 compression function (FIPS 180-4 section 6.2.2) on the x86
  * SHA extensions, with the entry points and contracts of the scalar kernel
- * (sha2/sha256_compress.jinc):
+ * (src/sha256_compress.jinc):
  *
  *     _sha256_compress(h, block, ms)    one block from a byte array
  *     _sha256_compress_blocks(h, p, n, ms) n blocks from caller memory
@@ -44,7 +44,7 @@
  * stack; they live in vector registers, which it does not clear.
  */
 
-from Hash require "sha2/sha256_k.jinc"
+from Hash require "sha256_k.jinc"
 
 /*
  * PSHUFB mask reversing the bytes of each dword: as little-endian u32

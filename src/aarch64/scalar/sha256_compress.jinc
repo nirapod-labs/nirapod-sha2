@@ -7,7 +7,7 @@
  *
  * The SHA-256 compression function (FIPS 180-4 section 6.2.2) written for
  * the A64 instruction forms, with the entry points and contracts of the
- * shared scalar kernel (sha2/sha256_compress.jinc):
+ * shared scalar kernel (src/sha256_compress.jinc):
  *
  *     _sha256_compress(h, block, ms)
  *     _sha256_compress_blocks(h, p, n, ms)
@@ -41,7 +41,7 @@
  */
 
 from HashWord require "word.jinc"
-from Hash require "sha2/sha256_k.jinc"
+from Hash require "sha256_k.jinc"
 
 /*
  * Rounds 0 .. 63 and the feed-forward on W_0 .. W_15 in w. Variable k

@@ -6,4 +6,4 @@
  * instructions in this feature set. SHA-512 uses the scalar kernel.
  */
 
-from Hash require "sha2/sha512_compress.jinc"
+from Hash require "sha512_compress.jinc"

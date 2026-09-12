@@ -6,7 +6,7 @@
  * ======================================
  *
  * Four independent SHA-512 compressions in AVX2, with the entry point and
- * contract of the scalar 4-way kernel (sha2/sha512_x4_compress.jinc):
+ * contract of the scalar 4-way kernel (src/sha512_x4_compress.jinc):
  *
  *     _sha512_x4_compress(h4, blocks, ms)
  *
@@ -24,7 +24,7 @@
  * compiled); clearing is the export's obligation.
  */
 
-from Hash require "sha2/sha512_k.jinc"
+from Hash require "sha512_k.jinc"
 
 /* VPSHUFB mask reversing the bytes of each qword, in both 128-bit halves. */
 u64[4] SHA512_X4_BSWAP = {

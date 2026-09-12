@@ -7,7 +7,7 @@
  *
  * The SHA-256 compression function (FIPS 180-4 section 6.2.2) on the A64
  * SHA-256 instructions (FEAT_SHA256), with the entry points and contracts
- * of the shared scalar kernel (sha2/sha256_compress.jinc):
+ * of the shared scalar kernel (src/sha256_compress.jinc):
  *
  *     _sha256_compress(h, block, ms)
  *     _sha256_compress_blocks(h, p, n, ms)
@@ -52,7 +52,7 @@
  * secret key, capi/clear.c).
  */
 
-from Hash require "sha2/sha256_k.jinc"
+from Hash require "sha256_k.jinc"
 
 /*
  * One block: the 64 rounds and the feed-forward on (abcd, efgh). m holds
