@@ -1,6 +1,6 @@
 version = 1
 
 [[annotations]]
-path = ["README.md", "**/README.md", "AUTHORS", "NOTICE", ".gitignore"]
+path = ["README.md", "**/README.md", "**/PROVENANCE.md", "AUTHORS", "NOTICE", ".gitignore"]
 SPDX-FileCopyrightText = "nirapod-sha2 contributors"
 SPDX-License-Identifier = "Apache-2.0"

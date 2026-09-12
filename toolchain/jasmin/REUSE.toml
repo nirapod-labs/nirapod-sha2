@@ -1,0 +1,29 @@
+version = 1
+
+# Jasmin's licence, reproduced from the pinned commit.
+[[annotations]]
+path = "jasmin-license.txt"
+SPDX-FileCopyrightText = "Jasmin contributors"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "PATCHES.md"
+SPDX-FileCopyrightText = "nirapod-sha2 contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
+# Patches to Jasmin are distributed under Jasmin's licence.
+[[annotations]]
+path = "patches/**"
+SPDX-FileCopyrightText = ["Jasmin contributors", "nirapod-sha2 contributors"]
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "PATCHES-SIMD.md"
+SPDX-FileCopyrightText = "nirapod-sha2 contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
+# The Advanced SIMD series, distributed under Jasmin's licence like patches/.
+[[annotations]]
+path = "patches-simd/**"
+SPDX-FileCopyrightText = ["Jasmin contributors", "nirapod-sha2 contributors"]
+SPDX-License-Identifier = "MIT"
