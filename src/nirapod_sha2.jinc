@@ -1,0 +1,814 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * nirapod_sha2.jinc
+ * =================
+ *
+ * Every export of the library: the boundary between the C layer (capi/)
+ * and the Jasmin implementation. The build compiles this file once per
+ * architecture and kernel variant, wrapped in the namespace
+ * nirapod_sha2_jz_<arch>_<variant>, so export `op` becomes the symbol
+ * nirapod_sha2_jz_<arch>_<variant>__op (capi/jasmin.h). The kernels of a
+ * unit come from its include roots (src/README.md); this file names none.
+ *
+ *     sha224, sha256, sha384, sha512,     one-shot hash of a message in
+ *     sha512_224, sha512_256               memory (FIPS 180-4 section 6)
+ *
+ *     <hash>_init, <hash>_update,         incremental hash over a context
+ *     <hash>_final                         (context.jinc)
+ *
+ *     hmac_sha256, hmac_sha512            one-shot HMAC (FIPS 198-1)
+ *     hmac_<hash>_init, _update, _final   incremental HMAC over a context
+ *
+ *     sha256_x8, sha512_x4                SHA-256 of 8, SHA-512 of 4
+ *                                          equal-length messages packed in
+ *                                          memory, one-shot
+ *
+ * Each export is a short composition of functions in the other files of
+ * src/, so that its correctness reduces to theirs.
+ *
+ * Calling convention (all exports)
+ *
+ *     An array argument is a pointer to exactly the stated number of
+ *     bytes, with no alignment requirement. in, key and msg point to inlen,
+ *     keylen and msglen readable bytes; they are not read when the length
+ *     is 0, so any pointer will do then. Outputs receive exactly the digest
+ *     or tag length: 28, 32, 48, 64, 28 and 32 bytes for the six hash
+ *     functions, 32 and 64 for the two HMACs, 8 x 32 and 4 x 64 for the
+ *     multi-way forms.
+ *
+ *     Contexts are 112 bytes (SHA-224, SHA-256), 208 (SHA-384, SHA-512,
+ *     SHA-512/224, SHA-512/256), 144 (HMAC-SHA-256) and 272 (HMAC-SHA-512)
+ *     of caller memory, laid out as context.jinc describes.
+ *
+ *     No output or context may overlap any input or another output. The C
+ *     layer refuses overlapping buffers before it calls an export.
+ *
+ * Lengths
+ *
+ *     A one-shot export needs inlen < 2^61 (multi-way: len < 2^61; HMAC:
+ *     keylen < 2^61 and msglen < 2^61 - B, B the block size). These are the
+ *     domain of the SHA-2 length field and of the proofs; the C layer
+ *     checks them. Update checks its own limit against the total stored in
+ *     the context, which the C layer cannot read.
+ *
+ * Results
+ *
+ *     update and final return SHA2_STATUS_OK (0), SHA2_STATUS_STATE (1:
+ *     the context is not one of this function, or was finalised) or
+ *     SHA2_STATUS_LENGTH (2: the total would reach 2^61). On a result other
+ *     than 0 nothing is written. The other exports cannot fail and return
+ *     nothing.
+ *
+ * Classification
+ *
+ *     Message, key, context contents, digest and tag are secret; pointers
+ *     and lengths are public. The only releases are the tag and total of a
+ *     context (__sha2_ctx_open in context.jinc), which are public by
+ *     construction. The status is computed from them and is public.
+ *
+ * Speculation
+ *
+ *     An export can be entered under misspeculation with any register
+ *     values, so each one starts with #init_msf, a fence that gives an
+ *     exact misspeculation flag, and protects every pointer and length
+ *     argument with it before first use. The SCT annotations type those
+ *     arguments transient for the same reason.
+ *
+ * Stack
+ *
+ *     The functions below leave secret-derived data in their frames
+ *     (src/README.md, "Residue"). The build compiles every unit with
+ *     -stack-zero, so each export clears the stack it used before it
+ *     returns.
+ */
+
+from Hash require "sha256.jinc"
+from Hash require "sha512.jinc"
+from Hash require "hmac.jinc"
+from Hash require "digest.jinc"
+from Hash require "context.jinc"
+from Hash require "hmac_mem.jinc"
+from Hash require "sha256_x8_mem.jinc"
+from Hash require "sha512_x4_mem.jinc"
+
+/*
+ * One-shot hashes
+ * ===============
+ *
+ * The digest of the inlen bytes at in. SHA-256 and SHA-512 finish straight
+ * into out; the truncated functions finish into a local array and copy
+ * their prefix (digest.jinc).
+ */
+
+#[ct = "secret × public × public -> secret"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret }"]
+export fn sha224(reg mut ptr u8[28] out, reg u64 in inlen) -> reg ptr u8[28]
+{
+  stack u8[32] d;
+  reg u64 ms;
+
+  ms = #init_msf();
+  out = #protect_ptr(out, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  () = #spill(out);
+  d, ms = _sha224_mem(d, in, inlen, ms);
+  () = #unspill(out);
+  out = #protect_ptr(out, ms);
+  out = __digest28_of32(out, d);
+
+  return out;
+}
+
+#[ct = "secret × public × public -> secret"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret }"]
+export fn sha256(reg mut ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32]
+{
+  reg u64 ms;
+
+  ms = #init_msf();
+  out = #protect_ptr(out, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  out, ms = _sha256_mem(out, in, inlen, ms);
+
+  return out;
+}
+
+#[ct = "secret × public × public -> secret"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret }"]
+export fn sha384(reg mut ptr u8[48] out, reg u64 in inlen) -> reg ptr u8[48]
+{
+  stack u8[64] d;
+  reg u64 ms;
+
+  ms = #init_msf();
+  out = #protect_ptr(out, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  () = #spill(out);
+  d, ms = _sha384_mem(d, in, inlen, ms);
+  () = #unspill(out);
+  out = #protect_ptr(out, ms);
+  out = __digest48_of64(out, d);
+
+  return out;
+}
+
+#[ct = "secret × public × public -> secret"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret }"]
+export fn sha512(reg mut ptr u8[64] out, reg u64 in inlen) -> reg ptr u8[64]
+{
+  reg u64 ms;
+
+  ms = #init_msf();
+  out = #protect_ptr(out, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  out, ms = _sha512_mem(out, in, inlen, ms);
+
+  return out;
+}
+
+#[ct = "secret × public × public -> secret"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret }"]
+export fn sha512_224(reg mut ptr u8[28] out, reg u64 in inlen) -> reg ptr u8[28]
+{
+  stack u8[64] d;
+  reg u64 ms;
+
+  ms = #init_msf();
+  out = #protect_ptr(out, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  () = #spill(out);
+  d, ms = _sha512_224_mem(d, in, inlen, ms);
+  () = #unspill(out);
+  out = #protect_ptr(out, ms);
+  out = __digest28_of64(out, d);
+
+  return out;
+}
+
+#[ct = "secret × public × public -> secret"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret }"]
+export fn sha512_256(reg mut ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32]
+{
+  stack u8[64] d;
+  reg u64 ms;
+
+  ms = #init_msf();
+  out = #protect_ptr(out, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  () = #spill(out);
+  d, ms = _sha512_256_mem(d, in, inlen, ms);
+  () = #unspill(out);
+  out = #protect_ptr(out, ms);
+  out = __digest32_of64(out, d);
+
+  return out;
+}
+
+/*
+ * Incremental hashes
+ * ==================
+ *
+ * init writes a whole context; update appends inlen bytes at in; final
+ * writes the digest and zeroes the context. Contracts in context.jinc
+ * (_sha256_ctx_update, _sha256_ctx_final and their SHA-512 forms). A
+ * truncated final copies its digest only after the context's checks have
+ * passed, so a failing final writes nothing to out.
+ */
+
+#[ct = "secret -> secret"]
+#[sct = "{ ptr: transient, val: secret } → { ptr: transient, val: secret }"]
+export fn sha224_init(reg mut ptr u8[SHA256_CTX_BYTES] ctx) -> reg ptr u8[SHA256_CTX_BYTES]
+{
+  stack u32[8] h;
+  reg u64 ms tag total;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+
+  h = __sha224_init(h);
+  tag = __sha2_tag(SHA2_FN_SHA224);
+  total = 0;
+  ctx = __sha256_ctx_init(ctx, h, tag, total);
+
+  return ctx;
+}
+
+#[ct = "secret × public × public -> secret × public"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret } × public"]
+export fn sha224_update(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg u64 in inlen) -> reg ptr u8[SHA256_CTX_BYTES], reg u64
+{
+  reg u64 ms expect status;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  expect = __sha2_tag(SHA2_FN_SHA224);
+  ctx, status, ms = _sha256_ctx_update(ctx, in, inlen, expect, ms);
+
+  return ctx, status;
+}
+
+#[ct = "secret × secret -> secret × secret × public"]
+#[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
+         { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+export fn sha224_final(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg mut ptr u8[28] out)
+  -> reg ptr u8[SHA256_CTX_BYTES], reg ptr u8[28], reg u64
+{
+  stack u8[32] d;
+  reg u64 ms expect status;
+  reg bool ok;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  out = #protect_ptr(out, ms);
+
+  expect = __sha2_tag(SHA2_FN_SHA224);
+  () = #spill(out);
+  ctx, d, status, ms = _sha256_ctx_final(ctx, d, expect, ms);
+  () = #unspill(out);
+  out = #protect_ptr(out, ms);
+
+  ok = status == SHA2_STATUS_OK;
+  if (ok) {
+    ms = #update_msf(ok, ms);
+    out = __digest28_of32(out, d);
+  } else {
+    ms = #update_msf(!ok, ms);
+  }
+
+  return ctx, out, status;
+}
+
+#[ct = "secret -> secret"]
+#[sct = "{ ptr: transient, val: secret } → { ptr: transient, val: secret }"]
+export fn sha256_init(reg mut ptr u8[SHA256_CTX_BYTES] ctx) -> reg ptr u8[SHA256_CTX_BYTES]
+{
+  stack u32[8] h;
+  reg u64 ms tag total;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+
+  h = __sha256_init(h);
+  tag = __sha2_tag(SHA2_FN_SHA256);
+  total = 0;
+  ctx = __sha256_ctx_init(ctx, h, tag, total);
+
+  return ctx;
+}
+
+#[ct = "secret × public × public -> secret × public"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret } × public"]
+export fn sha256_update(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg u64 in inlen) -> reg ptr u8[SHA256_CTX_BYTES], reg u64
+{
+  reg u64 ms expect status;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  expect = __sha2_tag(SHA2_FN_SHA256);
+  ctx, status, ms = _sha256_ctx_update(ctx, in, inlen, expect, ms);
+
+  return ctx, status;
+}
+
+#[ct = "secret × secret -> secret × secret × public"]
+#[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
+         { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+export fn sha256_final(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg mut ptr u8[32] out)
+  -> reg ptr u8[SHA256_CTX_BYTES], reg ptr u8[32], reg u64
+{
+  reg u64 ms expect status;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  out = #protect_ptr(out, ms);
+
+  expect = __sha2_tag(SHA2_FN_SHA256);
+  ctx, out, status, ms = _sha256_ctx_final(ctx, out, expect, ms);
+
+  return ctx, out, status;
+}
+
+#[ct = "secret -> secret"]
+#[sct = "{ ptr: transient, val: secret } → { ptr: transient, val: secret }"]
+export fn sha384_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SHA512_CTX_BYTES]
+{
+  stack u64[8] h;
+  reg u64 ms tag total;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+
+  h = __sha384_init(h);
+  tag = __sha2_tag(SHA2_FN_SHA384);
+  total = 0;
+  ctx = __sha512_ctx_init(ctx, h, tag, total);
+
+  return ctx;
+}
+
+#[ct = "secret × public × public -> secret × public"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret } × public"]
+export fn sha384_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inlen) -> reg ptr u8[SHA512_CTX_BYTES], reg u64
+{
+  reg u64 ms expect status;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  expect = __sha2_tag(SHA2_FN_SHA384);
+  ctx, status, ms = _sha512_ctx_update(ctx, in, inlen, expect, ms);
+
+  return ctx, status;
+}
+
+#[ct = "secret × secret -> secret × secret × public"]
+#[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
+         { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+export fn sha384_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[48] out)
+  -> reg ptr u8[SHA512_CTX_BYTES], reg ptr u8[48], reg u64
+{
+  stack u8[64] d;
+  reg u64 ms expect status;
+  reg bool ok;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  out = #protect_ptr(out, ms);
+
+  expect = __sha2_tag(SHA2_FN_SHA384);
+  () = #spill(out);
+  ctx, d, status, ms = _sha512_ctx_final(ctx, d, expect, ms);
+  () = #unspill(out);
+  out = #protect_ptr(out, ms);
+
+  ok = status == SHA2_STATUS_OK;
+  if (ok) {
+    ms = #update_msf(ok, ms);
+    out = __digest48_of64(out, d);
+  } else {
+    ms = #update_msf(!ok, ms);
+  }
+
+  return ctx, out, status;
+}
+
+#[ct = "secret -> secret"]
+#[sct = "{ ptr: transient, val: secret } → { ptr: transient, val: secret }"]
+export fn sha512_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SHA512_CTX_BYTES]
+{
+  stack u64[8] h;
+  reg u64 ms tag total;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+
+  h = __sha512_init(h);
+  tag = __sha2_tag(SHA2_FN_SHA512);
+  total = 0;
+  ctx = __sha512_ctx_init(ctx, h, tag, total);
+
+  return ctx;
+}
+
+#[ct = "secret × public × public -> secret × public"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret } × public"]
+export fn sha512_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inlen) -> reg ptr u8[SHA512_CTX_BYTES], reg u64
+{
+  reg u64 ms expect status;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  expect = __sha2_tag(SHA2_FN_SHA512);
+  ctx, status, ms = _sha512_ctx_update(ctx, in, inlen, expect, ms);
+
+  return ctx, status;
+}
+
+#[ct = "secret × secret -> secret × secret × public"]
+#[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
+         { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+export fn sha512_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[64] out)
+  -> reg ptr u8[SHA512_CTX_BYTES], reg ptr u8[64], reg u64
+{
+  reg u64 ms expect status;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  out = #protect_ptr(out, ms);
+
+  expect = __sha2_tag(SHA2_FN_SHA512);
+  ctx, out, status, ms = _sha512_ctx_final(ctx, out, expect, ms);
+
+  return ctx, out, status;
+}
+
+#[ct = "secret -> secret"]
+#[sct = "{ ptr: transient, val: secret } → { ptr: transient, val: secret }"]
+export fn sha512_224_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SHA512_CTX_BYTES]
+{
+  stack u64[8] h;
+  reg u64 ms tag total;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+
+  h = __sha512_224_init(h);
+  tag = __sha2_tag(SHA2_FN_SHA512_224);
+  total = 0;
+  ctx = __sha512_ctx_init(ctx, h, tag, total);
+
+  return ctx;
+}
+
+#[ct = "secret × public × public -> secret × public"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret } × public"]
+export fn sha512_224_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inlen) -> reg ptr u8[SHA512_CTX_BYTES], reg u64
+{
+  reg u64 ms expect status;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  expect = __sha2_tag(SHA2_FN_SHA512_224);
+  ctx, status, ms = _sha512_ctx_update(ctx, in, inlen, expect, ms);
+
+  return ctx, status;
+}
+
+#[ct = "secret × secret -> secret × secret × public"]
+#[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
+         { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+export fn sha512_224_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[28] out)
+  -> reg ptr u8[SHA512_CTX_BYTES], reg ptr u8[28], reg u64
+{
+  stack u8[64] d;
+  reg u64 ms expect status;
+  reg bool ok;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  out = #protect_ptr(out, ms);
+
+  expect = __sha2_tag(SHA2_FN_SHA512_224);
+  () = #spill(out);
+  ctx, d, status, ms = _sha512_ctx_final(ctx, d, expect, ms);
+  () = #unspill(out);
+  out = #protect_ptr(out, ms);
+
+  ok = status == SHA2_STATUS_OK;
+  if (ok) {
+    ms = #update_msf(ok, ms);
+    out = __digest28_of64(out, d);
+  } else {
+    ms = #update_msf(!ok, ms);
+  }
+
+  return ctx, out, status;
+}
+
+#[ct = "secret -> secret"]
+#[sct = "{ ptr: transient, val: secret } → { ptr: transient, val: secret }"]
+export fn sha512_256_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SHA512_CTX_BYTES]
+{
+  stack u64[8] h;
+  reg u64 ms tag total;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+
+  h = __sha512_256_init(h);
+  tag = __sha2_tag(SHA2_FN_SHA512_256);
+  total = 0;
+  ctx = __sha512_ctx_init(ctx, h, tag, total);
+
+  return ctx;
+}
+
+#[ct = "secret × public × public -> secret × public"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret } × public"]
+export fn sha512_256_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inlen) -> reg ptr u8[SHA512_CTX_BYTES], reg u64
+{
+  reg u64 ms expect status;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  expect = __sha2_tag(SHA2_FN_SHA512_256);
+  ctx, status, ms = _sha512_ctx_update(ctx, in, inlen, expect, ms);
+
+  return ctx, status;
+}
+
+#[ct = "secret × secret -> secret × secret × public"]
+#[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
+         { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+export fn sha512_256_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[32] out)
+  -> reg ptr u8[SHA512_CTX_BYTES], reg ptr u8[32], reg u64
+{
+  stack u8[64] d;
+  reg u64 ms expect status;
+  reg bool ok;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  out = #protect_ptr(out, ms);
+
+  expect = __sha2_tag(SHA2_FN_SHA512_256);
+  () = #spill(out);
+  ctx, d, status, ms = _sha512_ctx_final(ctx, d, expect, ms);
+  () = #unspill(out);
+  out = #protect_ptr(out, ms);
+
+  ok = status == SHA2_STATUS_OK;
+  if (ok) {
+    ms = #update_msf(ok, ms);
+    out = __digest32_of64(out, d);
+  } else {
+    ms = #update_msf(!ok, ms);
+  }
+
+  return ctx, out, status;
+}
+
+/*
+ * HMAC
+ * ====
+ *
+ * One-shot: hmac_mem.jinc. Incremental: init forms the inner and
+ * outer states from the key, update appends to the inner hash with the
+ * hash's own update (the HMAC context begins with a hash context), and
+ * final finishes both hashes (context.jinc).
+ */
+
+#[ct = "secret × public × public × public × public -> secret"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient × transient × transient →
+         { ptr: transient, val: secret }"]
+export fn hmac_sha256(reg mut ptr u8[32] out, reg u64 key keylen msg msglen) -> reg ptr u8[32]
+{
+  reg u64 ms;
+
+  ms = #init_msf();
+  out = #protect_ptr(out, ms);
+  key = #protect(key, ms);
+  keylen = #protect(keylen, ms);
+  msg = #protect(msg, ms);
+  msglen = #protect(msglen, ms);
+
+  out, ms = _hmac_sha256_mem(out, key, keylen, msg, msglen, ms);
+
+  return out;
+}
+
+#[ct = "secret × public × public × public × public -> secret"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient × transient × transient →
+         { ptr: transient, val: secret }"]
+export fn hmac_sha512(reg mut ptr u8[64] out, reg u64 key keylen msg msglen) -> reg ptr u8[64]
+{
+  reg u64 ms;
+
+  ms = #init_msf();
+  out = #protect_ptr(out, ms);
+  key = #protect(key, ms);
+  keylen = #protect(keylen, ms);
+  msg = #protect(msg, ms);
+  msglen = #protect(msglen, ms);
+
+  out, ms = _hmac_sha512_mem(out, key, keylen, msg, msglen, ms);
+
+  return out;
+}
+
+#[ct = "secret × public × public -> secret"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret }"]
+export fn hmac_sha256_init(reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx, reg u64 key keylen)
+  -> reg ptr u8[HMAC_SHA256_CTX_BYTES]
+{
+  reg u64 ms;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  key = #protect(key, ms);
+  keylen = #protect(keylen, ms);
+
+  ctx, ms = __hmac_sha256_ctx_init(ctx, key, keylen, ms);
+
+  return ctx;
+}
+
+#[ct = "secret × public × public -> secret × public"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret } × public"]
+export fn hmac_sha256_update(reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx, reg u64 in inlen)
+  -> reg ptr u8[HMAC_SHA256_CTX_BYTES], reg u64
+{
+  reg u64 ms expect status;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  expect = __sha2_tag(SHA2_FN_HMAC_SHA256);
+  ctx[0:SHA256_CTX_BYTES], status, ms =
+    _sha256_ctx_update(ctx[0:SHA256_CTX_BYTES], in, inlen, expect, ms);
+
+  return ctx, status;
+}
+
+#[ct = "secret × secret -> secret × secret × public"]
+#[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
+         { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+export fn hmac_sha256_final(reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx, reg mut ptr u8[32] out)
+  -> reg ptr u8[HMAC_SHA256_CTX_BYTES], reg ptr u8[32], reg u64
+{
+  reg u64 ms status;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  out = #protect_ptr(out, ms);
+
+  ctx, out, status, ms = __hmac_sha256_ctx_final(ctx, out, ms);
+
+  return ctx, out, status;
+}
+
+#[ct = "secret × public × public -> secret"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret }"]
+export fn hmac_sha512_init(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg u64 key keylen)
+  -> reg ptr u8[HMAC_SHA512_CTX_BYTES]
+{
+  reg u64 ms;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  key = #protect(key, ms);
+  keylen = #protect(keylen, ms);
+
+  ctx, ms = __hmac_sha512_ctx_init(ctx, key, keylen, ms);
+
+  return ctx;
+}
+
+#[ct = "secret × public × public -> secret × public"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret } × public"]
+export fn hmac_sha512_update(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg u64 in inlen)
+  -> reg ptr u8[HMAC_SHA512_CTX_BYTES], reg u64
+{
+  reg u64 ms expect status;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  in = #protect(in, ms);
+  inlen = #protect(inlen, ms);
+
+  expect = __sha2_tag(SHA2_FN_HMAC_SHA512);
+  ctx[0:SHA512_CTX_BYTES], status, ms =
+    _sha512_ctx_update(ctx[0:SHA512_CTX_BYTES], in, inlen, expect, ms);
+
+  return ctx, status;
+}
+
+#[ct = "secret × secret -> secret × secret × public"]
+#[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
+         { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+export fn hmac_sha512_final(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg mut ptr u8[64] out)
+  -> reg ptr u8[HMAC_SHA512_CTX_BYTES], reg ptr u8[64], reg u64
+{
+  reg u64 ms status;
+
+  ms = #init_msf();
+  ctx = #protect_ptr(ctx, ms);
+  out = #protect_ptr(out, ms);
+
+  ctx, out, status, ms = __hmac_sha512_ctx_final(ctx, out, ms);
+
+  return ctx, out, status;
+}
+
+/*
+ * Multi-way hashes
+ * ================
+ *
+ * Message k is the len bytes at in + k len; digest k goes to out at 32k
+ * (SHA-256) or 64k (SHA-512). The kernel is the unit's Sha2KernelX: the
+ * AVX2 kernels in the x86-64 avx2 unit, otherwise one single-way
+ * compression per message (sha256_x8_mem.jinc, sha512_x4_mem.jinc).
+ */
+
+#[ct = "secret × public × public -> secret"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret }"]
+export fn sha256_x8(reg mut ptr u8[256] out, reg u64 in len) -> reg ptr u8[256]
+{
+  reg u64 ms;
+
+  ms = #init_msf();
+  out = #protect_ptr(out, ms);
+  in = #protect(in, ms);
+  len = #protect(len, ms);
+
+  out, ms = _sha256_x8_mem(out, in, len, ms);
+
+  return out;
+}
+
+#[ct = "secret × public × public -> secret"]
+#[sct = "{ ptr: transient, val: secret } × transient × transient →
+         { ptr: transient, val: secret }"]
+export fn sha512_x4(reg mut ptr u8[256] out, reg u64 in len) -> reg ptr u8[256]
+{
+  reg u64 ms;
+
+  ms = #init_msf();
+  out = #protect_ptr(out, ms);
+  in = #protect(in, ms);
+  len = #protect(len, ms);
+
+  out, ms = _sha512_x4_mem(out, in, len, ms);
+
+  return out;
+}
