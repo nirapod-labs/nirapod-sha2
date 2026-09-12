@@ -1,0 +1,216 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * sha256_x8_mem.jinc
+ * ==================
+ *
+ * Eight SHA-256 hashes of equal-length messages packed in caller memory:
+ *
+ *     message k = in[k len .. (k + 1) len - 1],  k = 0 .. 7
+ *
+ *     _sha256_x8_absorb_mem   append len bytes to each of the 8 instances
+ *     _sha256_x8_mem          one-shot: digests of the 8 messages
+ *
+ * This is the memory form of sha256_x8_array.jinc, written to the same
+ * plan: the instances share total, so they fill, compress and pad in
+ * lockstep, and each computes what _sha256_absorb_mem and
+ * _sha256_finalize compute on its own message. The length is a run-time
+ * value and the messages are read from memory, so an export can take one
+ * pointer and one length for all eight, both arguments the safety checker
+ * can bound.
+ *
+ * The state is that of sha256_x8.jinc, and the compression is
+ * _sha256_x8_compress from the Sha2KernelX root.
+ *
+ * Memory: in must be readable for 8 len bytes, and 8 len must not wrap
+ * the address space. No alignment is required.
+ *
+ * Security: messages, states and digests are secret. Every branch, loop
+ * bound and address depends only on total, len, in and compile-time
+ * instance indices.
+ */
+
+from Hash require "sha256_x8.jinc"
+
+/*
+ * Copy n bytes of memory at p into buf from offset dst: single bytes up
+ * to the next multiple of 8 in buf, then 8-byte words, then the tail, as
+ * __sha256_x8_copy does for arrays.
+ */
+inline fn __sha256_x8_copy_mem(
+  reg mut ptr u8[512] buf,
+  reg u64 dst,
+  reg u64 p n_,
+  reg u64 ms
+) -> reg ptr u8[512], reg u64
+{
+  reg u64 n head end src t;
+  reg bool more;
+
+  n = n_;
+  head = dst;
+  head = -head;
+  head &= 7;
+  head = n < head ? n : head;
+  n -= head;
+  src = 0;
+
+  end = dst;
+  end += head;
+  while { more = dst < end; } (more) {
+    ms = #update_msf(more, ms);
+    t = (64u)[:u8 p + src];
+    buf[dst] = (8u)t;
+    dst += 1;
+    src += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  while { more = n >= 8; } (more) {
+    ms = #update_msf(more, ms);
+    t = [:u64 p + src];
+    buf.[:u64 dst] = t;
+    dst += 8;
+    src += 8;
+    n -= 8;
+  }
+  ms = #update_msf(!more, ms);
+
+  end = dst;
+  end += n;
+  while { more = dst < end; } (more) {
+    ms = #update_msf(more, ms);
+    t = (64u)[:u8 p + src];
+    buf[dst] = (8u)t;
+    dst += 1;
+    src += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  return buf, ms;
+}
+
+/*
+ * Append inlen bytes to each instance; instance k reads in + k inlen.
+ *
+ * Afterwards total has grown by inlen and every instance's pending block
+ * holds total mod 64 bytes. Any inlen, including 0. The instances' message
+ * stride is inlen itself, which is what a one-shot over packed messages
+ * needs; it is kept in stride while inlen counts down.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public ×
+         public × public × msf →
+         { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+fn _sha256_x8_absorb_mem(
+  reg mut ptr u32[64] h,
+  reg mut ptr u8[512] buf,
+  reg u64 total in inlen,
+  reg u64 ms
+) -> reg ptr u32[64], reg ptr u8[512], reg u64, reg u64
+{
+  reg u64 fill off stride n dst p;
+  reg bool more full;
+  inline int k;
+
+  fill = total;
+  fill &= 63;
+  total += inlen;
+  off = 0;
+  stride = inlen;
+
+  /*
+   * Invariant at the top: every instance holds fill < 64 pending bytes,
+   * and off bytes of each message have been taken.
+   */
+
+  while { more = inlen != 0; } (more) {
+    ms = #update_msf(more, ms);
+
+    n = 64;
+    n -= fill;
+    n = inlen < n ? inlen : n;
+    inlen -= n;
+
+    p = in;
+    p += off;
+    for k = 0 to 8 {
+      dst = fill;
+      dst += 64 * k;
+      buf, ms = __sha256_x8_copy_mem(buf, dst, p, n, ms);
+      p += stride;
+    }
+    fill += n;
+    off += n;
+
+    full = fill == 64;
+    if (full) {
+      ms = #update_msf(full, ms);
+      /*
+       * The loop state crosses the compression through the stack and is
+       * protected on reload, as in _sha256_x8_absorb_array.
+       */
+      () = #spill(total, in, off, inlen, stride, buf);
+      h, ms = _sha256_x8_compress(h, buf, ms);
+      () = #unspill(total, in, off, inlen, stride, buf);
+      total = #protect(total, ms);
+      in = #protect(in, ms);
+      off = #protect(off, ms);
+      inlen = #protect(inlen, ms);
+      stride = #protect(stride, ms);
+      buf = #protect_ptr(buf, ms);
+      fill = 0;
+    } else {
+      ms = #update_msf(!full, ms);
+    }
+  }
+  ms = #update_msf(!more, ms);
+
+  return h, buf, total, ms;
+}
+
+/*
+ * One-shot SHA-256 of the 8 packed messages of len bytes each: out
+ * receives digest k at bytes 32k .. 32k + 31 (FIPS 180-4 section 6.2 on
+ * each message separately).
+ *
+ * len < 2^61, so that each bit length fits the length field and 8 len
+ * does not wrap. out must not overlap the messages.
+ */
+#[sct = "{ ptr: public, val: secret } × public × public × msf →
+         { ptr: public, val: secret } × msf"]
+fn _sha256_x8_mem(
+  reg mut ptr u8[256] out,
+  reg u64 in len,
+  reg u64 ms
+) -> reg ptr u8[256], reg u64
+{
+  stack u32[64] h;
+  stack u8[512] buf_s;
+  reg ptr u8[512] buf;
+  reg u64 total z;
+  inline int i;
+
+  h = __sha256_x8_init(h);
+
+  /*
+   * Zeroed for the safety checker only, for the reason given in
+   * __sha256_mem_from: the run-time-indexed writes of absorb and finalize
+   * cover every byte the compressions read, which the pinned checker does
+   * not see. No byte of the zeroing reaches a digest.
+   */
+  z = 0;
+  for i = 0 to 64 {
+    buf_s[:u64 i] = z;
+  }
+  buf = buf_s;
+  total = 0;
+
+  () = #spill(out);
+  h, buf, total, ms = _sha256_x8_absorb_mem(h, buf, total, in, len, ms);
+  () = #unspill(out);
+  out = #protect_ptr(out, ms);
+  out, h, buf, ms = _sha256_x8_finalize(out, h, buf, total, ms);
+
+  return out, ms;
+}
