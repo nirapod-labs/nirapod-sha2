@@ -1,0 +1,85 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * digest.jinc
+ * ===========
+ *
+ * Exact-length digests. The finalize functions of sha256.jinc and
+ * sha512.jinc write the whole final chaining value, 32 or 64 bytes, and a
+ * truncated digest is its prefix (FIPS 180-4 sections 6.3, 6.5, 6.6 and
+ * 6.7):
+ *
+ *     SHA-224      28 of 32 bytes
+ *     SHA-384      48 of 64 bytes
+ *     SHA-512/224  28 of 64 bytes
+ *     SHA-512/256  32 of 64 bytes
+ *
+ * For these four the exports finish into a local array and copy the
+ * digest with one of the functions below, so the caller's output receives
+ * the digest and nothing else: the bytes of the chaining value that FIPS
+ * 180-4 drops never reach caller memory. They stay in the export's stack
+ * frame, which the build clears before the export returns. SHA-256 and
+ * SHA-512 finish straight into the caller's output.
+ *
+ * Each copy reads d and writes out at constant offsets; the contents are
+ * secret and no address or branch depends on them.
+ */
+
+inline fn __digest28_of32(reg mut ptr u8[28] out, reg const ptr u8[32] d) -> reg ptr u8[28]
+{
+  reg u64 t;
+  reg u32 x;
+  inline int i;
+
+  for i = 0 to 3 {
+    t = d.[:u64 8 * i];
+    out.[:u64 8 * i] = t;
+  }
+  x = d.[:u32 24];
+  out.[:u32 24] = x;
+
+  return out;
+}
+
+inline fn __digest28_of64(reg mut ptr u8[28] out, reg const ptr u8[64] d) -> reg ptr u8[28]
+{
+  reg u64 t;
+  reg u32 x;
+  inline int i;
+
+  for i = 0 to 3 {
+    t = d.[:u64 8 * i];
+    out.[:u64 8 * i] = t;
+  }
+  x = d.[:u32 24];
+  out.[:u32 24] = x;
+
+  return out;
+}
+
+inline fn __digest32_of64(reg mut ptr u8[32] out, reg const ptr u8[64] d) -> reg ptr u8[32]
+{
+  reg u64 t;
+  inline int i;
+
+  for i = 0 to 4 {
+    t = d.[:u64 8 * i];
+    out.[:u64 8 * i] = t;
+  }
+
+  return out;
+}
+
+inline fn __digest48_of64(reg mut ptr u8[48] out, reg const ptr u8[64] d) -> reg ptr u8[48]
+{
+  reg u64 t;
+  inline int i;
+
+  for i = 0 to 6 {
+    t = d.[:u64 8 * i];
+    out.[:u64 8 * i] = t;
+  }
+
+  return out;
+}
