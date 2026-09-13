@@ -1,67 +1,49 @@
 /*
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * clear.c
  * =======
  *
- * Clearing of secrets the C layer can reach: its own buffers, and the
- * registers a secret-dependent Jasmin call may leave behind.
- *
- * Memory
- *
- *     nirapod_sha2_clear stores zeros through a volatile pointer and ends
- *     with a compiler barrier on the buffer, so the stores are not removed
- *     as dead even when the buffer is about to go out of scope.
+ * Clearing of the registers a Jasmin call may leave holding secret-derived
+ * values. The C layer has no buffers of its own that hold secrets: it
+ * never copies a message, key, digest or context, so registers are all
+ * there is to clear here. The stack the Jasmin code used is cleared by the
+ * export itself (Makefile, -stack-zero), and a context by final.
  *
  * Registers
  *
  *     A Jasmin export restores the callee-saved registers of the platform
  *     ABI and leaves the others as its last instructions set them, which
- *     may be values derived from the secret key. The library calls
- *     nirapod_sha2_clear_registers right after each export that reads the
- *     secret key, before control returns towards the application. It zeroes
- *     every register the ABI lets a callee change:
+ *     may be values derived from the message, the key or the state. The
+ *     library calls nirapod_sha2_clear_registers right after each export,
+ *     before control returns towards the application. It zeroes every
+ *     register the ABI lets a callee change:
  *
  *         AArch64 (AAPCS64)  x0-x17 and v0-v31, except the low 64 bits of
  *                            v8-v15, which are callee-saved and are
  *                            restored by this function's own epilogue
  *         x86-64 (SysV)      rax, rcx, rdx, rsi, rdi, r8-r11, and
  *                            xmm0-xmm15, or all of ymm0-ymm15 with VZEROALL
- *                            after a variant that used AVX; on a CPU with
+ *                            after a unit that used AVX; on a CPU with
  *                            AVX-512, all of zmm0-zmm31, whatever the
- *                            variant
+ *                            unit
  *
  *     The Jasmin code never uses the registers AVX-512 adds, but other code
  *     in the process can leave secrets there before the export runs: the C
  *     library's memcpy has variants that copy through zmm16-zmm31 (or their
- *     ymm halves), and the testing build copies the seeds it is given with
- *     memcpy. The AVX-512 mask registers k0-k7 are not cleared, nor is
+ *     ymm halves). The AVX-512 mask registers k0-k7 are not cleared, nor is
  *     the register state of later extensions (APX r16-r31).
  *
  *     x18 is left alone: macOS reserves it, as do Linux systems that keep
  *     a shadow call stack there, so writing it is not safe everywhere. The
- *     Jasmin code never uses it (make asm-policy rejects it); on Linux,
- *     where the C compiler may use it as a temporary, tests/abi/
- *     test_clearing.c compares it between two secret inputs. Flags are not
- *     cleared. Registers saved by the operating system on a context switch
+ *     Jasmin code never uses it (make asm-policy rejects it on the
+ *     AArch64 units). Flags are not cleared. Registers saved by the operating system on a context switch
  *     are outside this file's reach.
  */
 
 #include "internal.h"
-
-void nirapod_sha2_clear(void *p, size_t len)
-{
-    volatile uint8_t *q = (volatile uint8_t *)p;
-    size_t i;
-
-    for (i = 0; i < len; i++) {
-        q[i] = 0;
-    }
-#if defined(__GNUC__) || defined(__clang__)
-    __asm__ __volatile__("" : : "r"(p) : "memory");
-#endif
-}
 
 #if defined(__aarch64__)
 
@@ -125,11 +107,11 @@ void nirapod_sha2_clear_registers(unsigned used_features)
     CLEAR_HI16_ONE(w, 31)
 
 /*
- * VZEROALL needs AVX, which every non-scalar variant requires (sets.c),
- * as does AVX-512; it also zeroes the upper halves of zmm0-zmm15. The
- * scalar variant runs on CPUs without AVX and uses no upper ymm halves,
- * so for it, on a CPU without AVX-512, the legacy-encoded XORPS of the
- * low halves is enough.
+ * VZEROALL needs AVX, which every family that needs AVX2 or SHA-NI implies
+ * (units.c, dispatch.c), as does AVX-512; it also zeroes the upper halves
+ * of zmm0-zmm15. The portable code runs on CPUs without AVX and uses no
+ * upper ymm halves, so for it, on a CPU without AVX-512, the
+ * legacy-encoded XORPS of the low halves is enough.
  */
 __attribute__((noinline))
 void nirapod_sha2_clear_registers(unsigned used_features)
@@ -172,26 +154,3 @@ void nirapod_sha2_clear_registers(unsigned used_features)
 #else
 #error "clear.c: unsupported architecture"
 #endif
-
-/*
- * Leaving AVX state
- *
- *     An export of an x86-64 variant that uses 256-bit registers can return
- *     with the upper halves of ymm0-ymm15 non-zero, and some CPUs penalise
- *     every legacy-SSE instruction run in that state. The x86-64 convention
- *     is to clear the upper halves (VZEROUPPER) before control passes to
- *     code that may use legacy SSE. Key generation and signing do so through
- *     nirapod_sha2_clear_registers (VZEROALL); this function serves the
- *     calls that read no secret: verification, including the check of a new
- *     signature. Elsewhere it does nothing.
- */
-void nirapod_sha2_leave_avx(unsigned used_features)
-{
-#if defined(__x86_64__)
-    if ((used_features & (NIRAPOD_SHA2_CPU_AVX2 | NIRAPOD_SHA2_CPU_SHANI)) != 0) {
-        __asm__ __volatile__("vzeroupper" : : : "memory");
-    }
-#else
-    (void)used_features;
-#endif
-}

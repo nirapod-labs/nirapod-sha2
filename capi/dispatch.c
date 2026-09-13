@@ -1,25 +1,27 @@
 /*
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * dispatch.c
  * ==========
  *
- * Chooses the compiled variant of a parameter set for the running CPU.
+ * Reads the CPU features of the running machine and chooses, per
+ * operation family, the unit an operation runs on.
  *
- * The scalar variant exists for every set and runs on every supported CPU
- * (ARMv8.0-A, x86-64 baseline). A set may also have variants that need
- * instruction-set extensions (sets.c); one is chosen only when the CPU
- * reports every extension it needs and, on x86-64, the operating system
- * has enabled the register state it uses. All variants of a set compute the same
- * function; tests/core runs each one this CPU supports, through the
- * testing library, and checks the choice for every combination of the
- * features (nirapod_sha2_select_for).
+ * The portable unit exists on both architectures and runs on every
+ * supported CPU (ARMv8.0-A, x86-64 baseline). The other units need
+ * instruction-set extensions for some families (units.c); a unit is
+ * chosen for a family only when the CPU reports every extension that
+ * family's code uses in it and, on x86-64, the operating system has
+ * enabled the register state it uses. All units compute the same
+ * functions; the tests run every unit this CPU supports, through the
+ * testing library, and check the choice for combinations of features
+ * the host does not have (nirapod_sha2_select_for).
  *
- * The feature test runs on every call for a set with more than one
- * variant: the library keeps no cached result, in line with its
- * no-global-state contract. Its cost, a few CPUID instructions, is
- * negligible against one hash.
+ * The library keeps no global state, so the features are read on the
+ * call that needs them, and only when the family has an admitted unit
+ * besides the portable one.
  */
 
 #include "internal.h"
@@ -82,14 +84,14 @@ unsigned nirapod_sha2_cpu_features(void)
 #elif defined(__aarch64__)
 
 /*
- * AArch64 extensions an extension variant may require: Advanced SIMD and
- * the SHA-256, SHA-512 and SHA-3 instructions (FEAT_SHA256, FEAT_SHA512,
- * FEAT_SHA3). User code cannot read the ID registers portably, so the
- * operating system's report is used:
+ * AArch64 extensions a unit may require: Advanced SIMD and the SHA-256
+ * and SHA-512 instructions (FEAT_SHA256, FEAT_SHA512). User code cannot
+ * read the ID registers portably, so the operating system's report is
+ * used:
  *
  *     macOS   sysctl hw.optional.arm.AdvSIMD and hw.optional.arm.FEAT_*
  *     Linux   getauxval(AT_HWCAP): HWCAP_ASIMD (bit 1), HWCAP_SHA2 (bit 6),
- *             HWCAP_SHA3 (bit 17), HWCAP_SHA512 (bit 21)
+ *             HWCAP_SHA512 (bit 21)
  */
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
@@ -115,9 +117,6 @@ unsigned nirapod_sha2_cpu_features(void)
     if (sysctl_flag("hw.optional.arm.FEAT_SHA512")) {
         features |= NIRAPOD_SHA2_CPU_SHA512;
     }
-    if (sysctl_flag("hw.optional.arm.FEAT_SHA3")) {
-        features |= NIRAPOD_SHA2_CPU_SHA3;
-    }
     return features;
 }
 
@@ -126,7 +125,6 @@ unsigned nirapod_sha2_cpu_features(void)
 
 #define HWCAP_BIT_ASIMD  (UINT64_C(1) << 1)
 #define HWCAP_BIT_SHA2   (UINT64_C(1) << 6)
-#define HWCAP_BIT_SHA3   (UINT64_C(1) << 17)
 #define HWCAP_BIT_SHA512 (UINT64_C(1) << 21)
 
 unsigned nirapod_sha2_cpu_features(void)
@@ -143,9 +141,6 @@ unsigned nirapod_sha2_cpu_features(void)
     if ((hwcap & HWCAP_BIT_SHA512) != 0) {
         features |= NIRAPOD_SHA2_CPU_SHA512;
     }
-    if ((hwcap & HWCAP_BIT_SHA3) != 0) {
-        features |= NIRAPOD_SHA2_CPU_SHA3;
-    }
     return features;
 }
 
@@ -160,27 +155,83 @@ unsigned nirapod_sha2_cpu_features(void)
 
 #endif
 
-const nirapod_sha2_impl *nirapod_sha2_select_for(nirapod_sha2_set set, unsigned cpu)
+/*
+ * Default dispatch
+ * ----------------
+ *
+ * Per family, the candidate units in order of preference; the first whose
+ * needs the CPU has is chosen, and the portable unit, last in every list,
+ * needs nothing. The order is the library's target (accelerated kernel
+ * where the CPU has it): on AArch64 the sha2 unit for every family, on
+ * x86-64 SHA-NI for single-way SHA-256 and AVX2 for the multi-way forms.
+ * The aarch64 scalar unit is in no list: it is built and tested, and
+ * selectable through the testing library only.
+ *
+ * A unit enters the default dispatch only when all its gates have passed:
+ * a correctness proof of its kernel against FIPS 180-4, a safety-checker
+ * verdict, the constant-time and speculative constant-time checks, and
+ * native tests (docs/STATUS.md). admitted marks the candidates that have.
+ * Today that is the portable unit alone, so the public functions run the
+ * portable kernels on every CPU and read no CPU features. Admitting a unit
+ * is a change of one admitted flag below, made with the evidence for it.
+ */
+typedef struct candidate {
+    size_t unit;     /* index into units.c */
+    int admitted;    /* in the default dispatch */
+} candidate;
+
+#define PORTABLE { 0, 1 }
+
+#if defined(__aarch64__)
+static const candidate candidates[NIRAPOD_SHA2_FAMILIES][2] = {
+    /* SHA256 */ { { 2, 0 }, PORTABLE },
+    /* SHA512 */ { { 2, 0 }, PORTABLE },
+    /* X8     */ { { 2, 0 }, PORTABLE },
+    /* X4     */ { { 2, 0 }, PORTABLE },
+};
+#elif defined(__x86_64__)
+static const candidate candidates[NIRAPOD_SHA2_FAMILIES][2] = {
+    /* SHA256 */ { { 1, 0 }, PORTABLE },
+    /* SHA512 */ { PORTABLE, PORTABLE },    /* no x86-64 SHA-512 kernel besides it */
+    /* X8     */ { { 2, 0 }, PORTABLE },
+    /* X4     */ { { 2, 0 }, PORTABLE },
+};
+#endif
+
+#define CANDIDATES (sizeof(candidates[0]) / sizeof(candidates[0][0]))
+
+const nirapod_sha2_unit *nirapod_sha2_select_for(nirapod_sha2_family f, unsigned cpu, int gated)
 {
-    const nirapod_sha2_impl *chosen = nirapod_sha2_impl_variant(set, 0);
-    const nirapod_sha2_impl *impl;
+    const nirapod_sha2_unit *u;
     size_t i;
 
-    for (i = 1; (impl = nirapod_sha2_impl_variant(set, i)) != NULL; i++) {
-        if ((impl->features & ~cpu) == 0) {
-            chosen = impl;
+    for (i = 0; i < CANDIDATES; i++) {
+        if (gated && !candidates[f][i].admitted) {
+            continue;
+        }
+        u = nirapod_sha2_unit_at(candidates[f][i].unit);
+        if ((u->needs[f] & ~cpu) == 0) {
+            return u;
         }
     }
-    return chosen;
+    return nirapod_sha2_unit_at(0);
 }
 
-const nirapod_sha2_impl *nirapod_sha2_select(nirapod_sha2_set set)
+const nirapod_sha2_unit *nirapod_sha2_select(nirapod_sha2_family f)
 {
-    /*
-     * The features are read only when the set has a variant besides
-     * scalar, which every set has on both architectures today.
-     */
-    unsigned cpu = nirapod_sha2_impl_variant(set, 1) != NULL ? nirapod_sha2_cpu_features() : 0;
+    unsigned cpu = 0;
+    size_t i;
 
-    return nirapod_sha2_select_for(set, cpu);
+    /*
+     * The features are read only when an admitted candidate of the family
+     * needs one; with the portable unit alone they are not read at all.
+     */
+    for (i = 0; i < CANDIDATES; i++) {
+        if (candidates[f][i].admitted &&
+            nirapod_sha2_unit_at(candidates[f][i].unit)->needs[f] != 0) {
+            cpu = nirapod_sha2_cpu_features();
+            break;
+        }
+    }
+    return nirapod_sha2_select_for(f, cpu, 1);
 }

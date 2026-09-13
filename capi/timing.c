@@ -1,12 +1,13 @@
 /*
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * timing.c
  * ========
  *
- * Data-independent timing mode around the secret-dependent Jasmin calls
- * (key generation and signing).
+ * Data-independent timing mode around each Jasmin call: every export reads
+ * a message, a key or a context, all secret.
  *
  * AArch64
  *
@@ -26,14 +27,14 @@
  *         Linux   getauxval(AT_HWCAP) & HWCAP_DIT (bit 24)
  *
  *     Without FEAT_DIT nothing is changed and the instruction-timing
- *     assumption rests on the CPU (nirapod_sha2.h, "Timing").
+ *     assumption rests on the CPU (nirapod_sha2.h, "Security").
  *
  * x86-64
  *
  *     Intel's DOITM mode is enabled through a model-specific register that
  *     user code cannot write. Enabling it is the caller's or the platform's
  *     obligation, and CPUs without DOITM give no such control;
- *     enter() and leave() do nothing (nirapod_sha2.h, "Timing").
+ *     enter() and leave() do nothing (nirapod_sha2.h, "Security").
  */
 
 #include "internal.h"
