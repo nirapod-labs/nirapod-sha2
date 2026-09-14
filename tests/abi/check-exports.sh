@@ -1,5 +1,6 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
 # SPDX-License-Identifier: Apache-2.0
 #
 # tests/abi/check-exports.sh
