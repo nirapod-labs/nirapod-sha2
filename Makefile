@@ -9,9 +9,9 @@
 #     make             build/<host>/lib/libnirapod_sha2.a and
 #                      build/<host>/lib/libnirapod_sha2_testing.a
 #     make check       the symbol check of libnirapod_sha2.a (with its
-#                      negative control), the assembly policy, and the
-#                      smoke tests on this host, through the testing
-#                      library and through the production library
+#                      negative control), the assembly policy, the smoke
+#                      tests on this host, through the testing library and
+#                      through the production library, and the DIT test
 #     make asm         assembly of the units of ARCH (default: the host's);
 #                      SYSTEM_aarch64=linux gives Linux AArch64 assembly
 #     make asm-all     assembly of the units of both architectures
@@ -260,7 +260,17 @@ $(SMOKE_PUBLIC): $(SMOKE_SRC) $(LIB)
 	@mkdir -p $(@D)
 	$(CC) -I$(INCLUDE) $(CWARN) $(CFLAGS) -o $@ $(TESTS)/smoke/smoke.c $(LIB)
 
-check: $(LIB) $(EXPORTS_CONTROL) $(SMOKE) $(SMOKE_PUBLIC) asm-policy
+# The data-independent timing test (tests/timing/dit.c): a call leaves the
+# caller's PSTATE.DIT as it found it, set or clear. Linked with the testing
+# library because it reads the feature cache through capi/internal.h. On
+# x86-64 it reports NOT APPLICABLE.
+DIT_TEST := $(OUT)/tests/dit
+
+$(DIT_TEST): $(TESTS)/timing/dit.c $(TESTING_LIB)
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(CWARN) $(CFLAGS) -o $@ $(TESTS)/timing/dit.c $(TESTING_LIB)
+
+check: $(LIB) $(EXPORTS_CONTROL) $(SMOKE) $(SMOKE_PUBLIC) $(DIT_TEST) asm-policy
 	$(CHECK_EXPORTS) check $(INCLUDE)/nirapod_sha2.h $(LIB) $(SYM_PREFIX)
 	@if $(CHECK_EXPORTS) check $(INCLUDE)/nirapod_sha2.h $(EXPORTS_CONTROL) $(SYM_PREFIX) \
 	    > $(OUT)/lib/exports-control.log 2>&1; then \
@@ -268,6 +278,7 @@ check: $(LIB) $(EXPORTS_CONTROL) $(SMOKE) $(SMOKE_PUBLIC) asm-policy
 	else echo "check-exports negative control: rejected, as required"; fi
 	$(SMOKE)
 	$(SMOKE_PUBLIC)
+	$(DIT_TEST)
 
 # The AArch64 units must leave x18 alone: macOS reserves it, and clear.c
 # does not clear it. A use of x18 or w18 anywhere in their assembly fails.
