@@ -170,10 +170,13 @@ unsigned nirapod_sha2_cpu_features(void)
  * A unit enters the default dispatch only when all its gates have passed:
  * a correctness proof of its kernel against FIPS 180-4, a safety-checker
  * verdict, the constant-time and speculative constant-time checks, and
- * native tests. admitted marks the candidates that have.
- * Today that is the portable unit alone, so the public functions run the
- * portable kernels on every CPU and read no CPU features. Admitting a unit
- * is a change of one admitted flag below, made with the evidence for it.
+ * native tests. admitted marks the candidates that have. The portable unit
+ * is admitted on other grounds: it is the fallback every CPU needs, and its
+ * kernels are the only ones with a correctness proof so far; its remaining
+ * gates are open like the others'. Today it is the only admitted unit, so
+ * the public functions run the portable kernels on every CPU and read no
+ * CPU features. Admitting a unit is a change of one admitted flag below,
+ * made with the evidence for it.
  */
 typedef struct candidate {
     size_t unit;     /* index into units.c */
