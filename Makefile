@@ -12,7 +12,8 @@
 #                      negative control), the assembly policy, and the
 #                      smoke tests on this host, through the testing
 #                      library and through the production library
-#     make asm         assembly of the units of ARCH (default: the host's)
+#     make asm         assembly of the units of ARCH (default: the host's);
+#                      SYSTEM_aarch64=linux gives Linux AArch64 assembly
 #     make asm-all     assembly of the units of both architectures
 #     make ct          jasmin-ct and jasmin-ct --sct on every unit of the
 #                      architectures in CT_ARCHES (default: both), with the
@@ -92,16 +93,18 @@ OUT  := $(BUILD)/$(HOST_ARCH)-$(HOST_SYSTEM)
 #     x86_64-shani       src/x86_64/shani        src
 #     x86_64-avx2        src                     src/x86_64/avx2
 #
-# Hash is src and HashWord src/<arch> for every unit. The units of an
-# architecture are compiled for the system it is supported on: AArch64 for
-# the host's system on a macOS or Linux host, x86-64 for Linux.
+# Hash is src and HashWord src/<arch> for every unit. The assembly of a
+# unit goes to build/asm/<system>/<unit>.s. The system of each
+# architecture is the one it is supported on, x86-64 Linux and AArch64 the
+# host's (macosx or linux); SYSTEM_aarch64=linux on a Mac gives the Linux
+# AArch64 assembly.
 
 UNITS_aarch64 := aarch64-portable aarch64-scalar aarch64-sha2
 UNITS_x86_64  := x86_64-portable x86_64-shani x86_64-avx2
 ALL_UNITS     := $(UNITS_aarch64) $(UNITS_x86_64)
 
-SYSTEM_aarch64 := $(HOST_SYSTEM)
-SYSTEM_x86_64  := linux
+SYSTEM_aarch64 ?= $(HOST_SYSTEM)
+SYSTEM_x86_64  ?= linux
 JARCH_aarch64  := armv8a
 JARCH_x86_64   := x86-64
 
@@ -113,15 +116,15 @@ SX_avx2   := $(SRC)/x86_64/avx2
 unit_arch    = $(word 1,$(subst -, ,$(1)))
 unit_variant = $(word 2,$(subst -, ,$(1)))
 unit_jarch   = $(JARCH_$(call unit_arch,$(1)))
-unit_system  = $(SYSTEM_$(call unit_arch,$(1)))
 unit_roots   = -I Hash=$(SRC) -I HashWord=$(SRC)/$(call unit_arch,$(1)) \
                -I Sha2Kernel=$(or $(S1_$(call unit_variant,$(1))),$(SRC)) \
                -I Sha2KernelX=$(or $(SX_$(call unit_variant,$(1))),$(SRC))
 
 # -stack-zero: each export clears the stack it used before it returns
-# (src/nirapod_sha2.jinc, "Stack").
-unit_flags = -arch $(call unit_jarch,$(1)) -system $(call unit_system,$(1)) \
+# (src/nirapod_sha2.jinc, "Stack"). $(1) is the unit, $(2) the system.
+unit_flags = -arch $(call unit_jarch,$(1)) -system $(2) \
              -stack-zero loop -stack-zero-size u64
+unit_asm   = $(BUILD)/asm/$(SYSTEM_$(call unit_arch,$(1)))/$(1).s
 
 JASMIN_DEPS := $(shell find $(SRC) -name '*.jinc') Makefile
 
@@ -130,9 +133,14 @@ $(BUILD)/units/%.jazz: Makefile
 	@printf 'namespace nirapod_sha2_jz_%s {\n  from Hash require "nirapod_sha2.jinc"\n}\n' \
 	  $(subst -,_,$*) > $@
 
-$(BUILD)/asm/%.s: $(BUILD)/units/%.jazz $(JASMIN_DEPS)
+# The stem is <system>/<unit>; every unit file is a prerequisite, since
+# make 3.81 cannot name just the one the stem selects.
+UNIT_FILES := $(addprefix $(BUILD)/units/,$(addsuffix .jazz,$(ALL_UNITS)))
+
+$(BUILD)/asm/%.s: $(UNIT_FILES) $(JASMIN_DEPS)
 	@mkdir -p $(@D)
-	$(JASMINC) $(call unit_flags,$*) $(call unit_roots,$*) -o $@ $<
+	$(JASMINC) $(call unit_flags,$(notdir $*),$(patsubst %/,%,$(dir $*))) \
+	  $(call unit_roots,$(notdir $*)) -o $@ $(BUILD)/units/$(notdir $*).jazz
 
 .PHONY: all asm asm-all asm-policy ct check clean
 
@@ -140,8 +148,8 @@ $(BUILD)/asm/%.s: $(BUILD)/units/%.jazz $(JASMIN_DEPS)
 .SECONDARY:
 all: $(OUT)/lib/libnirapod_sha2.a $(OUT)/lib/libnirapod_sha2_testing.a
 
-asm: $(addprefix $(BUILD)/asm/,$(addsuffix .s,$(UNITS_$(ARCH))))
-asm-all: $(addprefix $(BUILD)/asm/,$(addsuffix .s,$(ALL_UNITS)))
+asm: $(foreach u,$(UNITS_$(ARCH)),$(call unit_asm,$(u)))
+asm-all: $(foreach u,$(ALL_UNITS),$(call unit_asm,$(u)))
 
 # The Linux assemblers accept the A64 SHA-2 mnemonics only with the
 # extensions enabled (+sha2: FEAT_SHA256; +sha3: FEAT_SHA512). The option
@@ -152,7 +160,7 @@ UNIT_ASFLAGS := $(if $(filter aarch64-linux,$(HOST_ARCH)-$(HOST_SYSTEM)),-march=
 HOST_UNITS := $(UNITS_$(HOST_ARCH))
 JOBJ := $(addprefix $(OUT)/obj/,$(addsuffix .o,$(HOST_UNITS)))
 
-$(OUT)/obj/%.o: $(BUILD)/asm/%.s
+$(OUT)/obj/%.o: $(BUILD)/asm/$(HOST_SYSTEM)/%.s
 	@mkdir -p $(@D)
 	$(CC) $(UNIT_ASFLAGS) -c -o $@ $<
 
@@ -263,7 +271,7 @@ check: $(LIB) $(EXPORTS_CONTROL) $(SMOKE) $(SMOKE_PUBLIC) asm-policy
 
 # The AArch64 units must leave x18 alone: macOS reserves it, and clear.c
 # does not clear it. A use of x18 or w18 anywhere in their assembly fails.
-asm-policy: $(addprefix $(BUILD)/asm/,$(addsuffix .s,$(filter $(UNITS_aarch64),$(UNITS_$(HOST_ARCH)))))
+asm-policy: $(foreach u,$(filter $(UNITS_aarch64),$(UNITS_$(HOST_ARCH))),$(BUILD)/asm/$(HOST_SYSTEM)/$(u).s)
 	@for f in $^; do \
 	  if grep -E -n '(^|[^a-z0-9_])[xw]18([^0-9]|$$)' $$f; then echo "asm-policy: $$f uses x18" >&2; exit 1; fi; \
 	done; echo "asm-policy: PASS ($(words $^) AArch64 units, x18 unused)"
