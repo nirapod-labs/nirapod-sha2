@@ -41,7 +41,7 @@
  * CPU features a unit may need, as nirapod_sha2_cpu_features reports them
  * for the running architecture. No unit needs the AVX-512 bits:
  * nirapod_sha2_clear_registers reads them to clear the registers AVX-512
- * adds. DIT is read by timing.c.
+ * adds, and timing.c reads DIT.
  */
 #define NIRAPOD_SHA2_CPU_AVX2     0x01u  /* x86-64: AVX2, YMM state enabled */
 #define NIRAPOD_SHA2_CPU_SHANI    0x02u  /* x86-64: SHA extensions and AVX */
@@ -104,7 +104,8 @@ const nirapod_sha2_unit *nirapod_sha2_unit_at(size_t index);
 
 /*
  * The NIRAPOD_SHA2_CPU_* features of the running CPU, read from the CPU
- * or the operating system on every call. dispatch.c.
+ * or the operating system on the first call and cached (dispatch.c,
+ * "Feature cache").
  */
 unsigned nirapod_sha2_cpu_features(void);
 

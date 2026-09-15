@@ -80,9 +80,11 @@
  *
  * Concurrency
  *
- *     The library keeps no global mutable state and allocates nothing.
- *     Calls on distinct buffers and contexts may run concurrently; calls
- *     that share a context must be serialised by the caller.
+ *     The library allocates nothing. Its only global state is a cache of
+ *     the CPU's features, written once on first use with atomic stores
+ *     and never changed after; concurrent first calls are safe. Calls on
+ *     distinct buffers and contexts may run concurrently; calls that
+ *     share a context must be serialised by the caller.
  *
  * Security
  *

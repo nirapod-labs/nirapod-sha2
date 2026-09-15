@@ -21,7 +21,7 @@
  *     enter() checks that the CPU reports FEAT_DIT, saves DIT, and sets it;
  *     leave() writes the saved value back, so a caller that had DIT set
  *     keeps it. Writing DIT on a CPU without FEAT_DIT is undefined, hence
- *     the check, made on every call (no cached global):
+ *     the check, on the features dispatch.c reads once per process:
  *
  *         macOS   sysctl hw.optional.arm.FEAT_DIT
  *         Linux   getauxval(AT_HWCAP) & HWCAP_DIT (bit 24)
@@ -39,11 +39,6 @@
 
 #include "internal.h"
 
-#if defined(__aarch64__) && defined(__APPLE__)
-#include <sys/sysctl.h>
-#elif defined(__aarch64__) && defined(__linux__)
-#include <sys/auxv.h>
-#endif
 
 #if defined(__aarch64__)
 
@@ -51,19 +46,7 @@
 
 static int cpu_has_dit(void)
 {
-#if defined(__APPLE__)
-    int value = 0;
-    size_t size = sizeof(value);
-
-    if (sysctlbyname("hw.optional.arm.FEAT_DIT", &value, &size, NULL, 0) != 0) {
-        return 0;
-    }
-    return value == 1;
-#elif defined(__linux__)
-    return (getauxval(AT_HWCAP) & (UINT64_C(1) << 24)) != 0;
-#else
-    return 0;
-#endif
+    return (nirapod_sha2_cpu_features() & NIRAPOD_SHA2_CPU_DIT) != 0;
 }
 
 uint64_t nirapod_sha2_timing_enter(void)

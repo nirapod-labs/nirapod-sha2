@@ -19,9 +19,19 @@
  * testing library, and check the choice for combinations of features
  * the host does not have (nirapod_sha2_select_for).
  *
- * The library keeps no global state, so the features are read on the
- * call that needs them, and only when the family has an admitted unit
- * besides the portable one.
+ * Feature cache
+ *
+ *     The features are read once per process and kept in one word, the
+ *     library's only global variable: reading them costs one to four
+ *     system calls on macOS (one per sysctl name), which measurement
+ *     showed to cost more than hashing a short message several times over
+ *     (the record of the measurement is kept with the library's
+ *     benchmarks). The word starts at 0 and is written once with the
+ *     features and FEATURES_VALID set. Every access is an atomic load or
+ *     store, so concurrent first calls do not race: each may read the
+ *     features itself, and each stores the same value, because the
+ *     features of the machine do not change while the process runs. No
+ *     lock is taken and nothing is allocated.
  */
 
 #include "internal.h"
@@ -46,7 +56,7 @@
 #define XCR0_SSE_AVX       0x6u
 #define XCR0_AVX512        0xe0u
 
-unsigned nirapod_sha2_cpu_features(void)
+static unsigned read_cpu_features(void)
 {
     unsigned int a, b, c, d;
     unsigned int xcr0_lo, xcr0_hi;
@@ -85,13 +95,13 @@ unsigned nirapod_sha2_cpu_features(void)
 
 /*
  * AArch64 extensions a unit may require: Advanced SIMD and the SHA-256
- * and SHA-512 instructions (FEAT_SHA256, FEAT_SHA512). User code cannot
- * read the ID registers portably, so the operating system's report is
- * used:
+ * and SHA-512 instructions (FEAT_SHA256, FEAT_SHA512); and FEAT_DIT, which
+ * timing.c needs before it may touch PSTATE.DIT. User code cannot read the
+ * ID registers portably, so the operating system's report is used:
  *
  *     macOS   sysctl hw.optional.arm.AdvSIMD and hw.optional.arm.FEAT_*
  *     Linux   getauxval(AT_HWCAP): HWCAP_ASIMD (bit 1), HWCAP_SHA2 (bit 6),
- *             HWCAP_SHA512 (bit 21)
+ *             HWCAP_SHA512 (bit 21), HWCAP_DIT (bit 24)
  */
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
@@ -104,7 +114,7 @@ static int sysctl_flag(const char *name)
     return sysctlbyname(name, &value, &size, NULL, 0) == 0 && value == 1;
 }
 
-unsigned nirapod_sha2_cpu_features(void)
+static unsigned read_cpu_features(void)
 {
     unsigned features = 0;
 
@@ -117,6 +127,9 @@ unsigned nirapod_sha2_cpu_features(void)
     if (sysctl_flag("hw.optional.arm.FEAT_SHA512")) {
         features |= NIRAPOD_SHA2_CPU_SHA512;
     }
+    if (sysctl_flag("hw.optional.arm.FEAT_DIT")) {
+        features |= NIRAPOD_SHA2_CPU_DIT;
+    }
     return features;
 }
 
@@ -126,8 +139,9 @@ unsigned nirapod_sha2_cpu_features(void)
 #define HWCAP_BIT_ASIMD  (UINT64_C(1) << 1)
 #define HWCAP_BIT_SHA2   (UINT64_C(1) << 6)
 #define HWCAP_BIT_SHA512 (UINT64_C(1) << 21)
+#define HWCAP_BIT_DIT    (UINT64_C(1) << 24)
 
-unsigned nirapod_sha2_cpu_features(void)
+static unsigned read_cpu_features(void)
 {
     uint64_t hwcap = getauxval(AT_HWCAP);
     unsigned features = 0;
@@ -141,12 +155,15 @@ unsigned nirapod_sha2_cpu_features(void)
     if ((hwcap & HWCAP_BIT_SHA512) != 0) {
         features |= NIRAPOD_SHA2_CPU_SHA512;
     }
+    if ((hwcap & HWCAP_BIT_DIT) != 0) {
+        features |= NIRAPOD_SHA2_CPU_DIT;
+    }
     return features;
 }
 
 #else
 
-unsigned nirapod_sha2_cpu_features(void)
+static unsigned read_cpu_features(void)
 {
     return 0;
 }
@@ -154,6 +171,21 @@ unsigned nirapod_sha2_cpu_features(void)
 #endif
 
 #endif
+
+#define FEATURES_VALID 0x80000000u
+
+static unsigned features_cache;
+
+unsigned nirapod_sha2_cpu_features(void)
+{
+    unsigned f = __atomic_load_n(&features_cache, __ATOMIC_RELAXED);
+
+    if ((f & FEATURES_VALID) == 0) {
+        f = read_cpu_features() | FEATURES_VALID;
+        __atomic_store_n(&features_cache, f, __ATOMIC_RELAXED);
+    }
+    return f & ~FEATURES_VALID;
+}
 
 /*
  * Default dispatch
