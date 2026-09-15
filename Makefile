@@ -16,12 +16,17 @@
 #                      SYSTEM_aarch64=linux gives Linux AArch64 assembly
 #     make asm-all     assembly of the units of both architectures
 #     make ct          jasmin-ct and jasmin-ct --sct on every unit of the
-#                      architectures in CT_ARCHES (default: both), with the
-#                      check that every export of src/nirapod_sha2.jinc was
-#                      typed by both
+#                      architectures in CT_ARCHES (default: the host's,
+#                      ARCH), with the check that every export of
+#                      src/nirapod_sha2.jinc was typed by both, and on the
+#                      array test unit of those architectures
+#     make array-test  tests/array/array.c against the library, through
+#                      the array test unit (src/*_ASIZE.jinc instantiated)
 #     make asm-policy  properties of the AArch64 assembly the C layer relies
 #                      on (x18 unused)
 #     make clean       remove build/
+#
+# Assembly comes from the Jasmin sources, compiled by JASMINC.
 #
 # <host> is <arch>-<system>: aarch64-macosx, aarch64-linux or
 # x86_64-linux. Assembly for the other architecture needs no target
@@ -85,13 +90,13 @@ OUT  := $(BUILD)/$(HOST_ARCH)-$(HOST_SYSTEM)
 # (capi/jasmin.h). A unit's kernels are chosen by its include roots
 # (src/README.md):
 #
-#     unit               Sha2Kernel              Sha2KernelX
-#     aarch64-portable   src                     src
-#     aarch64-scalar     src/aarch64/scalar      src
-#     aarch64-sha2       src/aarch64/sha2        src
-#     x86_64-portable    src                     src
-#     x86_64-shani       src/x86_64/shani        src
-#     x86_64-avx2        src                     src/x86_64/avx2
+#     unit               Sha256Kernel        Sha512Kernel        Sha256KernelX, Sha512KernelX
+#     aarch64-portable   src                 src                 src
+#     aarch64-scalar     src/aarch64/scalar  src/aarch64/scalar  src/aarch64/neon, src
+#     aarch64-sha2       src/aarch64/sha2    src/aarch64/sha2    src
+#     x86_64-portable    src                 src                 src
+#     x86_64-shani       src/x86_64/shani    src                 src
+#     x86_64-avx2        src                 src                 src/x86_64/avx2
 #
 # Hash is src and HashWord src/<arch> for every unit. The assembly of a
 # unit goes to build/asm/<system>/<unit>.s. The system of each
@@ -108,23 +113,40 @@ SYSTEM_x86_64  ?= linux
 JARCH_aarch64  := armv8a
 JARCH_x86_64   := x86-64
 
-S1_scalar := $(SRC)/aarch64/scalar
-S1_sha2   := $(SRC)/aarch64/sha2
-S1_shani  := $(SRC)/x86_64/shani
-SX_avx2   := $(SRC)/x86_64/avx2
+K256_scalar := $(SRC)/aarch64/scalar
+K512_scalar := $(SRC)/aarch64/scalar
+X256_scalar := $(SRC)/aarch64/neon
+K256_sha2   := $(SRC)/aarch64/sha2
+K512_sha2   := $(SRC)/aarch64/sha2
+K256_shani  := $(SRC)/x86_64/shani
+X256_avx2   := $(SRC)/x86_64/avx2
+X512_avx2   := $(SRC)/x86_64/avx2
 
 unit_arch    = $(word 1,$(subst -, ,$(1)))
 unit_variant = $(word 2,$(subst -, ,$(1)))
 unit_jarch   = $(JARCH_$(call unit_arch,$(1)))
 unit_roots   = -I Hash=$(SRC) -I HashWord=$(SRC)/$(call unit_arch,$(1)) \
-               -I Sha2Kernel=$(or $(S1_$(call unit_variant,$(1))),$(SRC)) \
-               -I Sha2KernelX=$(or $(SX_$(call unit_variant,$(1))),$(SRC))
+               -I Sha256Kernel=$(or $(K256_$(call unit_variant,$(1))),$(SRC)) \
+               -I Sha512Kernel=$(or $(K512_$(call unit_variant,$(1))),$(SRC)) \
+               -I Sha256KernelX=$(or $(X256_$(call unit_variant,$(1))),$(SRC)) \
+               -I Sha512KernelX=$(or $(X512_$(call unit_variant,$(1))),$(SRC))
+
+# Queries for the CI scripts, so that the unit list and the include roots
+# are written in this file only: `make -s print-units ARCH=x86_64`,
+# `make -s print-roots-x86_64-avx2`.
+print-units:
+	@echo $(UNITS_$(ARCH))
+
+print-roots-%:
+	@echo $(call unit_roots,$*)
 
 # -stack-zero: each export clears the stack it used before it returns
 # (src/nirapod_sha2.jinc, "Stack"). $(1) is the unit, $(2) the system.
 unit_flags = -arch $(call unit_jarch,$(1)) -system $(2) \
              -stack-zero loop -stack-zero-size u64
 unit_asm   = $(BUILD)/asm/$(SYSTEM_$(call unit_arch,$(1)))/$(1).s
+
+ASM_ROOT := $(BUILD)
 
 JASMIN_DEPS := $(shell find $(SRC) -name '*.jinc') Makefile
 
@@ -142,7 +164,7 @@ $(BUILD)/asm/%.s: $(UNIT_FILES) $(JASMIN_DEPS)
 	$(JASMINC) $(call unit_flags,$(notdir $*),$(patsubst %/,%,$(dir $*))) \
 	  $(call unit_roots,$(notdir $*)) -o $@ $(BUILD)/units/$(notdir $*).jazz
 
-.PHONY: all asm asm-all asm-policy ct check clean
+.PHONY: all asm asm-all asm-policy ct check clean array-test print-units
 
 # Generated units and assembly are kept, not removed as intermediates.
 .SECONDARY:
@@ -160,7 +182,7 @@ UNIT_ASFLAGS := $(if $(filter aarch64-linux,$(HOST_ARCH)-$(HOST_SYSTEM)),-march=
 HOST_UNITS := $(UNITS_$(HOST_ARCH))
 JOBJ := $(addprefix $(OUT)/obj/,$(addsuffix .o,$(HOST_UNITS)))
 
-$(OUT)/obj/%.o: $(BUILD)/asm/$(HOST_SYSTEM)/%.s
+$(OUT)/obj/%.o: $(ASM_ROOT)/asm/$(HOST_SYSTEM)/%.s
 	@mkdir -p $(@D)
 	$(CC) $(UNIT_ASFLAGS) -c -o $@ $<
 
@@ -282,7 +304,7 @@ check: $(LIB) $(EXPORTS_CONTROL) $(SMOKE) $(SMOKE_PUBLIC) $(DIT_TEST) asm-policy
 
 # The AArch64 units must leave x18 alone: macOS reserves it, and clear.c
 # does not clear it. A use of x18 or w18 anywhere in their assembly fails.
-asm-policy: $(foreach u,$(filter $(UNITS_aarch64),$(UNITS_$(HOST_ARCH))),$(BUILD)/asm/$(HOST_SYSTEM)/$(u).s)
+asm-policy: $(foreach u,$(filter $(UNITS_aarch64),$(UNITS_$(HOST_ARCH))),$(ASM_ROOT)/asm/$(HOST_SYSTEM)/$(u).s)
 	@for f in $^; do \
 	  if grep -E -n '(^|[^a-z0-9_])[xw]18([^0-9]|$$)' $$f; then echo "asm-policy: $$f uses x18" >&2; exit 1; fi; \
 	done; echo "asm-policy: PASS ($(words $^) AArch64 units, x18 unused)"
@@ -295,7 +317,7 @@ asm-policy: $(foreach u,$(filter $(UNITS_aarch64),$(UNITS_$(HOST_ARCH))),$(BUILD
 # in both logs, so an export cannot drop out of the check unnoticed. A
 # type error, a checker error or a missing export fails the target.
 # Logs: build/ct/<unit>.{ct,sct}.log.
-CT_ARCHES ?= aarch64 x86_64
+CT_ARCHES ?= $(ARCH)
 CT_UNITS  := $(foreach a,$(CT_ARCHES),$(UNITS_$(a)))
 
 $(BUILD)/ct/%.ok: $(BUILD)/units/%.jazz $(JASMIN_DEPS) $(TESTS)/ct/exports.sh
@@ -306,8 +328,51 @@ $(BUILD)/ct/%.ok: $(BUILD)/units/%.jazz $(JASMIN_DEPS) $(TESTS)/ct/exports.sh
 	  $(BUILD)/ct/$*.ct.log $(BUILD)/ct/$*.sct.log
 	@touch $@
 
-ct: $(addprefix $(BUILD)/ct/,$(addsuffix .ok,$(CT_UNITS)))
-	@echo "ct: jasmin-ct and jasmin-ct --sct PASS on $(words $(CT_UNITS)) units ($(CT_UNITS))"
+ct: $(addprefix $(BUILD)/ct/,$(addsuffix .ok,$(CT_UNITS) $(addprefix array-,$(CT_ARCHES))))
+	@echo "ct: jasmin-ct and jasmin-ct --sct PASS on $(words $(CT_UNITS)) units ($(CT_UNITS)) and the array unit of $(CT_ARCHES)"
+
+# The array instance files (src/*_ASIZE.jinc, src/README.md "Array
+# instances"). Their test unit, tests/array/array.jazz, instantiates every
+# one at several array sizes behind test exports. It is compiled with the
+# portable kernels (build/array/<arch>-<system>.s), typed by jasmin-ct and --sct with the units (make ct), and
+# linked only into the array test, never into a library.
+ARRAY_JAZZ := $(TESTS)/array/array.jazz
+ARRAY_ASM  := $(ASM_ROOT)/array/$(HOST_ARCH)-$(HOST_SYSTEM).s
+ARRAY_OBJ  := $(OUT)/obj/array.o
+ARRAY_TEST := $(OUT)/tests/array
+
+# The stem is <arch>-<system>.
+$(BUILD)/array/%.s: $(ARRAY_JAZZ) $(JASMIN_DEPS)
+	@mkdir -p $(@D)
+	$(JASMINC) $(call unit_flags,$(call unit_arch,$*)-portable,$(word 2,$(subst -, ,$*))) \
+	  $(call unit_roots,$(call unit_arch,$*)-portable) -o $@ $(ARRAY_JAZZ)
+
+$(ARRAY_OBJ): $(ARRAY_ASM)
+	@mkdir -p $(@D)
+	$(CC) $(UNIT_ASFLAGS) -c -o $@ $<
+
+$(ARRAY_TEST): $(TESTS)/array/array.c $(ARRAY_OBJ) $(LIB)
+	@mkdir -p $(@D)
+	$(CC) -I$(INCLUDE) $(CWARN) $(CFLAGS) -o $@ $(TESTS)/array/array.c $(ARRAY_OBJ) $(LIB)
+
+array-test: $(ARRAY_TEST)
+	$(ARRAY_TEST)
+
+# Typing of the array test unit for one architecture (the stem), with the
+# requirement that every export of the unit was typed by both checkers.
+$(BUILD)/ct/array-%.ok: $(ARRAY_JAZZ) $(JASMIN_DEPS)
+	@mkdir -p $(@D)
+	$(JASMIN_CT) --arch $(JARCH_$*) --print $(call unit_roots,$*-portable) $(ARRAY_JAZZ) \
+	  > $(BUILD)/ct/array-$*.ct.log 2>&1
+	$(JASMIN_CT) --arch $(JARCH_$*) --sct $(call unit_roots,$*-portable) $(ARRAY_JAZZ) \
+	  > $(BUILD)/ct/array-$*.sct.log 2>&1
+	@n=$$(grep -c '^ *export fn' $(ARRAY_JAZZ) || true); \
+	t=$$(grep -c '^fn A[0-9]*::[a-z0-9_]* ' $(BUILD)/ct/array-$*.ct.log || true); \
+	s=$$(grep -cE '^[a-z]+ A[0-9]+::[a-z0-9_]+ :' $(BUILD)/ct/array-$*.sct.log || true); \
+	if [ "$$n" -eq 0 ] || [ "$$t" -lt "$$n" ] || [ "$$s" -lt "$$n" ]; then \
+	  echo "array unit, $*: $$n exports, $$t typed by jasmin-ct, $$s by --sct" >&2; exit 1; fi; \
+	echo "array unit, $*: jasmin-ct and --sct PASS ($$n exports)"
+	@touch $@
 
 clean:
 	rm -rf $(BUILD)
