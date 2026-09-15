@@ -134,12 +134,25 @@ fn _sha512_x4_absorb_mem(
 
     p = in;
     p += off;
+    dst = fill;
+    /*
+     * The copy needs p, n, dst, buf and ms; the rest of the loop state
+     * waits on the stack so that the four copies fit the x86-64 register
+     * bank, and is protected on reload like the state around the
+     * compression below.
+     */
+    () = #spill(total, in, off, inlen, fill);
     for k = 0 to 4 {
-      dst = fill;
-      dst += 128 * k;
       buf, ms = __sha512_x4_copy_mem(buf, dst, p, n, ms);
       p += stride;
+      dst += 128;
     }
+    () = #unspill(total, in, off, inlen, fill);
+    total = #protect(total, ms);
+    in = #protect(in, ms);
+    off = #protect(off, ms);
+    inlen = #protect(inlen, ms);
+    fill = #protect(fill, ms);
     fill += n;
     off += n;
 
