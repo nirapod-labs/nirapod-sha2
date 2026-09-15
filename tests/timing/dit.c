@@ -10,11 +10,11 @@
  * half of the guarantee, that the mode is on while an export runs, is not
  * observable from outside the library.
  *
- * Enter scripts and error returns take the same path: the token records
+ * Successful and rejected calls take the same path: the token records
  * what the call did, and a caller that already had DIT set costs no write.
- * Those are the two cases this test pins down. It runs on AArch64; on
- * x86-64 the mode is DOITM, which user code cannot write, and the test
- * reports NOT APPLICABLE (nirapod_sha2.h, "Security").
+ * The test covers both starting states, clear and set. It runs on
+ * AArch64; on x86-64 the mode is DOITM, which user code cannot write, and
+ * the test reports NOT APPLICABLE (nirapod_sha2.h, "Security").
  */
 
 #include <stdio.h>
