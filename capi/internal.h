@@ -98,16 +98,37 @@ typedef struct nirapod_sha2_unit {
 
 /*
  * The units of this architecture, index 0 the portable unit, which runs
- * on every CPU of the architecture; NULL past the last. units.c.
+ * on every CPU of the architecture. units.c. The dispatch holds their
+ * addresses in its candidate tables, so it needs no index or bounds check
+ * per call.
  */
+extern const nirapod_sha2_unit nirapod_sha2_units[];
+
+/* The unit at index, NULL past the last. units.c. */
 const nirapod_sha2_unit *nirapod_sha2_unit_at(size_t index);
 
 /*
  * The NIRAPOD_SHA2_CPU_* features of the running CPU, read from the CPU
- * or the operating system on the first call and cached (dispatch.c,
- * "Feature cache").
+ * or the operating system on the first call and kept in one write-once
+ * word (dispatch.c, "Feature cache"). The usual path is the load, the
+ * test and the mask below; the read itself is out of line.
  */
-unsigned nirapod_sha2_cpu_features(void);
+#define NIRAPOD_SHA2_FEATURES_VALID 0x80000000u
+
+extern unsigned nirapod_sha2_features_cache;
+
+unsigned nirapod_sha2_read_cpu_features(void);
+
+static inline unsigned nirapod_sha2_cpu_features(void)
+{
+    unsigned f = __atomic_load_n(&nirapod_sha2_features_cache, __ATOMIC_RELAXED);
+
+    if ((f & NIRAPOD_SHA2_FEATURES_VALID) == 0) {
+        f = nirapod_sha2_read_cpu_features() | NIRAPOD_SHA2_FEATURES_VALID;
+        __atomic_store_n(&nirapod_sha2_features_cache, f, __ATOMIC_RELAXED);
+    }
+    return f & ~NIRAPOD_SHA2_FEATURES_VALID;
+}
 
 /*
  * The unit that family f runs on a CPU with features cpu. With gated = 1

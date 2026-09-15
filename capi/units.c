@@ -55,7 +55,7 @@
 #define A64_SHA256 (NIRAPOD_SHA2_CPU_ASIMD | NIRAPOD_SHA2_CPU_SHA256)
 #define A64_SHA512 (NIRAPOD_SHA2_CPU_ASIMD | NIRAPOD_SHA2_CPU_SHA512)
 
-static const nirapod_sha2_unit units[] = {
+const nirapod_sha2_unit nirapod_sha2_units[] = {
     { "aarch64-portable", { 0, 0, 0, 0 }, UNIT_OPS(aarch64_portable) },
     { "aarch64-scalar", { 0, 0, 0, 0 }, UNIT_OPS(aarch64_scalar) },
     { "aarch64-sha2", { A64_SHA256, A64_SHA512, A64_SHA256, A64_SHA512 }, UNIT_OPS(aarch64_sha2) },
@@ -63,7 +63,7 @@ static const nirapod_sha2_unit units[] = {
 
 #elif defined(__x86_64__)
 
-static const nirapod_sha2_unit units[] = {
+const nirapod_sha2_unit nirapod_sha2_units[] = {
     { "x86_64-portable", { 0, 0, 0, 0 }, UNIT_OPS(x86_64_portable) },
     { "x86_64-shani", { NIRAPOD_SHA2_CPU_SHANI, 0, NIRAPOD_SHA2_CPU_SHANI, 0 }, UNIT_OPS(x86_64_shani) },
     { "x86_64-avx2", { 0, 0, NIRAPOD_SHA2_CPU_AVX2, NIRAPOD_SHA2_CPU_AVX2 }, UNIT_OPS(x86_64_avx2) },
@@ -75,5 +75,7 @@ static const nirapod_sha2_unit units[] = {
 
 const nirapod_sha2_unit *nirapod_sha2_unit_at(size_t index)
 {
-    return index < sizeof(units) / sizeof(units[0]) ? &units[index] : NULL;
+    return index < sizeof(nirapod_sha2_units) / sizeof(nirapod_sha2_units[0])
+               ? &nirapod_sha2_units[index]
+               : NULL;
 }
