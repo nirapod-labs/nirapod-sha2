@@ -15,6 +15,12 @@
  */
 
 /* Copy n bytes of in from offset src into buf from offset dst. */
+#[safety =
+   { requires = (64u) dst + (64u) n_ <= 512 && (64u) src + (64u) n_ <= 4 * HASH_ARRAY_LEN
+       && is_arr_init(in, (64u) src, (64u) n_)
+   , res = { buf_out, ms_out }
+   }
+ ]
 inline fn __sha512_x4_copy(
   reg mut ptr u8[512] buf,
   reg u64 dst,
@@ -71,6 +77,22 @@ inline fn __sha512_x4_copy(
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public ×
          { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 256)
+       && is_arr_init(buf, 0, (64u) total % 128)
+       && is_arr_init(buf, 128, (64u) total % 128)
+       && is_arr_init(buf, 256, (64u) total % 128)
+       && is_arr_init(buf, 384, (64u) total % 128)
+       && is_arr_init(in, 0, 4 * HASH_ARRAY_LEN)
+   , res = { h_out, buf_out, total_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+       && is_arr_init(buf_out, 0, (64u) total_out % 128)
+       && is_arr_init(buf_out, 128, (64u) total_out % 128)
+       && is_arr_init(buf_out, 256, (64u) total_out % 128)
+       && is_arr_init(buf_out, 384, (64u) total_out % 128)
+       && total_out == total + HASH_ARRAY_LEN
+   }
+ ]
 fn _sha512_x4_absorb_array(
   reg mut ptr u64[32] h,
   reg mut ptr u8[512] buf,

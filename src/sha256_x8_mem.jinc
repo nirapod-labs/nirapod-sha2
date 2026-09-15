@@ -38,6 +38,11 @@ from Hash require "sha256_x8.jinc"
  * to the next multiple of 8 in buf, then 8-byte words, then the tail, as
  * __sha256_x8_copy does for arrays.
  */
+#[safety =
+   { requires = (64u) dst + (64u) n_ <= 512 && is_mem_init((64u) p, (64u) n_)
+   , res = { buf_out, ms_out }
+   }
+ ]
 inline fn __sha256_x8_copy_mem(
   reg mut ptr u8[512] buf,
   reg u64 dst,
@@ -102,6 +107,30 @@ inline fn __sha256_x8_copy_mem(
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public ×
          public × public × msf →
          { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 256)
+       && is_arr_init(buf, 0, (64u) total % 64)
+       && is_arr_init(buf, 64, (64u) total % 64)
+       && is_arr_init(buf, 128, (64u) total % 64)
+       && is_arr_init(buf, 192, (64u) total % 64)
+       && is_arr_init(buf, 256, (64u) total % 64)
+       && is_arr_init(buf, 320, (64u) total % 64)
+       && is_arr_init(buf, 384, (64u) total % 64)
+       && is_arr_init(buf, 448, (64u) total % 64)
+       && is_mem_init((64u) in, 8 * (64u) inlen)
+   , res = { h_out, buf_out, total_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+       && is_arr_init(buf_out, 0, (64u) total_out % 64)
+       && is_arr_init(buf_out, 64, (64u) total_out % 64)
+       && is_arr_init(buf_out, 128, (64u) total_out % 64)
+       && is_arr_init(buf_out, 192, (64u) total_out % 64)
+       && is_arr_init(buf_out, 256, (64u) total_out % 64)
+       && is_arr_init(buf_out, 320, (64u) total_out % 64)
+       && is_arr_init(buf_out, 384, (64u) total_out % 64)
+       && is_arr_init(buf_out, 448, (64u) total_out % 64)
+       && total_out == total + inlen
+   }
+ ]
 fn _sha256_x8_absorb_mem(
   reg mut ptr u32[64] h,
   reg mut ptr u8[512] buf,
@@ -192,6 +221,12 @@ fn _sha256_x8_absorb_mem(
  */
 #[sct = "{ ptr: public, val: secret } × public × public × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_mem_init((64u) in, 8 * (64u) len)
+   , res = { out_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 256)
+   }
+ ]
 fn _sha256_x8_mem(
   reg mut ptr u8[256] out,
   reg u64 in len,

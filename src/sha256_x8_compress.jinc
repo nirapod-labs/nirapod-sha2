@@ -26,6 +26,12 @@ from Sha2Kernel require "sha256_compress.jinc"
 
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h8, 0, 256) && is_arr_init(blocks, 0, 512)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
 fn _sha256_x8_compress(
   reg mut ptr u32[64] h8,
   reg const ptr u8[512] blocks,

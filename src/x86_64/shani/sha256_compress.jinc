@@ -56,6 +56,10 @@ u32[4] SHA256_SHANI_BSWAP = { 0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f };
  * h as H_0 .. H_7 (lanes a b c d and e f g h, low to high) to and from the
  * abef / cdgh register layout.
  */
+#[safety =
+   { requires = is_arr_init(h, 0, 32)
+   }
+ ]
 inline fn __shani_load_state(reg const ptr u32[8] h) -> reg u128, reg u128
 {
   reg u128 lo hi abef cdgh t;
@@ -71,6 +75,10 @@ inline fn __shani_load_state(reg const ptr u32[8] h) -> reg u128, reg u128
   return abef, cdgh;
 }
 
+#[safety =
+   { res = { h_out }, ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
 inline fn __shani_store_state(reg mut ptr u32[8] h, reg u128 abef cdgh) -> reg ptr u32[8]
 {
   reg u128 lo hi t;
@@ -89,6 +97,12 @@ inline fn __shani_store_state(reg mut ptr u32[8] h, reg u128 abef cdgh) -> reg p
  * 64 rounds on message groups w[0..3] (W_0 .. W_15, already byte-swapped),
  * then the feed-forward of step 4.
  */
+#[safety =
+   { requires = is_arr_init(h, 0, 32)
+   , res = { h_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
 inline fn __shani_rounds(reg mut ptr u32[8] h, reg u128[4] w) -> reg ptr u32[8]
 {
   reg ptr u32[64] k;
@@ -126,6 +140,12 @@ inline fn __shani_rounds(reg mut ptr u32[8] h, reg u128[4] w) -> reg ptr u32[8]
 
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_arr_init(block, 0, 64)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
 fn _sha256_compress(
   reg mut ptr u32[8] h,
   reg const ptr u8[64] block,
@@ -151,6 +171,12 @@ fn _sha256_compress(
 
 /* One block from caller memory at p; the loop body of _sha256_compress_blocks. */
 #[sct = "{ ptr: public, val: secret } × public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_mem_init((64u) p, 64)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
 fn _sha256_compress_one(reg mut ptr u32[8] h, reg u64 p, reg u64 ms) -> reg ptr u32[8], reg u64
 {
   reg ptr u32[4] mask_p;
@@ -177,6 +203,12 @@ fn _sha256_compress_one(reg mut ptr u32[8] h, reg u64 p, reg u64 ms) -> reg ptr 
  * out of the registers the callee writes, so they are never reloaded.
  */
 #[sct = "{ ptr: public, val: secret } × public × public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_mem_init((64u) p, 64 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
 fn _sha256_compress_blocks(
   reg mut ptr u32[8] h,
   reg u64 p n,

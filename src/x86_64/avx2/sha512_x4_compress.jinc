@@ -94,6 +94,12 @@ inline fn __sigma1_4x(reg u256 x) -> reg u256
  * Words 4q .. 4q + 3 of the four blocks into w[4q .. 4q + 3], transposed
  * and byte-swapped. Row k is instance k's 32 bytes at 128k + 32q.
  */
+#[safety =
+   { requires = 0 <= q && q < 4 && is_arr_init(w, 0, 128 * q) && is_arr_init(blocks, 0, 512)
+   , res = { w_out }
+   , ensures = is_arr_init(w_out, 0, 128 * (q + 1))
+   }
+ ]
 inline fn __sha512_x4_load_quarter(
   stack u256[16] w,
   reg const ptr u8[512] blocks,
@@ -130,6 +136,12 @@ inline fn __sha512_x4_load_quarter(
 
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h4, 0, 256) && is_arr_init(blocks, 0, 512)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
 fn _sha512_x4_compress(
   reg mut ptr u64[32] h4,
   reg const ptr u8[512] blocks,

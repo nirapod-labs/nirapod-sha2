@@ -74,6 +74,10 @@ from Hash require "sha512_k.jinc"
  * One block: the 80 rounds and the feed-forward on s[0..3]. m holds the
  * block's sixteen message words, already in native order, two per vector.
  */
+#[safety =
+   { requires = is_arr_init(k, 0, 640)
+   }
+ ]
 inline fn __sha512_block_a64(
   reg u128[5] s,
   reg u128[8] m,
@@ -130,6 +134,12 @@ inline fn __sha512_block_a64(
 
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_arr_init(block, 0, 128)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
 fn _sha512_compress(
   reg mut ptr u64[8] h,
   reg const ptr u8[128] block,
@@ -164,6 +174,12 @@ fn _sha512_compress(
  * n are never reloaded.
  */
 #[sct = "{ ptr: public, val: secret } × public × public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_mem_init((64u) p, 128 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
 fn _sha512_compress_blocks(
   reg mut ptr u64[8] h,
   reg u64 p n,

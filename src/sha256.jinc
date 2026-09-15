@@ -48,6 +48,7 @@ u32[8] SHA224_IV = {
   0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4
 };
 
+#[safety = { res = { h_out }, ensures = is_arr_init(h_out, 0, 32) }]
 inline fn __sha256_init(reg mut ptr u32[8] h) -> reg ptr u32[8]
 {
   reg ptr u32[8] iv;
@@ -62,6 +63,7 @@ inline fn __sha256_init(reg mut ptr u32[8] h) -> reg ptr u32[8]
   return h;
 }
 
+#[safety = { res = { h_out }, ensures = is_arr_init(h_out, 0, 32) }]
 inline fn __sha224_init(reg mut ptr u32[8] h) -> reg ptr u32[8]
 {
   reg ptr u32[8] iv;
@@ -83,6 +85,20 @@ inline fn __sha224_init(reg mut ptr u32[8] h) -> reg ptr u32[8]
  * straight from memory; the remainder (< 64 bytes) is left in buf.
  * Afterwards total has grown by inlen and buf holds total mod 64 bytes.
  */
+/*
+ * Safety: h is initialised, buf holds its total mod 64 pending bytes, and
+ * inlen bytes at in are readable. On return buf holds the new total mod 64
+ * pending bytes, and the new total is total + inlen.
+ */
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_arr_init(buf, 0, (64u) total % 64)
+       && is_mem_init((64u) in, (64u) inlen)
+   , res = { h_out, buf_out, total_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+       && is_arr_init(buf_out, 0, (64u) total_out % 64)
+       && total_out == total + inlen
+   }
+ ]
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } ×
          public × public × public ×
          msf →
@@ -208,6 +224,14 @@ fn _sha256_absorb_mem(
  * and the last 4 bytes are the rest of the final chaining value. h and buf
  * keep final-state data afterwards and need re-initialisation before reuse.
  */
+/* Safety: h is initialised and buf holds total mod 64 pending bytes. */
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_arr_init(buf, 0, (64u) total % 64)
+   , res = { out_out, h_out, buf_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 32) && is_arr_init(h_out, 0, 32)
+       && is_arr_init(buf_out, 0, 64)
+   }
+ ]
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } ×
          { ptr: public, val: secret } × public × msf →
          { ptr: public, val: secret } × { ptr: public, val: secret } ×
@@ -282,6 +306,12 @@ fn _sha256_finalize(
   return out, h, buf, ms;
 }
 
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 32)
+   }
+ ]
 inline fn __sha256_mem_from(
   reg mut ptr u8[32] out,
   reg mut ptr u32[8] h,
@@ -324,6 +354,12 @@ inline fn __sha256_mem_from(
   return out, ms;
 }
 
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 32)
+   }
+ ]
 #[sct = "{ ptr: public, val: secret } × public × public × msf →
          { ptr: public, val: secret } × msf"]
 fn _sha256_mem(reg mut ptr u8[32] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[32], reg u64
@@ -336,6 +372,12 @@ fn _sha256_mem(reg mut ptr u8[32] out, reg u64 in inlen, reg u64 ms) -> reg ptr 
   return out, ms;
 }
 
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 32)
+   }
+ ]
 #[sct = "{ ptr: public, val: secret } × public × public × msf →
          { ptr: public, val: secret } × msf"]
 fn _sha224_mem(reg mut ptr u8[32] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[32], reg u64

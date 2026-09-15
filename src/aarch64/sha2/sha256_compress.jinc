@@ -58,6 +58,10 @@ from Hash require "sha256_k.jinc"
  * One block: the 64 rounds and the feed-forward on (abcd, efgh). m holds
  * the block's sixteen message words, already in native order.
  */
+#[safety =
+   { requires = is_arr_init(k, 0, 256)
+   }
+ ]
 inline fn __sha256_block_a64(
   reg u128 abcd efgh,
   reg u128[4] m,
@@ -95,6 +99,12 @@ inline fn __sha256_block_a64(
 
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_arr_init(block, 0, 64)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
 fn _sha256_compress(
   reg mut ptr u32[8] h,
   reg const ptr u8[64] block,
@@ -127,6 +137,12 @@ fn _sha256_compress(
  * n are never reloaded.
  */
 #[sct = "{ ptr: public, val: secret } × public × public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_mem_init((64u) p, 64 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
 fn _sha256_compress_blocks(
   reg mut ptr u32[8] h,
   reg u64 p n,

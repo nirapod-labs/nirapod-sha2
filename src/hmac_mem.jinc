@@ -35,6 +35,12 @@ from Hash require "hmac.jinc"
 
 #[sct = "{ ptr: public, val: secret } × public × public × public × public × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_mem_init((64u) key, (64u) keylen) && is_mem_init((64u) msg, (64u) msglen)
+   , res = { out_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 32)
+   }
+ ]
 fn _hmac_sha256_mem(
   reg mut ptr u8[32] out,
   reg u64 key keylen msg msglen,
@@ -79,6 +85,12 @@ fn _hmac_sha256_mem(
 /* The SHA-512 form of _hmac_sha256_mem, with B = 128 and a 64-byte tag. */
 #[sct = "{ ptr: public, val: secret } × public × public × public × public × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_mem_init((64u) key, (64u) keylen) && is_mem_init((64u) msg, (64u) msglen)
+   , res = { out_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 64)
+   }
+ ]
 fn _hmac_sha512_mem(
   reg mut ptr u8[64] out,
   reg u64 key keylen msg msglen,
