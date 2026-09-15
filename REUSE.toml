@@ -4,3 +4,18 @@ version = 1
 path = ["README.md", "**/README.md", "**/PROVENANCE.md", "AUTHORS", "NOTICE", ".gitignore"]
 SPDX-FileCopyrightText = "nirapod-sha2 contributors"
 SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["tests/vectors/cavp/*.rsp"]
+SPDX-FileCopyrightText = "National Institute of Standards and Technology; not subject to copyright in the United States"
+SPDX-License-Identifier = "NIST-Software"
+
+[[annotations]]
+path = ["tests/vectors/wycheproof/*.json"]
+SPDX-FileCopyrightText = "Wycheproof contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["tests/vectors/**/SHA256SUMS"]
+SPDX-FileCopyrightText = "nirapod-sha2 contributors"
+SPDX-License-Identifier = "Apache-2.0"
