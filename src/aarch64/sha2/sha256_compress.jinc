@@ -138,7 +138,7 @@ fn _sha256_compress(
  */
 #[sct = "{ ptr: public, val: secret } × public × public × msf → { ptr: public, val: secret } × msf"]
 #[safety =
-   { requires = is_arr_init(h, 0, 32) && is_mem_init((64u) p, 64 * (64u) n)
+   { requires = is_arr_init(h, 0, 32) && n < (64u) 288230376151711744 && is_mem_init((64u) p, 64 * (64u) n)
    , res = { h_out, ms_out }
    , ensures = is_arr_init(h_out, 0, 32)
    }

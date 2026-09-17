@@ -945,7 +945,7 @@ export fn hmac_sha512_final(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg mut p
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret }"]
 #[safety =
-   { requires = is_mem_init((64u) in, 8 * (64u) len)
+   { requires = len < (64u) 2305843009213693952 && is_mem_init((64u) in, 8 * (64u) len)
    , res = { out_out }
    , ensures = is_arr_init(out_out, 0, 256)
    }
@@ -968,7 +968,7 @@ export fn sha256_x8(reg mut ptr u8[256] out, reg u64 in len) -> reg ptr u8[256]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret }"]
 #[safety =
-   { requires = is_mem_init((64u) in, 4 * (64u) len)
+   { requires = len < (64u) 2305843009213693952 && is_mem_init((64u) in, 4 * (64u) len)
    , res = { out_out }
    , ensures = is_arr_init(out_out, 0, 256)
    }

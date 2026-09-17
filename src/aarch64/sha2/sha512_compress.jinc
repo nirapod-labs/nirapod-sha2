@@ -175,7 +175,7 @@ fn _sha512_compress(
  */
 #[sct = "{ ptr: public, val: secret } × public × public × msf → { ptr: public, val: secret } × msf"]
 #[safety =
-   { requires = is_arr_init(h, 0, 64) && is_mem_init((64u) p, 128 * (64u) n)
+   { requires = is_arr_init(h, 0, 64) && n < (64u) 144115188075855872 && is_mem_init((64u) p, 128 * (64u) n)
    , res = { h_out, ms_out }
    , ensures = is_arr_init(h_out, 0, 64)
    }

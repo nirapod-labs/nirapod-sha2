@@ -117,7 +117,7 @@ inline fn __sha256_x8_copy_mem(
        && is_arr_init(buf, 320, (64u) total % 64)
        && is_arr_init(buf, 384, (64u) total % 64)
        && is_arr_init(buf, 448, (64u) total % 64)
-       && is_mem_init((64u) in, 8 * (64u) inlen)
+       && inlen < (64u) 2305843009213693952 && is_mem_init((64u) in, 8 * (64u) inlen)
    , res = { h_out, buf_out, total_out, ms_out }
    , ensures = is_arr_init(h_out, 0, 256)
        && is_arr_init(buf_out, 0, (64u) total_out % 64)
@@ -222,7 +222,7 @@ fn _sha256_x8_absorb_mem(
 #[sct = "{ ptr: public, val: secret } × public × public × msf →
          { ptr: public, val: secret } × msf"]
 #[safety =
-   { requires = is_mem_init((64u) in, 8 * (64u) len)
+   { requires = len < (64u) 2305843009213693952 && is_mem_init((64u) in, 8 * (64u) len)
    , res = { out_out, ms_out }
    , ensures = is_arr_init(out_out, 0, 256)
    }
