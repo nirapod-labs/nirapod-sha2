@@ -93,7 +93,7 @@ OUT  := $(BUILD)/$(HOST_ARCH)-$(HOST_SYSTEM)
 #     unit               Sha256Kernel        Sha512Kernel        Sha256KernelX, Sha512KernelX
 #     aarch64-portable   src                 src                 src
 #     aarch64-scalar     src/aarch64/scalar  src/aarch64/scalar  src/aarch64/neon, src
-#     aarch64-sha2       src/aarch64/sha2    src/aarch64/sha2    src
+#     aarch64-sha2       src/aarch64/sha2    src/aarch64/sha2    src/aarch64/sha2
 #     x86_64-portable    src                 src                 src
 #     x86_64-shani       src/x86_64/shani    src                 src
 #     x86_64-avx2        src                 src                 src/x86_64/avx2
@@ -118,6 +118,8 @@ K512_scalar := $(SRC)/aarch64/scalar
 X256_scalar := $(SRC)/aarch64/neon
 K256_sha2   := $(SRC)/aarch64/sha2
 K512_sha2   := $(SRC)/aarch64/sha2
+X256_sha2   := $(SRC)/aarch64/sha2
+X512_sha2   := $(SRC)/aarch64/sha2
 K256_shani  := $(SRC)/x86_64/shani
 X256_avx2   := $(SRC)/x86_64/avx2
 X512_avx2   := $(SRC)/x86_64/avx2

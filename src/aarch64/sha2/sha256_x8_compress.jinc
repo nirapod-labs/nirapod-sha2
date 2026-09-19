@@ -1,0 +1,289 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * sha256_x8_compress.jinc (AArch64, SHA-256 instructions)
+ * =======================================================
+ *
+ * Eight independent SHA-256 compressions on the A64 SHA-256 instructions
+ * (FEAT_SHA256), with the entry points and contracts of the portable
+ * 8-way kernel (src/sha256_x8_compress.jinc):
+ *
+ *     _sha256_x8_compress(h8, blocks, ms)
+ *     _sha256_x8_compress_lanes(h8, in, off, n, ms)
+ *
+ * Rounds. Each lane runs the rounds of the single-way kernel in this
+ * directory (sha256_compress.jinc): its chaining value in two vectors,
+ *
+ *     abcd = [H_0; H_1; H_2; H_3]      efgh = [H_4; H_5; H_6; H_7]
+ *
+ * lane 0 lowest, four rounds per SHA256H / SHA256H2 pair, and the
+ * schedule four words at a time with SHA256SU0 / SHA256SU1. One lane's
+ * rounds are a chain of dependent SHA256H / SHA256H2 instructions, so a
+ * core that can start a new SHA-2 instruction before the previous one has
+ * finished idles between them. Two lanes are therefore run together: for
+ * every group of four rounds, the instructions of lane 2i and then those
+ * of lane 2i + 1, which are independent of each other and fill those
+ * gaps. A pair of lanes needs about 20 vector registers (state, the
+ * state saved for the feed-forward, schedule and temporaries) and the
+ * other pair of the same half keeps its state in 4 more, so everything
+ * stays in the 32 vector registers.
+ *
+ * State layout. h8 holds H_j of lane k at 8j + k, so the 16 bytes
+ * h8[:u128 2j + f] are word j of lanes 4f .. 4f + 3. A 4 x 4 transpose
+ * of words 0 .. 3 (or 4 .. 7) of those four lanes gives their abcd (or
+ * efgh) vectors; the same transpose takes them back. Each half (f = 0, 1)
+ * is loaded, its two pairs are compressed, and it is stored back.
+ *
+ * Message words are big-endian in the block (FIPS 180-4 section 3.1);
+ * REV32 swaps the bytes of each word after a 16-byte load.
+ *
+ * Required CPU feature: FEAT_SHA256 (and Advanced SIMD). The caller's
+ * dispatch must establish it; this file does not check.
+ *
+ * Security: h8 and the blocks are secret. The rounds are straight-line
+ * code; the only branches are the block loops of
+ * _sha256_x8_compress_lanes on its public block count, which update ms.
+ * Every address is fixed at compile time or is a public lane pointer
+ * protected after its load from the table. Residue: nothing secret is
+ * stored to the stack; the vector registers that held state and schedule
+ * are not cleared here (capi/clear.c).
+ */
+
+from Hash require "sha256_k.jinc"
+
+/*
+ * 4 x 4 transpose of 32-bit elements: row i of the result is column i of
+ * the input rows a, b, c, d.
+ */
+inline fn __sha256_x8_tr4(reg u128 a b c d) -> reg u128, reg u128, reg u128, reg u128
+{
+  reg u128 t0 t1 t2 t3;
+
+  t0 = #VTRN1_4u32(a, b);
+  t1 = #VTRN2_4u32(a, b);
+  t2 = #VTRN1_4u32(c, d);
+  t3 = #VTRN2_4u32(c, d);
+  a = #VTRN1_2u64(t0, t2);
+  b = #VTRN1_2u64(t1, t3);
+  c = #VTRN2_2u64(t0, t2);
+  d = #VTRN2_2u64(t1, t3);
+
+  return a, b, c, d;
+}
+
+/*
+ * The chaining values of lanes 4f .. 4f + 3: lane 4f + l has abcd in
+ * st[2l] and efgh in st[2l + 1].
+ */
+#[safety =
+   { requires = 0 <= f && f < 2 && is_arr_init(h8, 0, 256)
+   }
+ ]
+inline fn __sha256_x8_load_half(
+  reg const ptr u32[64] h8,
+  inline int f
+) -> reg u128[8]
+{
+  reg u128[8] st;
+  reg u128 a b c d;
+  inline int q;
+
+  for q = 0 to 2 {
+    a = h8[:u128 2 * (4 * q) + f];
+    b = h8[:u128 2 * (4 * q + 1) + f];
+    c = h8[:u128 2 * (4 * q + 2) + f];
+    d = h8[:u128 2 * (4 * q + 3) + f];
+    a, b, c, d = __sha256_x8_tr4(a, b, c, d);
+    st[q] = a;
+    st[2 + q] = b;
+    st[4 + q] = c;
+    st[6 + q] = d;
+  }
+
+  return st;
+}
+
+#[safety =
+   { requires = 0 <= f && f < 2 && is_arr_init(h8, 0, 256)
+   , res = { h_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
+inline fn __sha256_x8_store_half(
+  reg mut ptr u32[64] h8,
+  reg u128[8] st,
+  inline int f
+) -> reg ptr u32[64]
+{
+  reg u128 a b c d;
+  inline int q;
+
+  for q = 0 to 2 {
+    a, b, c, d = __sha256_x8_tr4(st[q], st[2 + q], st[4 + q], st[6 + q]);
+    h8[:u128 2 * (4 * q) + f] = a;
+    h8[:u128 2 * (4 * q + 1) + f] = b;
+    h8[:u128 2 * (4 * q + 2) + f] = c;
+    h8[:u128 2 * (4 * q + 3) + f] = d;
+  }
+
+  return h8;
+}
+
+/*
+ * One block of lanes 4f + 2r and 4f + 2r + 1: the 64 rounds and the
+ * feed-forward on st[4r .. 4r + 3], [abcd; efgh] of the first lane, then
+ * of the second, as __sha256_x8_load_half leaves them. m holds the
+ * sixteen message words of the first lane in m[0 .. 3] and of the second
+ * in m[4 .. 7], already in native order. Within each group of four
+ * rounds, the first lane's instructions come before the second's, as
+ * in the single-way kernel, so that the two dependency chains alternate.
+ */
+#[safety =
+   { requires = is_arr_init(k, 0, 256)
+   }
+ ]
+inline fn __sha256_x8_block2(
+  reg u128[8] st,
+  inline int r,
+  reg u128[8] m,
+  reg const ptr u32[64] k
+) -> reg u128[8], reg u128[8]
+{
+  reg u128[4] s0;
+  reg u128[2] wk prev;
+  reg u128 kv;
+  inline int g l j;
+
+  for j = 0 to 4 {
+    s0[j] = st[4 * r + j];
+  }
+
+  for g = 0 to 16 {
+    kv = k[:u128 g];
+    for l = 0 to 2 {
+      wk[l] = #VADD_4u32(kv, m[4 * l + g % 4]);
+      #[inline]
+      if (g < 12) {
+        m[4 * l + g % 4] = #SHA256SU0(m[4 * l + g % 4], m[4 * l + (g + 1) % 4]);
+        m[4 * l + g % 4] = #SHA256SU1(m[4 * l + g % 4], m[4 * l + (g + 2) % 4],
+                                      m[4 * l + (g + 3) % 4]);
+      }
+      prev[l] = st[4 * r + 2 * l];
+      st[4 * r + 2 * l] = #SHA256H(st[4 * r + 2 * l], st[4 * r + 2 * l + 1], wk[l]);
+      st[4 * r + 2 * l + 1] = #SHA256H2(st[4 * r + 2 * l + 1], prev[l], wk[l]);
+    }
+  }
+
+  for j = 0 to 4 {
+    st[4 * r + j] = #VADD_4u32(st[4 * r + j], s0[j]);
+  }
+
+  return st, m;
+}
+
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
+         { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h8, 0, 256) && is_arr_init(blocks, 0, 512)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
+fn _sha256_x8_compress(
+  reg mut ptr u32[64] h8,
+  reg const ptr u8[512] blocks,
+  reg u64 ms
+) -> reg ptr u32[64], reg u64
+{
+  reg u128[8] st m;
+  reg ptr u32[64] k;
+  inline int f r i;
+
+  k = SHA256_K;
+  for f = 0 to 2 {
+    st = __sha256_x8_load_half(h8, f);
+    for r = 0 to 2 {
+      /* lane k's block is blocks[:u128 4k .. 4k + 3] */
+      for i = 0 to 4 {
+        m[i] = blocks[:u128 4 * (4 * f + 2 * r) + i];
+        m[i] = #VREV32_16u8(m[i]);
+        m[4 + i] = blocks[:u128 4 * (4 * f + 2 * r + 1) + i];
+        m[4 + i] = #VREV32_16u8(m[4 + i]);
+      }
+      st, m = __sha256_x8_block2(st, r, m, k);
+    }
+    h8 = __sha256_x8_store_half(h8, st, f);
+  }
+
+  return h8, ms;
+}
+
+/*
+ * n whole blocks of every lane, read straight from lane memory: lane k's
+ * blocks are the 64 n bytes at in[k] + off. Each pair of lanes runs all
+ * its n blocks before the next pair starts, with its state in registers
+ * throughout; nothing crosses a function call, so only the lane pointers,
+ * loaded from the table, need protecting.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: transient } × public ×
+         public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h8, 0, 256) && is_arr_init(in, 0, 64)
+       && n < (64u) 288230376151711744 && off < (64u) 2305843009213693952
+       && is_mem_init((64u) in[0] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[1] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[2] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[3] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[4] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[5] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[6] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[7] + (64u) off, 64 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
+fn _sha256_x8_compress_lanes(
+  reg mut ptr u32[64] h8,
+  reg const ptr u64[8] in,
+  reg u64 off n,
+  reg u64 ms
+) -> reg ptr u32[64], reg u64
+{
+  reg u128[8] st m;
+  reg ptr u32[64] k;
+  reg u64 p q c;
+  reg bool more;
+  inline int f r i;
+
+  k = SHA256_K;
+  for f = 0 to 2 {
+    st = __sha256_x8_load_half(h8, f);
+    for r = 0 to 2 {
+      p = in[4 * f + 2 * r];
+      p = #protect(p, ms);
+      p += off;
+      q = in[4 * f + 2 * r + 1];
+      q = #protect(q, ms);
+      q += off;
+      c = n;
+      while { more = c != 0; } (more) {
+        ms = #update_msf(more, ms);
+        for i = 0 to 4 {
+          m[i] = [:u128 p + 16 * i];
+          m[i] = #VREV32_16u8(m[i]);
+          m[4 + i] = [:u128 q + 16 * i];
+          m[4 + i] = #VREV32_16u8(m[4 + i]);
+        }
+        st, m = __sha256_x8_block2(st, r, m, k);
+        p += 64;
+        q += 64;
+        c -= 1;
+      }
+      ms = #update_msf(!more, ms);
+    }
+    h8 = __sha256_x8_store_half(h8, st, f);
+  }
+
+  return h8, ms;
+}

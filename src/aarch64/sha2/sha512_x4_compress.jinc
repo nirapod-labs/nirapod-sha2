@@ -1,0 +1,275 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * sha512_x4_compress.jinc (AArch64, SHA-512 instructions)
+ * =======================================================
+ *
+ * Four independent SHA-512 compressions on the A64 SHA-512 instructions
+ * (FEAT_SHA512), with the entry points and contracts of the portable
+ * 4-way kernel (src/sha512_x4_compress.jinc):
+ *
+ *     _sha512_x4_compress(h4, blocks, ms)
+ *     _sha512_x4_compress_lanes(h4, in, off, n, ms)
+ *
+ * Rounds. Each lane runs the rounds of the single-way kernel in this
+ * directory (sha512_compress.jinc): its working variables in pairs,
+ *
+ *     [a; b]  [c; d]  [e; f]  [g; h]
+ *
+ * lane 0 lowest, plus a fifth vector that receives each new [e; f], two
+ * rounds per SHA512H / SHA512H2 pair, the five vectors changing roles
+ * after every pair of rounds, and the schedule two words at a time with
+ * SHA512SU0 / SHA512SU1. That file's header gives the operand roles.
+ *
+ * One lane's rounds are a chain of dependent SHA512H / SHA512H2
+ * instructions, so lanes 2i and 2i + 1 run together: for every pair of
+ * rounds, the instructions of the first lane and then those of the
+ * second, which are independent and fill the gaps of each other's chain.
+ * Both lanes' state (10 vectors), schedule (16), round constants and
+ * temporaries leave too few of the 32 vector registers for the chaining
+ * values saved for the feed-forward (8 more), so those go to a local
+ * stack array, stored before each block and reloaded after it.
+ *
+ * State layout. h4 holds H_j of lane k at 4j + k, so the 16 bytes
+ * h4[:u128 2j + i] are word j of lanes 2i and 2i + 1. TRN1 and TRN2 of
+ * words 2q and 2q + 1 give the vector [H_2q; H_2q+1] of each of the two
+ * lanes, and the same instructions take them back. Each pair of lanes is
+ * loaded, compressed and stored back in turn.
+ *
+ * Message words are big-endian in the block (FIPS 180-4 section 3.1);
+ * REV64 swaps the bytes of each word after a 16-byte load.
+ *
+ * Required CPU feature: FEAT_SHA512 (and Advanced SIMD). The caller's
+ * dispatch must establish it; this file does not check.
+ *
+ * Security: h4 and the blocks are secret. The rounds are straight-line
+ * code; the only branches are the block loops of
+ * _sha512_x4_compress_lanes on its public block count, which update ms.
+ * Every address is fixed at compile time, is a public lane pointer
+ * protected after its load from the table, or is in the local stack
+ * frame. Residue: the local save array holds the chaining values of lanes
+ * 2 and 3 as they were before their last block; the vector registers
+ * that held state and schedule are not cleared here (capi/clear.c).
+ */
+
+from Hash require "sha512_k.jinc"
+
+/*
+ * The chaining values of lanes 2i and 2i + 1: s[0 .. 3] are [a; b] ..
+ * [g; h] of lane 2i and s[5 .. 8] those of lane 2i + 1. s[4] and s[9]
+ * are the lanes' fifth vectors and are not set here.
+ */
+#[safety =
+   { requires = 0 <= i && i < 2 && is_arr_init(h4, 0, 256)
+   }
+ ]
+inline fn __sha512_x4_load_pair(
+  reg const ptr u64[32] h4,
+  inline int i
+) -> reg u128[10]
+{
+  reg u128[10] s;
+  reg u128 a b;
+  inline int q;
+
+  for q = 0 to 4 {
+    a = h4[:u128 2 * (2 * q) + i];
+    b = h4[:u128 2 * (2 * q + 1) + i];
+    s[q] = #VTRN1_2u64(a, b);
+    s[5 + q] = #VTRN2_2u64(a, b);
+  }
+
+  return s;
+}
+
+#[safety =
+   { requires = 0 <= i && i < 2 && is_arr_init(h4, 0, 256)
+   , res = { h_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
+inline fn __sha512_x4_store_pair(
+  reg mut ptr u64[32] h4,
+  reg u128[10] s,
+  inline int i
+) -> reg ptr u64[32]
+{
+  reg u128 a b;
+  inline int q;
+
+  for q = 0 to 4 {
+    a = #VTRN1_2u64(s[q], s[5 + q]);
+    b = #VTRN2_2u64(s[q], s[5 + q]);
+    h4[:u128 2 * (2 * q) + i] = a;
+    h4[:u128 2 * (2 * q + 1) + i] = b;
+  }
+
+  return h4;
+}
+
+/*
+ * One block of two lanes: the 80 rounds and the feed-forward. s is as
+ * __sha512_x4_load_pair leaves it; m holds the sixteen message words of
+ * the first lane in m[0 .. 7] and of the second in m[8 .. 15], two per
+ * vector, already in native order. The per-lane instruction sequence is
+ * that of the single-way kernel; the five-vector role cycle is the same
+ * for both lanes and returns to the start after the 40 pairs of rounds.
+ */
+#[safety =
+   { requires = is_arr_init(k, 0, 640)
+   }
+ ]
+inline fn __sha512_x4_block2(
+  reg u128[10] s,
+  reg u128[16] m,
+  reg const ptr u64[80] k
+) -> reg u128[10], reg u128[16]
+{
+  stack u128[8] save;
+  reg u128 kv wk x y z;
+  inline int g j l i0 i1 i2 i3 i4 t;
+
+  for l = 0 to 2 {
+    for j = 0 to 4 {
+      save[4 * l + j] = s[5 * l + j];
+    }
+  }
+
+  i0 = 0; i1 = 1; i2 = 2; i3 = 3; i4 = 4;
+  for g = 0 to 40 {
+    j = g % 8;
+    kv = k[:u128 g];
+    for l = 0 to 2 {
+      wk = #VADD_2u64(kv, m[8 * l + j]);
+      wk = #VEXT(wk, wk, 8);
+      x = #VEXT(s[5 * l + i2], s[5 * l + i3], 8);
+      y = #VEXT(s[5 * l + i1], s[5 * l + i2], 8);
+      s[5 * l + i3] = #VADD_2u64(s[5 * l + i3], wk);
+      #[inline]
+      if (g < 32) {
+        z = #VEXT(m[8 * l + (j + 4) % 8], m[8 * l + (j + 5) % 8], 8);
+        m[8 * l + j] = #SHA512SU0(m[8 * l + j], m[8 * l + (j + 1) % 8]);
+        m[8 * l + j] = #SHA512SU1(m[8 * l + j], m[8 * l + (j + 7) % 8], z);
+      }
+      s[5 * l + i3] = #SHA512H(s[5 * l + i3], x, y);
+      s[5 * l + i4] = #VADD_2u64(s[5 * l + i1], s[5 * l + i3]);
+      s[5 * l + i3] = #SHA512H2(s[5 * l + i3], s[5 * l + i1], s[5 * l + i0]);
+    }
+
+    t = i0; i0 = i3; i3 = i2; i2 = i4; i4 = i1; i1 = t;
+  }
+
+  for l = 0 to 2 {
+    for j = 0 to 4 {
+      x = save[4 * l + j];
+      s[5 * l + j] = #VADD_2u64(s[5 * l + j], x);
+    }
+  }
+
+  return s, m;
+}
+
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
+         { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h4, 0, 256) && is_arr_init(blocks, 0, 512)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
+fn _sha512_x4_compress(
+  reg mut ptr u64[32] h4,
+  reg const ptr u8[512] blocks,
+  reg u64 ms
+) -> reg ptr u64[32], reg u64
+{
+  reg u128[10] s;
+  reg u128[16] m;
+  reg ptr u64[80] k;
+  inline int i j;
+
+  k = SHA512_K;
+  for i = 0 to 2 {
+    s = __sha512_x4_load_pair(h4, i);
+
+    /* lane k's block is blocks[:u128 8k .. 8k + 7] */
+    for j = 0 to 8 {
+      m[j] = blocks[:u128 8 * (2 * i) + j];
+      m[j] = #VREV64_16u8(m[j]);
+      m[8 + j] = blocks[:u128 8 * (2 * i + 1) + j];
+      m[8 + j] = #VREV64_16u8(m[8 + j]);
+    }
+    s, m = __sha512_x4_block2(s, m, k);
+
+    h4 = __sha512_x4_store_pair(h4, s, i);
+  }
+
+  return h4, ms;
+}
+
+/*
+ * n whole blocks of every lane, read straight from lane memory: lane k's
+ * blocks are the 128 n bytes at in[k] + off. Each pair of lanes runs all
+ * its n blocks before the next pair starts, with its state in registers
+ * throughout; nothing crosses a function call, so only the lane pointers,
+ * loaded from the table, need protecting.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: transient } × public ×
+         public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h4, 0, 256) && is_arr_init(in, 0, 32)
+       && n < (64u) 144115188075855872 && off < (64u) 2305843009213693952
+       && is_mem_init((64u) in[0] + (64u) off, 128 * (64u) n)
+       && is_mem_init((64u) in[1] + (64u) off, 128 * (64u) n)
+       && is_mem_init((64u) in[2] + (64u) off, 128 * (64u) n)
+       && is_mem_init((64u) in[3] + (64u) off, 128 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
+fn _sha512_x4_compress_lanes(
+  reg mut ptr u64[32] h4,
+  reg const ptr u64[4] in,
+  reg u64 off n,
+  reg u64 ms
+) -> reg ptr u64[32], reg u64
+{
+  reg u128[10] s;
+  reg u128[16] m;
+  reg ptr u64[80] k;
+  reg u64 p q c;
+  reg bool more;
+  inline int i j;
+
+  k = SHA512_K;
+  for i = 0 to 2 {
+    s = __sha512_x4_load_pair(h4, i);
+
+    p = in[2 * i];
+    p = #protect(p, ms);
+    p += off;
+    q = in[2 * i + 1];
+    q = #protect(q, ms);
+    q += off;
+    c = n;
+    while { more = c != 0; } (more) {
+      ms = #update_msf(more, ms);
+      for j = 0 to 8 {
+        m[j] = [:u128 p + 16 * j];
+        m[j] = #VREV64_16u8(m[j]);
+        m[8 + j] = [:u128 q + 16 * j];
+        m[8 + j] = #VREV64_16u8(m[8 + j]);
+      }
+      s, m = __sha512_x4_block2(s, m, k);
+      p += 128;
+      q += 128;
+      c -= 1;
+    }
+    ms = #update_msf(!more, ms);
+
+    h4 = __sha512_x4_store_pair(h4, s, i);
+  }
+
+  return h4, ms;
+}
