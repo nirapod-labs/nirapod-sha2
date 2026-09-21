@@ -15,6 +15,15 @@
  */
 
 /* Copy n bytes of in from offset off into buf from position fill. */
+#[safety =
+   { requires = is_arr_init(buf, 0, (64u) fill_) && 0 <= (64u) n_
+       && (64u) fill_ + (64u) n_ <= 64
+       && (64u) off_ + (64u) n_ <= HASH_ARRAY_LEN
+       && is_arr_init(in, (64u) off_, (64u) n_)
+   , res = { buf_out, ms_out }
+   , ensures = is_arr_init(buf_out, 0, (64u) fill_ + (64u) n_)
+   }
+ ]
 inline fn __sha256_buf_copy_array(
   reg mut ptr u8[64] buf,
   reg u64 fill_,
@@ -74,6 +83,15 @@ inline fn __sha256_buf_copy_array(
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public ×
          { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_arr_init(buf, 0, (64u) total % 64)
+       && is_arr_init(in, 0, HASH_ARRAY_LEN)
+   , res = { h_out, buf_out, total_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+       && is_arr_init(buf_out, 0, (64u) total_out % 64)
+       && total_out == total + HASH_ARRAY_LEN
+   }
+ ]
 fn _sha256_absorb_array(
   reg mut ptr u32[8] h,
   reg mut ptr u8[64] buf,

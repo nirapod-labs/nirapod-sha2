@@ -135,6 +135,10 @@ inline fn __sha2_tag(inline int f) -> reg u64
  * A released value is transient under the speculative model, so both are
  * protected with the exact flag before use.
  */
+#[safety =
+   { requires = is_arr_init(head, 0, 16)
+   }
+ ]
 inline fn __sha2_ctx_open(reg const ptr u8[16] head, reg u64 ms) -> reg u64, reg u64
 {
   reg u64 tag total;
@@ -171,6 +175,12 @@ inline fn __sha2_room(reg u64 total) -> reg u64
 
 /* Context loads and stores at the offsets of the layout above. */
 
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA256_CTX_BYTES)
+   , res = { h_out, buf_out }
+   , ensures = is_arr_init(h_out, 0, 32) && is_arr_init(buf_out, 0, 64)
+   }
+ ]
 inline fn __sha256_ctx_load(
   reg mut ptr u32[8] h,
   reg mut ptr u8[64] buf,
@@ -193,6 +203,13 @@ inline fn __sha256_ctx_load(
   return h, buf;
 }
 
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA256_CTX_BYTES) && is_arr_init(h, 0, 32)
+       && is_arr_init(buf, 0, 64)
+   , res = { ctx_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA256_CTX_BYTES)
+   }
+ ]
 inline fn __sha256_ctx_store(
   reg mut ptr u8[SHA256_CTX_BYTES] ctx,
   reg const ptr u32[8] h,
@@ -217,6 +234,12 @@ inline fn __sha256_ctx_store(
   return ctx;
 }
 
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES)
+   , res = { h_out, buf_out }
+   , ensures = is_arr_init(h_out, 0, 64) && is_arr_init(buf_out, 0, 128)
+   }
+ ]
 inline fn __sha512_ctx_load(
   reg mut ptr u64[8] h,
   reg mut ptr u8[128] buf,
@@ -238,6 +261,13 @@ inline fn __sha512_ctx_load(
   return h, buf;
 }
 
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES) && is_arr_init(h, 0, 64)
+       && is_arr_init(buf, 0, 128)
+   , res = { ctx_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
+   }
+ ]
 inline fn __sha512_ctx_store(
   reg mut ptr u8[SHA512_CTX_BYTES] ctx,
   reg const ptr u64[8] h,
@@ -268,6 +298,12 @@ inline fn __sha512_ctx_store(
  * context a defined value, so that the loads of update and final read
  * only bytes this file wrote.
  */
+#[safety =
+   { requires = is_arr_init(h, 0, 32)
+   , res = { ctx_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA256_CTX_BYTES)
+   }
+ ]
 inline fn __sha256_ctx_init(
   reg mut ptr u8[SHA256_CTX_BYTES] ctx,
   reg const ptr u32[8] h,
@@ -292,6 +328,12 @@ inline fn __sha256_ctx_init(
   return ctx;
 }
 
+#[safety =
+   { requires = is_arr_init(h, 0, 64)
+   , res = { ctx_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
+   }
+ ]
 inline fn __sha512_ctx_init(
   reg mut ptr u8[SHA512_CTX_BYTES] ctx,
   reg const ptr u64[8] h,
@@ -334,6 +376,12 @@ inline fn __sha512_ctx_init(
  */
 #[sct = "{ ptr: public, val: secret } × public × public × public × msf →
          { ptr: public, val: secret } × public × msf"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA256_CTX_BYTES) && is_mem_init((64u) in, (64u) inlen)
+   , res = { ctx_out, status, ms_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA256_CTX_BYTES)
+   }
+ ]
 fn _sha256_ctx_update(
   reg mut ptr u8[SHA256_CTX_BYTES] ctx,
   reg u64 in inlen expect,
@@ -378,6 +426,12 @@ fn _sha256_ctx_update(
 /* The SHA-512 form of _sha256_ctx_update, on 208-byte contexts. */
 #[sct = "{ ptr: public, val: secret } × public × public × public × msf →
          { ptr: public, val: secret } × public × msf"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES) && is_mem_init((64u) in, (64u) inlen)
+   , res = { ctx_out, status, ms_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
+   }
+ ]
 fn _sha512_ctx_update(
   reg mut ptr u8[SHA512_CTX_BYTES] ctx,
   reg u64 in inlen expect,
@@ -435,6 +489,12 @@ fn _sha512_ctx_update(
  */
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public × msf →
          { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA256_CTX_BYTES)
+   , res = { ctx_out, digest_out, status, ms_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA256_CTX_BYTES)
+   }
+ ]
 fn _sha256_ctx_final(
   reg mut ptr u8[SHA256_CTX_BYTES] ctx,
   reg mut ptr u8[32] digest,
@@ -476,6 +536,12 @@ fn _sha256_ctx_final(
 /* The SHA-512 form of _sha256_ctx_final, with a 64-byte digest. */
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public × msf →
          { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES)
+   , res = { ctx_out, digest_out, status, ms_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
+   }
+ ]
 fn _sha512_ctx_final(
   reg mut ptr u8[SHA512_CTX_BYTES] ctx,
   reg mut ptr u8[64] digest,
@@ -528,6 +594,12 @@ fn _sha512_ctx_final(
  * key, H(K) stay in this function's frame (README.md, "Residue") until
  * the export's stack clearing removes them.
  */
+#[safety =
+   { requires = is_mem_init((64u) key, (64u) keylen)
+   , res = { ctx_out, ms_out }
+   , ensures = is_arr_init(ctx_out, 0, HMAC_SHA256_CTX_BYTES)
+   }
+ ]
 inline fn __hmac_sha256_ctx_init(
   reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx,
   reg u64 key keylen,
@@ -558,6 +630,12 @@ inline fn __hmac_sha256_ctx_init(
 }
 
 /* The SHA-512 form of __hmac_sha256_ctx_init: 128-byte blocks, total = 128. */
+#[safety =
+   { requires = is_mem_init((64u) key, (64u) keylen)
+   , res = { ctx_out, ms_out }
+   , ensures = is_arr_init(ctx_out, 0, HMAC_SHA512_CTX_BYTES)
+   }
+ ]
 inline fn __hmac_sha512_ctx_init(
   reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx,
   reg u64 key keylen,
@@ -600,6 +678,12 @@ inline fn __hmac_sha512_ctx_init(
  * digest and the copies of the state remain until the export's stack
  * clearing.
  */
+#[safety =
+   { requires = is_arr_init(ctx, 0, HMAC_SHA256_CTX_BYTES)
+   , res = { ctx_out, out_out, status, ms_out }
+   , ensures = is_arr_init(ctx_out, 0, HMAC_SHA256_CTX_BYTES)
+   }
+ ]
 inline fn __hmac_sha256_ctx_final(
   reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx,
   reg mut ptr u8[32] out,
@@ -651,6 +735,12 @@ inline fn __hmac_sha256_ctx_final(
 }
 
 /* The SHA-512 form of __hmac_sha256_ctx_final, with a 64-byte tag. */
+#[safety =
+   { requires = is_arr_init(ctx, 0, HMAC_SHA512_CTX_BYTES)
+   , res = { ctx_out, out_out, status, ms_out }
+   , ensures = is_arr_init(ctx_out, 0, HMAC_SHA512_CTX_BYTES)
+   }
+ ]
 inline fn __hmac_sha512_ctx_final(
   reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx,
   reg mut ptr u8[64] out,

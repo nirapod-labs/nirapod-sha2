@@ -40,6 +40,12 @@ require "sha512.jinc"
  */
 #[sct = "{ ptr: public, val: secret } × public × public × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_mem_init((64u) key, (64u) keylen)
+   , res = { k0_out, ms_out }
+   , ensures = is_arr_init(k0_out, 0, 64)
+   }
+ ]
 fn _hmac_sha256_keyblock_mem(
   reg mut ptr u8[64] k0,
   reg u64 key keylen,
@@ -106,6 +112,12 @@ fn _hmac_sha256_keyblock_mem(
 
 #[sct = "{ ptr: public, val: secret } × public × public × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_mem_init((64u) key, (64u) keylen)
+   , res = { k0_out, ms_out }
+   , ensures = is_arr_init(k0_out, 0, 128)
+   }
+ ]
 fn _hmac_sha512_keyblock_mem(
   reg mut ptr u8[128] k0,
   reg u64 key keylen,
@@ -182,6 +194,12 @@ fn _hmac_sha512_keyblock_mem(
  * Neither they nor the compression's schedule window are cleared here;
  * clearing is an obligation of the export that runs this code.
  */
+#[safety =
+   { requires = is_arr_init(k0, 0, 64)
+   , res = { inner_out, outer_out, ms_out }
+   , ensures = is_arr_init(inner_out, 0, 32) && is_arr_init(outer_out, 0, 32)
+   }
+ ]
 inline fn __hmac_sha256_init(
   stack u32[8] inner outer,
   reg const ptr u8[64] k0,
@@ -219,6 +237,12 @@ inline fn __hmac_sha256_init(
 }
 
 /* The SHA-512 form of __hmac_sha256_init, with 128-byte blocks. */
+#[safety =
+   { requires = is_arr_init(k0, 0, 128)
+   , res = { inner_out, outer_out, ms_out }
+   , ensures = is_arr_init(inner_out, 0, 64) && is_arr_init(outer_out, 0, 64)
+   }
+ ]
 inline fn __hmac_sha512_init(
   stack u64[8] inner outer,
   reg const ptr u8[128] k0,
@@ -267,6 +291,13 @@ inline fn __hmac_sha512_init(
  * reason given at __hmac_sha256_init: both stay live across the inner
  * digest's finalize call.
  */
+#[safety =
+   { requires = is_arr_init(inner, 0, 32) && is_arr_init(buf, 0, (64u) total % 64)
+       && is_arr_init(outer, 0, 32)
+   , res = { out_out, inner_out, buf_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 32)
+   }
+ ]
 inline fn __hmac_sha256_finalize(
   stack u8[32] out,
   reg mut ptr u32[8] inner,
@@ -298,6 +329,13 @@ inline fn __hmac_sha256_finalize(
 }
 
 /* The SHA-512 form of __hmac_sha256_finalize. */
+#[safety =
+   { requires = is_arr_init(inner, 0, 64) && is_arr_init(buf, 0, (64u) total % 128)
+       && is_arr_init(outer, 0, 64)
+   , res = { out_out, inner_out, buf_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 64)
+   }
+ ]
 inline fn __hmac_sha512_finalize(
   stack u8[64] out,
   reg mut ptr u64[8] inner,

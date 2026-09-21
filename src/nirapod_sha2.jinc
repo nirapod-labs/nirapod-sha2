@@ -105,6 +105,12 @@ from Hash require "sha512_x4_mem.jinc"
 #[ct = "secret × public × public -> secret"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret }"]
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 28)
+   }
+ ]
 export fn sha224(reg mut ptr u8[28] out, reg u64 in inlen) -> reg ptr u8[28]
 {
   stack u8[32] d;
@@ -127,6 +133,12 @@ export fn sha224(reg mut ptr u8[28] out, reg u64 in inlen) -> reg ptr u8[28]
 #[ct = "secret × public × public -> secret"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret }"]
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 32)
+   }
+ ]
 export fn sha256(reg mut ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32]
 {
   reg u64 ms;
@@ -144,6 +156,12 @@ export fn sha256(reg mut ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32]
 #[ct = "secret × public × public -> secret"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret }"]
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 48)
+   }
+ ]
 export fn sha384(reg mut ptr u8[48] out, reg u64 in inlen) -> reg ptr u8[48]
 {
   stack u8[64] d;
@@ -166,6 +184,12 @@ export fn sha384(reg mut ptr u8[48] out, reg u64 in inlen) -> reg ptr u8[48]
 #[ct = "secret × public × public -> secret"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret }"]
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 64)
+   }
+ ]
 export fn sha512(reg mut ptr u8[64] out, reg u64 in inlen) -> reg ptr u8[64]
 {
   reg u64 ms;
@@ -183,6 +207,12 @@ export fn sha512(reg mut ptr u8[64] out, reg u64 in inlen) -> reg ptr u8[64]
 #[ct = "secret × public × public -> secret"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret }"]
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 28)
+   }
+ ]
 export fn sha512_224(reg mut ptr u8[28] out, reg u64 in inlen) -> reg ptr u8[28]
 {
   stack u8[64] d;
@@ -205,6 +235,12 @@ export fn sha512_224(reg mut ptr u8[28] out, reg u64 in inlen) -> reg ptr u8[28]
 #[ct = "secret × public × public -> secret"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret }"]
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 32)
+   }
+ ]
 export fn sha512_256(reg mut ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32]
 {
   stack u8[64] d;
@@ -237,6 +273,11 @@ export fn sha512_256(reg mut ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32]
 
 #[ct = "secret -> secret"]
 #[sct = "{ ptr: transient, val: secret } → { ptr: transient, val: secret }"]
+#[safety =
+   { res = { ctx_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA256_CTX_BYTES)
+   }
+ ]
 export fn sha224_init(reg mut ptr u8[SHA256_CTX_BYTES] ctx) -> reg ptr u8[SHA256_CTX_BYTES]
 {
   stack u32[8] h;
@@ -256,6 +297,12 @@ export fn sha224_init(reg mut ptr u8[SHA256_CTX_BYTES] ctx) -> reg ptr u8[SHA256
 #[ct = "secret × public × public -> secret × public"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA256_CTX_BYTES) && is_mem_init((64u) in, (64u) inlen)
+   , res = { ctx_out, status }
+   , ensures = is_arr_init(ctx_out, 0, SHA256_CTX_BYTES)
+   }
+ ]
 export fn sha224_update(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg u64 in inlen) -> reg ptr u8[SHA256_CTX_BYTES], reg u64
 {
   reg u64 ms expect status;
@@ -274,6 +321,10 @@ export fn sha224_update(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg u64 in inlen) 
 #[ct = "secret × secret -> secret × secret × public"]
 #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
          { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA256_CTX_BYTES)
+   }
+ ]
 export fn sha224_final(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg mut ptr u8[28] out)
   -> reg ptr u8[SHA256_CTX_BYTES], reg ptr u8[28], reg u64
 {
@@ -304,6 +355,11 @@ export fn sha224_final(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg mut ptr u8[28] 
 
 #[ct = "secret -> secret"]
 #[sct = "{ ptr: transient, val: secret } → { ptr: transient, val: secret }"]
+#[safety =
+   { res = { ctx_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA256_CTX_BYTES)
+   }
+ ]
 export fn sha256_init(reg mut ptr u8[SHA256_CTX_BYTES] ctx) -> reg ptr u8[SHA256_CTX_BYTES]
 {
   stack u32[8] h;
@@ -323,6 +379,12 @@ export fn sha256_init(reg mut ptr u8[SHA256_CTX_BYTES] ctx) -> reg ptr u8[SHA256
 #[ct = "secret × public × public -> secret × public"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA256_CTX_BYTES) && is_mem_init((64u) in, (64u) inlen)
+   , res = { ctx_out, status }
+   , ensures = is_arr_init(ctx_out, 0, SHA256_CTX_BYTES)
+   }
+ ]
 export fn sha256_update(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg u64 in inlen) -> reg ptr u8[SHA256_CTX_BYTES], reg u64
 {
   reg u64 ms expect status;
@@ -341,6 +403,10 @@ export fn sha256_update(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg u64 in inlen) 
 #[ct = "secret × secret -> secret × secret × public"]
 #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
          { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA256_CTX_BYTES)
+   }
+ ]
 export fn sha256_final(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg mut ptr u8[32] out)
   -> reg ptr u8[SHA256_CTX_BYTES], reg ptr u8[32], reg u64
 {
@@ -358,6 +424,11 @@ export fn sha256_final(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg mut ptr u8[32] 
 
 #[ct = "secret -> secret"]
 #[sct = "{ ptr: transient, val: secret } → { ptr: transient, val: secret }"]
+#[safety =
+   { res = { ctx_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
+   }
+ ]
 export fn sha384_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SHA512_CTX_BYTES]
 {
   stack u64[8] h;
@@ -377,6 +448,12 @@ export fn sha384_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SHA512
 #[ct = "secret × public × public -> secret × public"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES) && is_mem_init((64u) in, (64u) inlen)
+   , res = { ctx_out, status }
+   , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
+   }
+ ]
 export fn sha384_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inlen) -> reg ptr u8[SHA512_CTX_BYTES], reg u64
 {
   reg u64 ms expect status;
@@ -395,6 +472,10 @@ export fn sha384_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inlen) 
 #[ct = "secret × secret -> secret × secret × public"]
 #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
          { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES)
+   }
+ ]
 export fn sha384_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[48] out)
   -> reg ptr u8[SHA512_CTX_BYTES], reg ptr u8[48], reg u64
 {
@@ -425,6 +506,11 @@ export fn sha384_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[48] 
 
 #[ct = "secret -> secret"]
 #[sct = "{ ptr: transient, val: secret } → { ptr: transient, val: secret }"]
+#[safety =
+   { res = { ctx_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
+   }
+ ]
 export fn sha512_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SHA512_CTX_BYTES]
 {
   stack u64[8] h;
@@ -444,6 +530,12 @@ export fn sha512_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SHA512
 #[ct = "secret × public × public -> secret × public"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES) && is_mem_init((64u) in, (64u) inlen)
+   , res = { ctx_out, status }
+   , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
+   }
+ ]
 export fn sha512_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inlen) -> reg ptr u8[SHA512_CTX_BYTES], reg u64
 {
   reg u64 ms expect status;
@@ -462,6 +554,10 @@ export fn sha512_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inlen) 
 #[ct = "secret × secret -> secret × secret × public"]
 #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
          { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES)
+   }
+ ]
 export fn sha512_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[64] out)
   -> reg ptr u8[SHA512_CTX_BYTES], reg ptr u8[64], reg u64
 {
@@ -479,6 +575,11 @@ export fn sha512_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[64] 
 
 #[ct = "secret -> secret"]
 #[sct = "{ ptr: transient, val: secret } → { ptr: transient, val: secret }"]
+#[safety =
+   { res = { ctx_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
+   }
+ ]
 export fn sha512_224_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SHA512_CTX_BYTES]
 {
   stack u64[8] h;
@@ -498,6 +599,12 @@ export fn sha512_224_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SH
 #[ct = "secret × public × public -> secret × public"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES) && is_mem_init((64u) in, (64u) inlen)
+   , res = { ctx_out, status }
+   , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
+   }
+ ]
 export fn sha512_224_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inlen) -> reg ptr u8[SHA512_CTX_BYTES], reg u64
 {
   reg u64 ms expect status;
@@ -516,6 +623,10 @@ export fn sha512_224_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inl
 #[ct = "secret × secret -> secret × secret × public"]
 #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
          { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES)
+   }
+ ]
 export fn sha512_224_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[28] out)
   -> reg ptr u8[SHA512_CTX_BYTES], reg ptr u8[28], reg u64
 {
@@ -546,6 +657,11 @@ export fn sha512_224_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[
 
 #[ct = "secret -> secret"]
 #[sct = "{ ptr: transient, val: secret } → { ptr: transient, val: secret }"]
+#[safety =
+   { res = { ctx_out }
+   , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
+   }
+ ]
 export fn sha512_256_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SHA512_CTX_BYTES]
 {
   stack u64[8] h;
@@ -565,6 +681,12 @@ export fn sha512_256_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SH
 #[ct = "secret × public × public -> secret × public"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES) && is_mem_init((64u) in, (64u) inlen)
+   , res = { ctx_out, status }
+   , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
+   }
+ ]
 export fn sha512_256_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inlen) -> reg ptr u8[SHA512_CTX_BYTES], reg u64
 {
   reg u64 ms expect status;
@@ -583,6 +705,10 @@ export fn sha512_256_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inl
 #[ct = "secret × secret -> secret × secret × public"]
 #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
          { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES)
+   }
+ ]
 export fn sha512_256_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[32] out)
   -> reg ptr u8[SHA512_CTX_BYTES], reg ptr u8[32], reg u64
 {
@@ -624,6 +750,12 @@ export fn sha512_256_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[
 #[ct = "secret × public × public × public × public -> secret"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient × transient × transient →
          { ptr: transient, val: secret }"]
+#[safety =
+   { requires = is_mem_init((64u) key, (64u) keylen) && is_mem_init((64u) msg, (64u) msglen)
+   , res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 32)
+   }
+ ]
 export fn hmac_sha256(reg mut ptr u8[32] out, reg u64 key keylen msg msglen) -> reg ptr u8[32]
 {
   reg u64 ms;
@@ -643,6 +775,12 @@ export fn hmac_sha256(reg mut ptr u8[32] out, reg u64 key keylen msg msglen) -> 
 #[ct = "secret × public × public × public × public -> secret"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient × transient × transient →
          { ptr: transient, val: secret }"]
+#[safety =
+   { requires = is_mem_init((64u) key, (64u) keylen) && is_mem_init((64u) msg, (64u) msglen)
+   , res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 64)
+   }
+ ]
 export fn hmac_sha512(reg mut ptr u8[64] out, reg u64 key keylen msg msglen) -> reg ptr u8[64]
 {
   reg u64 ms;
@@ -662,6 +800,10 @@ export fn hmac_sha512(reg mut ptr u8[64] out, reg u64 key keylen msg msglen) -> 
 #[ct = "secret × public × public -> secret"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret }"]
+#[safety =
+   { requires = is_mem_init((64u) key, (64u) keylen)
+   }
+ ]
 export fn hmac_sha256_init(reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx, reg u64 key keylen)
   -> reg ptr u8[HMAC_SHA256_CTX_BYTES]
 {
@@ -680,6 +822,10 @@ export fn hmac_sha256_init(reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx, reg u64 ke
 #[ct = "secret × public × public -> secret × public"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, HMAC_SHA256_CTX_BYTES) && is_mem_init((64u) in, (64u) inlen)
+   }
+ ]
 export fn hmac_sha256_update(reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx, reg u64 in inlen)
   -> reg ptr u8[HMAC_SHA256_CTX_BYTES], reg u64
 {
@@ -700,6 +846,10 @@ export fn hmac_sha256_update(reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx, reg u64 
 #[ct = "secret × secret -> secret × secret × public"]
 #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
          { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, HMAC_SHA256_CTX_BYTES)
+   }
+ ]
 export fn hmac_sha256_final(reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx, reg mut ptr u8[32] out)
   -> reg ptr u8[HMAC_SHA256_CTX_BYTES], reg ptr u8[32], reg u64
 {
@@ -717,6 +867,10 @@ export fn hmac_sha256_final(reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx, reg mut p
 #[ct = "secret × public × public -> secret"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret }"]
+#[safety =
+   { requires = is_mem_init((64u) key, (64u) keylen)
+   }
+ ]
 export fn hmac_sha512_init(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg u64 key keylen)
   -> reg ptr u8[HMAC_SHA512_CTX_BYTES]
 {
@@ -735,6 +889,10 @@ export fn hmac_sha512_init(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg u64 ke
 #[ct = "secret × public × public -> secret × public"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, HMAC_SHA512_CTX_BYTES) && is_mem_init((64u) in, (64u) inlen)
+   }
+ ]
 export fn hmac_sha512_update(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg u64 in inlen)
   -> reg ptr u8[HMAC_SHA512_CTX_BYTES], reg u64
 {
@@ -755,6 +913,10 @@ export fn hmac_sha512_update(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg u64 
 #[ct = "secret × secret -> secret × secret × public"]
 #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } →
          { ptr: transient, val: secret } × { ptr: transient, val: secret } × public"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, HMAC_SHA512_CTX_BYTES)
+   }
+ ]
 export fn hmac_sha512_final(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg mut ptr u8[64] out)
   -> reg ptr u8[HMAC_SHA512_CTX_BYTES], reg ptr u8[64], reg u64
 {
@@ -782,6 +944,12 @@ export fn hmac_sha512_final(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg mut p
 #[ct = "secret × public × public -> secret"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret }"]
+#[safety =
+   { requires = len < (64u) 2305843009213693952 && is_mem_init((64u) in, 8 * (64u) len)
+   , res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 256)
+   }
+ ]
 export fn sha256_x8(reg mut ptr u8[256] out, reg u64 in len) -> reg ptr u8[256]
 {
   reg u64 ms;
@@ -799,6 +967,12 @@ export fn sha256_x8(reg mut ptr u8[256] out, reg u64 in len) -> reg ptr u8[256]
 #[ct = "secret × public × public -> secret"]
 #[sct = "{ ptr: transient, val: secret } × transient × transient →
          { ptr: transient, val: secret }"]
+#[safety =
+   { requires = len < (64u) 2305843009213693952 && is_mem_init((64u) in, 4 * (64u) len)
+   , res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 256)
+   }
+ ]
 export fn sha512_x4(reg mut ptr u8[256] out, reg u64 in len) -> reg ptr u8[256]
 {
   reg u64 ms;

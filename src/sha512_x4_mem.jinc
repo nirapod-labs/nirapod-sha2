@@ -38,6 +38,11 @@ from Hash require "sha512_x4.jinc"
  * to the next multiple of 8 in buf, then 8-byte words, then the tail, as
  * __sha512_x4_copy does for arrays.
  */
+#[safety =
+   { requires = (64u) dst + (64u) n_ <= 512 && is_mem_init((64u) p, (64u) n_)
+   , res = { buf_out, ms_out }
+   }
+ ]
 inline fn __sha512_x4_copy_mem(
   reg mut ptr u8[512] buf,
   reg u64 dst,
@@ -102,6 +107,22 @@ inline fn __sha512_x4_copy_mem(
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public ×
          public × public × msf →
          { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 256)
+       && is_arr_init(buf, 0, (64u) total % 128)
+       && is_arr_init(buf, 128, (64u) total % 128)
+       && is_arr_init(buf, 256, (64u) total % 128)
+       && is_arr_init(buf, 384, (64u) total % 128)
+       && inlen < (64u) 2305843009213693952 && is_mem_init((64u) in, 4 * (64u) inlen)
+   , res = { h_out, buf_out, total_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+       && is_arr_init(buf_out, 0, (64u) total_out % 128)
+       && is_arr_init(buf_out, 128, (64u) total_out % 128)
+       && is_arr_init(buf_out, 256, (64u) total_out % 128)
+       && is_arr_init(buf_out, 384, (64u) total_out % 128)
+       && total_out == total + inlen
+   }
+ ]
 fn _sha512_x4_absorb_mem(
   reg mut ptr u64[32] h,
   reg mut ptr u8[512] buf,
@@ -134,12 +155,25 @@ fn _sha512_x4_absorb_mem(
 
     p = in;
     p += off;
+    dst = fill;
+    /*
+     * The copy needs p, n, dst, buf and ms; the rest of the loop state
+     * waits on the stack so that the four copies fit the x86-64 register
+     * bank, and is protected on reload like the state around the
+     * compression below.
+     */
+    () = #spill(total, in, off, inlen, fill);
     for k = 0 to 4 {
-      dst = fill;
-      dst += 128 * k;
       buf, ms = __sha512_x4_copy_mem(buf, dst, p, n, ms);
       p += stride;
+      dst += 128;
     }
+    () = #unspill(total, in, off, inlen, fill);
+    total = #protect(total, ms);
+    in = #protect(in, ms);
+    off = #protect(off, ms);
+    inlen = #protect(inlen, ms);
+    fill = #protect(fill, ms);
     fill += n;
     off += n;
 
@@ -179,6 +213,12 @@ fn _sha512_x4_absorb_mem(
  */
 #[sct = "{ ptr: public, val: secret } × public × public × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = len < (64u) 2305843009213693952 && is_mem_init((64u) in, 4 * (64u) len)
+   , res = { out_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 256)
+   }
+ ]
 fn _sha512_x4_mem(
   reg mut ptr u8[256] out,
   reg u64 in len,

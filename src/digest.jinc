@@ -26,6 +26,10 @@
  * secret and no address or branch depends on them.
  */
 
+#[safety =
+   { requires = is_arr_init(d, 0, 32), res = { out_out }, ensures = is_arr_init(out_out, 0, 28)
+   }
+ ]
 inline fn __digest28_of32(reg mut ptr u8[28] out, reg const ptr u8[32] d) -> reg ptr u8[28]
 {
   reg u64 t;
@@ -42,6 +46,10 @@ inline fn __digest28_of32(reg mut ptr u8[28] out, reg const ptr u8[32] d) -> reg
   return out;
 }
 
+#[safety =
+   { requires = is_arr_init(d, 0, 64), res = { out_out }, ensures = is_arr_init(out_out, 0, 28)
+   }
+ ]
 inline fn __digest28_of64(reg mut ptr u8[28] out, reg const ptr u8[64] d) -> reg ptr u8[28]
 {
   reg u64 t;
@@ -58,6 +66,10 @@ inline fn __digest28_of64(reg mut ptr u8[28] out, reg const ptr u8[64] d) -> reg
   return out;
 }
 
+#[safety =
+   { requires = is_arr_init(d, 0, 64), res = { out_out }, ensures = is_arr_init(out_out, 0, 32)
+   }
+ ]
 inline fn __digest32_of64(reg mut ptr u8[32] out, reg const ptr u8[64] d) -> reg ptr u8[32]
 {
   reg u64 t;
@@ -71,6 +83,10 @@ inline fn __digest32_of64(reg mut ptr u8[32] out, reg const ptr u8[64] d) -> reg
   return out;
 }
 
+#[safety =
+   { requires = is_arr_init(d, 0, 64), res = { out_out }, ensures = is_arr_init(out_out, 0, 48)
+   }
+ ]
 inline fn __digest48_of64(reg mut ptr u8[48] out, reg const ptr u8[64] d) -> reg ptr u8[48]
 {
   reg u64 t;

@@ -1,0 +1,97 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# .github/workflows/ci.yml
+# ========================
+#
+# Runs ci/run.sh on native hosted runners: macOS on AArch64, Linux on
+# x86-64 and Linux on AArch64. The repository is not published during this
+# mission, so the workflow does not run now; it is kept ready for the day
+# it is. Actions are pinned by full commit.
+#
+# The toolchain is built from toolchain/ on the runner, which needs opam
+# 2.6.0 on PATH; toolchain/build.sh refuses another version. Linux AArch64
+# has no pinned SMT prover binaries and builds the compiler with
+# --no-easycrypt, so the proof job is not selected there.
+#
+# Inputs select the two long jobs; both are off by default.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      proofs:
+        description: Run the EasyCrypt proofs
+        type: boolean
+        default: false
+      safety:
+        description: Run the memory-safety checker
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  local-ci:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS AArch64
+            os: macos-14
+            arch: aarch64
+            easycrypt: true
+          - name: Linux x86-64
+            os: ubuntu-24.04
+            arch: x86_64
+            easycrypt: true
+          - name: Linux AArch64
+            os: ubuntu-24.04-arm
+            arch: aarch64
+            easycrypt: false
+    steps:
+      - name: Check out
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Host packages (macOS)
+        if: runner.os == 'macOS'
+        run: brew install gmp mpfr pcre2 pkg-config opam zlib
+
+      - name: Host packages (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl git m4 opam pkg-config \
+            libgmp-dev libmpfr-dev libpcre2-dev unzip zlib1g-dev
+
+      - name: Build the pinned toolchain
+        env:
+          JOBS: 4
+        run: |
+          set -eu
+          if [ "${{ matrix.easycrypt }}" = true ]; then
+            toolchain/build.sh all
+          else
+            toolchain/build.sh --no-easycrypt all
+          fi
+
+      - name: Run the local CI
+        run: |
+          set -eu
+          eval "$(opam env --root="$PWD/toolchain/work/opam" --switch=nirapod-sha2 --set-root --set-switch)"
+          export PATH="$PWD/toolchain/work/bin:$PATH"
+          args=
+          if [ "${{ inputs.proofs }}" = true ] && [ "${{ matrix.easycrypt }}" = true ]; then
+            args="$args --proofs"
+          fi
+          if [ "${{ inputs.safety }}" = true ] && [ "${{ matrix.arch }}" = x86_64 ]; then
+            args="$args --safety"
+          fi
+          ci/run.sh $args

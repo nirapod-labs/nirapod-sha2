@@ -59,6 +59,12 @@ u64[8] SHA512_256_IV = {
   0x96283ee2a88effe3, 0xbe5e1e2553863992, 0x2b0199fc2c85b8aa, 0x0eb72ddc81c52ca2
 };
 
+#[safety =
+   { requires = is_arr_init(iv, 0, 64)
+   , res = { h_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
 inline fn __sha512_load_iv(reg mut ptr u64[8] h, reg const ptr u64[8] iv) -> reg ptr u64[8]
 {
   reg u64 t;
@@ -71,24 +77,40 @@ inline fn __sha512_load_iv(reg mut ptr u64[8] h, reg const ptr u64[8] iv) -> reg
   return h;
 }
 
+#[safety =
+   { res = { h_out }, ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
 inline fn __sha512_init(reg mut ptr u64[8] h) -> reg ptr u64[8]
 {
   h = __sha512_load_iv(h, SHA512_IV);
   return h;
 }
 
+#[safety =
+   { res = { h_out }, ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
 inline fn __sha384_init(reg mut ptr u64[8] h) -> reg ptr u64[8]
 {
   h = __sha512_load_iv(h, SHA384_IV);
   return h;
 }
 
+#[safety =
+   { res = { h_out }, ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
 inline fn __sha512_224_init(reg mut ptr u64[8] h) -> reg ptr u64[8]
 {
   h = __sha512_load_iv(h, SHA512_224_IV);
   return h;
 }
 
+#[safety =
+   { res = { h_out }, ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
 inline fn __sha512_256_init(reg mut ptr u64[8] h) -> reg ptr u64[8]
 {
   h = __sha512_load_iv(h, SHA512_256_IV);
@@ -104,6 +126,15 @@ inline fn __sha512_256_init(reg mut ptr u64[8] h) -> reg ptr u64[8]
          public × public × public ×
          msf →
          { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_arr_init(buf, 0, (64u) total % 128)
+       && is_mem_init((64u) in, (64u) inlen)
+   , res = { h_out, buf_out, total_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+       && is_arr_init(buf_out, 0, (64u) total_out % 128)
+       && total_out == total + inlen
+   }
+ ]
 fn _sha512_absorb_mem(
   reg mut ptr u64[8] h,
   reg mut ptr u8[128] buf,
@@ -231,6 +262,13 @@ fn _sha512_absorb_mem(
          { ptr: public, val: secret } × public × msf →
          { ptr: public, val: secret } × { ptr: public, val: secret } ×
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_arr_init(buf, 0, (64u) total % 128)
+   , res = { out_out, h_out, buf_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 64) && is_arr_init(h_out, 0, 64)
+       && is_arr_init(buf_out, 0, 128)
+   }
+ ]
 fn _sha512_finalize(
   reg mut ptr u8[64] out,
   reg mut ptr u64[8] h,
@@ -304,6 +342,12 @@ fn _sha512_finalize(
   return out, h, buf, ms;
 }
 
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 64)
+   }
+ ]
 inline fn __sha512_mem_from(
   reg mut ptr u8[64] out,
   reg mut ptr u64[8] h,
@@ -348,6 +392,12 @@ inline fn __sha512_mem_from(
 
 #[sct = "{ ptr: public, val: secret } × public × public × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 64)
+   }
+ ]
 fn _sha512_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[64], reg u64
 {
   stack u64[8] h;
@@ -360,6 +410,12 @@ fn _sha512_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg ptr 
 
 #[sct = "{ ptr: public, val: secret } × public × public × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 64)
+   }
+ ]
 fn _sha384_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[64], reg u64
 {
   stack u64[8] h;
@@ -372,6 +428,12 @@ fn _sha384_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg ptr 
 
 #[sct = "{ ptr: public, val: secret } × public × public × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 64)
+   }
+ ]
 fn _sha512_224_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[64], reg u64
 {
   stack u64[8] h;
@@ -384,6 +446,12 @@ fn _sha512_224_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg 
 
 #[sct = "{ ptr: public, val: secret } × public × public × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 64)
+   }
+ ]
 fn _sha512_256_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[64], reg u64
 {
   stack u64[8] h;

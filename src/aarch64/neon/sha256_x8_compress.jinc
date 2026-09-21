@@ -1,0 +1,469 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * sha256_x8_compress.jinc (AArch64, Advanced SIMD)
+ * ================================================
+ *
+ * Eight independent SHA-256 compressions in Advanced SIMD (NEON) without
+ * the SHA-2 instructions, with the entry points and contracts of the
+ * portable 8-way kernel (src/sha256_x8_compress.jinc):
+ *
+ *     _sha256_x8_compress(h8, blocks, ms)
+ *     _sha256_x8_compress_lanes(h8, in, off, n, ms)
+ *
+ * Lane layout. A 128-bit register holds the same word of four instances,
+ * element k for instance 4x + k, so the eight instances are two halves,
+ * x = 0 (instances 0-3) and x = 1 (instances 4-7). h8 is already in that
+ * layout (H_j of instance k at 8j + k), so word j of half x is
+ * h8[:u128 2j + x]. A message is not: instance k's block is 64
+ * contiguous bytes. Each 16-byte row (four words of one instance) is
+ * loaded, REV32 makes its words big-endian (FIPS 180-4 section 3.1), and
+ * four rows of a half are transposed into four word vectors:
+ *
+ *     TRN1, TRN2 .4S   pairs of rows, interleaved words
+ *     TRN1, TRN2 .2D   pairs of pairs, interleaved doublewords
+ *
+ * Rounds: the round and schedule structure of the scalar kernel
+ * (src/sha256_compress.jinc) with every operation applied to four lanes,
+ * and the two halves interleaved operation by operation, so that every
+ * step has two independent instructions. Run one half after the other,
+ * each round is a single dependency chain and the kernel is much slower.
+ * Advanced SIMD has no rotate, so ROTR by r is SHL by 32 - r followed by
+ * SRI by r, which inserts x >> r below the shifted bits. Ch is
+ * (e & f) ^ (g & ~e) (AND, BIC, EOR); Maj is ((a ^ b) & (b ^ c)) ^ b,
+ * where b ^ c is the a ^ b of the round before. K_t is DUP of one element
+ * of four constants loaded from the shared table.
+ *
+ * Register use: 16 state vectors, the two a ^ b of each half, the
+ * constants and the temporaries of one step of both halves stay within the
+ * 32 vector registers. The 16-word schedule window of the two halves (32
+ * vectors) is stack memory.
+ *
+ * Required CPU feature: Advanced SIMD, which every ARMv8-A processor the
+ * library supports implements. No SHA-2, SHA-3 or other optional
+ * instruction is used.
+ *
+ * Security: h8 and the messages are secret. The rounds are straight-line
+ * code; every address is fixed at compile time, or is a lane pointer, which
+ * is public. The only branch is the loop of _compress_lanes on its public
+ * block count, which updates ms. Residue: the schedule window holds 16
+ * schedule words of every instance on return, W_46 .. W_61 (W_62 and W_63
+ * are not stored, nothing reads them); the vector registers that held the
+ * state and schedule are not cleared here. Clearing both is the export's
+ * obligation (stack: -stack-zero; registers: capi/clear.c).
+ */
+
+from Hash require "sha256_k.jinc"
+
+/* ROTR by r of each 32-bit element, for both halves. */
+inline fn __rotr_x2(reg u128 x0 x1, inline int r) -> reg u128, reg u128
+{
+  reg u128 y0 y1;
+
+  y0 = x0 <<4u32 (32 - r);
+  y1 = x1 <<4u32 (32 - r);
+  y0 = #VSRI_4u32(y0, x0, r);
+  y1 = #VSRI_4u32(y1, x1, r);
+  return y0, y1;
+}
+
+inline fn __Sigma0_x2(reg u128 x0 x1) -> reg u128, reg u128
+{
+  reg u128 r0 r1 t0 t1;
+
+  r0, r1 = __rotr_x2(x0, x1, 2);
+  t0, t1 = __rotr_x2(x0, x1, 13);
+  r0 ^= t0;
+  r1 ^= t1;
+  t0, t1 = __rotr_x2(x0, x1, 22);
+  r0 ^= t0;
+  r1 ^= t1;
+  return r0, r1;
+}
+
+inline fn __Sigma1_x2(reg u128 x0 x1) -> reg u128, reg u128
+{
+  reg u128 r0 r1 t0 t1;
+
+  r0, r1 = __rotr_x2(x0, x1, 6);
+  t0, t1 = __rotr_x2(x0, x1, 11);
+  r0 ^= t0;
+  r1 ^= t1;
+  t0, t1 = __rotr_x2(x0, x1, 25);
+  r0 ^= t0;
+  r1 ^= t1;
+  return r0, r1;
+}
+
+inline fn __sigma0_x2(reg u128 x0 x1) -> reg u128, reg u128
+{
+  reg u128 r0 r1 t0 t1;
+
+  r0, r1 = __rotr_x2(x0, x1, 7);
+  t0, t1 = __rotr_x2(x0, x1, 18);
+  r0 ^= t0;
+  r1 ^= t1;
+  t0 = x0 >>4u32 3;
+  t1 = x1 >>4u32 3;
+  r0 ^= t0;
+  r1 ^= t1;
+  return r0, r1;
+}
+
+inline fn __sigma1_x2(reg u128 x0 x1) -> reg u128, reg u128
+{
+  reg u128 r0 r1 t0 t1;
+
+  r0, r1 = __rotr_x2(x0, x1, 17);
+  t0, t1 = __rotr_x2(x0, x1, 19);
+  r0 ^= t0;
+  r1 ^= t1;
+  t0 = x0 >>4u32 10;
+  t1 = x1 >>4u32 10;
+  r0 ^= t0;
+  r1 ^= t1;
+  return r0, r1;
+}
+
+/*
+ * Four rows, r[k] the 16 bytes of instance k of a half at the same block
+ * offset 16i, into the words 4i .. 4i + 3 of the four instances: r[m]
+ * becomes word 4i + m, element k from instance k, as a native word.
+ */
+inline fn __sha256_x8_rows(reg u128[4] r) -> reg u128[4]
+{
+  reg u128[4] t;
+  inline int k;
+
+  for k = 0 to 4 {
+    r[k] = #VREV32_16u8(r[k]);
+  }
+
+  /* t[0] = words 0, 2 and t[1] = words 1, 3 of rows 0, 1; t[2], t[3] of rows 2, 3 */
+  t[0] = #VTRN1_4u32(r[0], r[1]);
+  t[1] = #VTRN2_4u32(r[0], r[1]);
+  t[2] = #VTRN1_4u32(r[2], r[3]);
+  t[3] = #VTRN2_4u32(r[2], r[3]);
+
+  r[0] = #VTRN1_2u64(t[0], t[2]);
+  r[1] = #VTRN1_2u64(t[1], t[3]);
+  r[2] = #VTRN2_2u64(t[0], t[2]);
+  r[3] = #VTRN2_2u64(t[1], t[3]);
+
+  return r;
+}
+
+/*
+ * One block of every instance: the 64 rounds and the feed-forward on h8.
+ * w holds the sixteen message words of the block, word j of half x at
+ * w[16x + j] as native words, and is the schedule window: W_t of half x
+ * is kept at w[16x + t mod 16].
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
+         { ptr: public, val: secret } × { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h8, 0, 256) && is_arr_init(w, 0, 512)
+   , res = { h_out, w_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
+fn _sha256_x8_block(
+  reg mut ptr u32[64] h8,
+  reg mut ptr u128[32] w,
+  reg u64 ms
+) -> reg ptr u32[64], reg ptr u128[32], reg u64
+{
+  reg ptr u32[64] k;
+  reg u128[16] v;
+  reg u128[4] ab;
+  reg u128[2] wt s c d;
+  reg u128 kq kd y;
+  inline int t x j;
+
+  /* v[8x + j]: word j of half x */
+  for j = 0 to 8 {
+    for x = 0 to 2 {
+      v[8 * x + j] = h8[:u128 2 * j + x];
+    }
+  }
+  k = SHA256_K;
+
+  /*
+   * Rounds of section 6.2.2 step 3; variable i (a = 0 .. h = 7) of half x
+   * in round t is v[8x + (i - t) mod 8]. ab[2x + t mod 2] is a ^ b of
+   * half x in round t; before round 0, ab[2x + 1] is b ^ c.
+   */
+  for x = 0 to 2 {
+    ab[2 * x + 1] = v[8 * x + 1] ^ v[8 * x + 2];
+  }
+
+  for t = 0 to 64 {
+    #[inline]
+    if (t % 4 == 0) {
+      kq = k[:u128 t / 4];
+    }
+    kd = #VDUPE_4u32(kq, t % 4);
+
+    /* W_t = σ1(W_t-2) + W_t-7 + σ0(W_t-15) + W_t-16 (step 1) */
+
+    #[inline]
+    if (t >= 16) {
+      for x = 0 to 2 {
+        wt[x] = w[16 * x + t % 16];
+      }
+      for x = 0 to 2 {
+        c[x] = w[16 * x + (t - 2) % 16];
+      }
+      s[0], s[1] = __sigma1_x2(c[0], c[1]);
+      for x = 0 to 2 {
+        wt[x] = wt[x] +4u32 s[x];
+      }
+      for x = 0 to 2 {
+        c[x] = w[16 * x + (t - 15) % 16];
+      }
+      s[0], s[1] = __sigma0_x2(c[0], c[1]);
+      for x = 0 to 2 {
+        wt[x] = wt[x] +4u32 s[x];
+      }
+      for x = 0 to 2 {
+        c[x] = w[16 * x + (t - 7) % 16];
+      }
+      for x = 0 to 2 {
+        wt[x] = wt[x] +4u32 c[x];
+      }
+      /* W_62 and W_63 are read by no later round */
+      #[inline]
+      if (t < 62) {
+        for x = 0 to 2 {
+          w[16 * x + t % 16] = wt[x];
+        }
+      }
+    } else {
+      for x = 0 to 2 {
+        wt[x] = w[16 * x + t];
+      }
+    }
+
+    /* T1 = h + W_t + K_t + Σ1(e) + Ch(e, f, g), built in h's register */
+
+    for x = 0 to 2 {
+      v[8 * x + (7 + 64 - t) % 8] = v[8 * x + (7 + 64 - t) % 8] +4u32 wt[x];
+    }
+    for x = 0 to 2 {
+      v[8 * x + (7 + 64 - t) % 8] = v[8 * x + (7 + 64 - t) % 8] +4u32 kd;
+    }
+    s[0], s[1] = __Sigma1_x2(v[(4 + 64 - t) % 8], v[8 + (4 + 64 - t) % 8]);
+    for x = 0 to 2 {
+      c[x] = v[8 * x + (4 + 64 - t) % 8] & v[8 * x + (5 + 64 - t) % 8];
+    }
+    for x = 0 to 2 {
+      d[x] = v[8 * x + (6 + 64 - t) % 8] & !v[8 * x + (4 + 64 - t) % 8];
+    }
+    for x = 0 to 2 {
+      v[8 * x + (7 + 64 - t) % 8] = v[8 * x + (7 + 64 - t) % 8] +4u32 s[x];
+    }
+    for x = 0 to 2 {
+      c[x] ^= d[x];
+    }
+    for x = 0 to 2 {
+      v[8 * x + (7 + 64 - t) % 8] = v[8 * x + (7 + 64 - t) % 8] +4u32 c[x];
+    }
+
+    /* e' = d + T1 */
+
+    for x = 0 to 2 {
+      v[8 * x + (3 + 64 - t) % 8] = v[8 * x + (3 + 64 - t) % 8] +4u32 v[8 * x + (7 + 64 - t) % 8];
+    }
+
+    /* a' = T1 + Σ0(a) + Maj(a, b, c), in h's register */
+
+    s[0], s[1] = __Sigma0_x2(v[(0 + 64 - t) % 8], v[8 + (0 + 64 - t) % 8]);
+    for x = 0 to 2 {
+      ab[2 * x + t % 2] = v[8 * x + (0 + 64 - t) % 8] ^ v[8 * x + (1 + 64 - t) % 8];
+    }
+    for x = 0 to 2 {
+      c[x] = ab[2 * x + t % 2] & ab[2 * x + (t + 1) % 2];
+    }
+    for x = 0 to 2 {
+      v[8 * x + (7 + 64 - t) % 8] = v[8 * x + (7 + 64 - t) % 8] +4u32 s[x];
+    }
+    for x = 0 to 2 {
+      c[x] ^= v[8 * x + (1 + 64 - t) % 8];
+    }
+    for x = 0 to 2 {
+      v[8 * x + (7 + 64 - t) % 8] = v[8 * x + (7 + 64 - t) % 8] +4u32 c[x];
+    }
+  }
+
+  /* Step 4; after 64 rounds variable j of half x is back in v[8x + j] */
+
+  for j = 0 to 8 {
+    for x = 0 to 2 {
+      y = h8[:u128 2 * j + x];
+      y = y +4u32 v[8 * x + j];
+      h8[:u128 2 * j + x] = y;
+    }
+  }
+
+  return h8, w, ms;
+}
+
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
+         { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h8, 0, 256) && is_arr_init(blocks, 0, 512)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
+fn _sha256_x8_compress(
+  reg mut ptr u32[64] h8,
+  reg const ptr u8[512] blocks,
+  reg u64 ms
+) -> reg ptr u32[64], reg u64
+{
+  stack u128[32] w;
+  reg u128[4] r;
+  inline int x i k;
+
+  /* row k of quarter i of half x: instance 4x + k, bytes 16i .. 16i + 15 */
+  for x = 0 to 2 {
+    for i = 0 to 4 {
+      for k = 0 to 4 {
+        r[k] = blocks[:u128 4 * (4 * x + k) + i];
+      }
+      r = __sha256_x8_rows(r);
+      for k = 0 to 4 {
+        w[16 * x + 4 * i + k] = r[k];
+      }
+    }
+  }
+
+  h8, w, ms = _sha256_x8_block(h8, w, ms);
+
+  return h8, ms;
+}
+
+/*
+ * The blocks of the four instances of half x from memory, instance 4x + k
+ * at pk, into the words of half x in w.
+ */
+#[safety =
+   { requires = 0 <= x && x < 2 && is_arr_init(w, 0, 256 * x)
+       && is_mem_init((64u) p0, 64) && is_mem_init((64u) p1, 64)
+       && is_mem_init((64u) p2, 64) && is_mem_init((64u) p3, 64)
+   , res = { w_out }
+   , ensures = is_arr_init(w_out, 0, 256 * (x + 1))
+   }
+ ]
+inline fn __sha256_x8_load_lanes(
+  stack u128[32] w,
+  inline int x,
+  reg u64 p0 p1 p2 p3
+) -> stack u128[32]
+{
+  reg u128[4] r;
+  inline int i k;
+
+  for i = 0 to 4 {
+    r[0] = [:u128 p0 + 16 * i];
+    r[1] = [:u128 p1 + 16 * i];
+    r[2] = [:u128 p2 + 16 * i];
+    r[3] = [:u128 p3 + 16 * i];
+    r = __sha256_x8_rows(r);
+    for k = 0 to 4 {
+      w[16 * x + 4 * i + k] = r[k];
+    }
+  }
+
+  return w;
+}
+
+/*
+ * n whole blocks of every lane from lane memory (lane k's at in[k] + off),
+ * with the interface of the portable kernel's _sha256_x8_compress_lanes.
+ * Each step loads one block of every lane straight into the schedule
+ * window, transposed, and runs the rounds on it; no block is copied. The
+ * lane pointers are protected after every load; the table and the loop
+ * state cross the call of the rounds through the stack and are protected
+ * on reload.
+ *
+ * Residue: that of _sha256_x8_block, for the last block.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: transient } × public ×
+         public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h8, 0, 256) && is_arr_init(in, 0, 64)
+       && n < (64u) 288230376151711744 && off < (64u) 2305843009213693952
+       && is_mem_init((64u) in[0] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[1] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[2] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[3] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[4] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[5] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[6] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[7] + (64u) off, 64 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
+fn _sha256_x8_compress_lanes(
+  reg mut ptr u32[64] h8,
+  reg const ptr u64[8] in,
+  reg u64 off n,
+  reg u64 ms
+) -> reg ptr u32[64], reg u64
+{
+  stack u128[32] w;
+  reg u64 p0 p1 p2 p3 p4 p5 p6 p7;
+  reg bool more;
+
+  while { more = n != 0; } (more) {
+    ms = #update_msf(more, ms);
+    /*
+     * Loads, then protects, then offsets, so that the protects form one
+     * run. Named registers rather than an array: the speculative
+     * constant-time checker gives a register array one type.
+     */
+    p0 = in[0];
+    p1 = in[1];
+    p2 = in[2];
+    p3 = in[3];
+    p4 = in[4];
+    p5 = in[5];
+    p6 = in[6];
+    p7 = in[7];
+    p0 = #protect(p0, ms);
+    p1 = #protect(p1, ms);
+    p2 = #protect(p2, ms);
+    p3 = #protect(p3, ms);
+    p4 = #protect(p4, ms);
+    p5 = #protect(p5, ms);
+    p6 = #protect(p6, ms);
+    p7 = #protect(p7, ms);
+    p0 += off;
+    p1 += off;
+    p2 += off;
+    p3 += off;
+    p4 += off;
+    p5 += off;
+    p6 += off;
+    p7 += off;
+    w = __sha256_x8_load_lanes(w, 0, p0, p1, p2, p3);
+    w = __sha256_x8_load_lanes(w, 1, p4, p5, p6, p7);
+
+    () = #spill(in, off, n);
+    h8, w, ms = _sha256_x8_block(h8, w, ms);
+    () = #unspill(in, off, n);
+    in = #protect_ptr(in, ms);
+    off = #protect(off, ms);
+    n = #protect(n, ms);
+
+    off += 64;
+    n -= 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  return h8, ms;
+}

@@ -448,7 +448,7 @@ static void test_multiway(int k, const char *kn)
 static void test_misuse(void)
 {
     const char *kn = "public";
-    uint8_t buf[512], out[64], snap[64];
+    uint8_t buf[512] = { 0 }, out[64], snap[64];
     any_ctx c, before;
     size_t i;
 

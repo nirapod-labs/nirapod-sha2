@@ -128,6 +128,12 @@ inline fn __sigma1_256(reg u32 x) -> reg u32
  * Every index is a compile-time function of t, so the rounds are straight
  * line code with fixed addresses.
  */
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_arr_init(w, 0, 64)
+   , res = { h_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
 inline fn __sha256_rounds(reg mut ptr u32[8] h, stack u32[16] w) -> reg ptr u32[8]
 {
   reg u32[8] v;
@@ -209,6 +215,12 @@ inline fn __sha256_rounds(reg mut ptr u32[8] h, stack u32[16] w) -> reg ptr u32[
  * first written. Used directly by callers that hold a precomputed chaining
  * value, and by the buffered paths of sha256.jinc.
  */
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_arr_init(block, 0, 64)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × msf"]
 fn _sha256_compress(
@@ -233,6 +245,12 @@ fn _sha256_compress(
 }
 
 /* One block from caller memory at p; the loop body of _sha256_compress_blocks. */
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_mem_init((64u) p, 64)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
 #[sct = "{ ptr: public, val: secret } × public × msf → { ptr: public, val: secret } × msf"]
 fn _sha256_compress_one(reg mut ptr u32[8] h, reg u64 p, reg u64 ms) -> reg ptr u32[8], reg u64
 {
@@ -259,6 +277,12 @@ fn _sha256_compress_one(reg mut ptr u32[8] h, reg u64 p, reg u64 ms) -> reg ptr 
  * p and n cross each block's compression through the stack (a kernel may
  * use every register) and are protected on reload.
  */
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && n < (64u) 288230376151711744 && is_mem_init((64u) p, 64 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
 #[sct = "{ ptr: public, val: secret } × public × public × msf → { ptr: public, val: secret } × msf"]
 fn _sha256_compress_blocks(
   reg mut ptr u32[8] h,

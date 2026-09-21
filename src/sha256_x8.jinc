@@ -27,6 +27,10 @@ from HashWord require "word.jinc"
 from Sha2KernelX require "sha256_x8_compress.jinc"
 require "sha256.jinc"
 
+#[safety =
+   { res = { h_out }, ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
 inline fn __sha256_x8_init(reg mut ptr u32[64] h) -> reg ptr u32[64]
 {
   reg ptr u32[8] iv;
@@ -43,6 +47,10 @@ inline fn __sha256_x8_init(reg mut ptr u32[64] h) -> reg ptr u32[64]
   return h;
 }
 
+#[safety =
+   { res = { h_out }, ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
 inline fn __sha224_x8_init(reg mut ptr u32[64] h) -> reg ptr u32[64]
 {
   reg ptr u32[8] iv;
@@ -60,6 +68,11 @@ inline fn __sha224_x8_init(reg mut ptr u32[64] h) -> reg ptr u32[64]
 }
 
 /* Zero bytes [lo, hi) of every instance's pending block. */
+#[safety =
+   { requires = 0 <= (64u) lo && (64u) lo <= (64u) hi && (64u) hi <= 64
+   , res = { buf_out, ms_out }
+   }
+ ]
 inline fn __sha256_x8_zero(
   reg mut ptr u8[512] buf,
   reg u64 lo hi,
@@ -98,6 +111,21 @@ inline fn __sha256_x8_zero(
          { ptr: public, val: secret } × public × msf →
          { ptr: public, val: secret } × { ptr: public, val: secret } ×
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 256)
+       && is_arr_init(buf, 0, (64u) total % 64)
+       && is_arr_init(buf, 64, (64u) total % 64)
+       && is_arr_init(buf, 128, (64u) total % 64)
+       && is_arr_init(buf, 192, (64u) total % 64)
+       && is_arr_init(buf, 256, (64u) total % 64)
+       && is_arr_init(buf, 320, (64u) total % 64)
+       && is_arr_init(buf, 384, (64u) total % 64)
+       && is_arr_init(buf, 448, (64u) total % 64)
+   , res = { out_out, h_out, buf_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 256) && is_arr_init(h_out, 0, 256)
+       && is_arr_init(buf_out, 0, 512)
+   }
+ ]
 fn _sha256_x8_finalize(
   reg mut ptr u8[256] out,
   reg mut ptr u32[64] h,

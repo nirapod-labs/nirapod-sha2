@@ -49,6 +49,12 @@ from Hash require "sha512_k.jinc"
  */
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_arr_init(w, 0, 128) && is_arr_init(k, 0, 640)
+   , res = { h_out, w_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64) && is_arr_init(w_out, 0, 128)
+   }
+ ]
 fn _sha512_rounds_a64(
   reg mut ptr u64[8] h,
   reg mut ptr u64[16] w,
@@ -143,6 +149,12 @@ fn _sha512_rounds_a64(
 
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_arr_init(block, 0, 128)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
 fn _sha512_compress(
   reg mut ptr u64[8] h,
   reg const ptr u8[128] block,
@@ -176,6 +188,12 @@ fn _sha512_compress(
  * the stack window w_s.
  */
 #[sct = "{ ptr: public, val: secret } × public × public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && n < (64u) 144115188075855872 && is_mem_init((64u) p, 128 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
 fn _sha512_compress_blocks(
   reg mut ptr u64[8] h,
   reg u64 p n,

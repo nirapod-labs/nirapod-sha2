@@ -105,6 +105,12 @@ inline fn __sigma1_512(reg u64 x) -> reg u64
  * Variable k (a = 0 .. h = 7) of round t is v[(k - t) mod 8]; see
  * __sha256_rounds for the slot rotation and the schedule window.
  */
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_arr_init(w, 0, 128)
+   , res = { h_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
 inline fn __sha512_rounds(reg mut ptr u64[8] h, stack u64[16] w) -> reg ptr u64[8]
 {
   reg u64[8] v;
@@ -185,6 +191,12 @@ inline fn __sha512_rounds(reg mut ptr u64[8] h, stack u64[16] w) -> reg ptr u64[
  */
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_arr_init(block, 0, 128)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
 fn _sha512_compress(
   reg mut ptr u64[8] h,
   reg const ptr u8[128] block,
@@ -208,6 +220,12 @@ fn _sha512_compress(
 
 /* One block from caller memory at p; the loop body of _sha512_compress_blocks. */
 #[sct = "{ ptr: public, val: secret } × public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_mem_init((64u) p, 128)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
 fn _sha512_compress_one(reg mut ptr u64[8] h, reg u64 p, reg u64 ms) -> reg ptr u64[8], reg u64
 {
   stack u64[16] w;
@@ -234,6 +252,12 @@ fn _sha512_compress_one(reg mut ptr u64[8] h, reg u64 p, reg u64 ms) -> reg ptr 
  * use every register) and are protected on reload.
  */
 #[sct = "{ ptr: public, val: secret } × public × public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && n < (64u) 144115188075855872 && is_mem_init((64u) p, 128 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
 fn _sha512_compress_blocks(
   reg mut ptr u64[8] h,
   reg u64 p n,

@@ -24,6 +24,12 @@ from Sha2Kernel require "sha512_compress.jinc"
 
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h4, 0, 256) && is_arr_init(blocks, 0, 512)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
 fn _sha512_x4_compress(
   reg mut ptr u64[32] h4,
   reg const ptr u8[512] blocks,
