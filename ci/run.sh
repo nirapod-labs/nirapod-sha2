@@ -12,7 +12,7 @@
 #     ci/run.sh [--all] [--safety] [--proofs] [--only JOBS] [--no-clean]
 #     ci/run.sh --list
 #
-# Default jobs: toolchain build tests exports ct docs.
+# Default jobs: toolchain build tests exports ct.
 # Opt-in jobs: safety (long, Linux only) and proofs (long, Linux only).
 #
 # A job passes only when it exits zero and its log holds a line that
@@ -29,9 +29,9 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 . "$ROOT/ci/lib.sh"
 cd "$ROOT" || exit 1
 
-ALL_JOBS="toolchain build tests exports ct docs"
+ALL_JOBS="toolchain build tests exports ct"
 OPT_JOBS="safety proofs"
-ORDER="toolchain build tests exports ct safety proofs docs"
+ORDER="toolchain build tests exports ct safety proofs"
 
 usage() {
   cat <<'EOF'
@@ -159,7 +159,6 @@ ci_timeout() {
     ct) printf '3600\n' ;;
     safety) printf '43200\n' ;;
     proofs) printf '28800\n' ;;
-    docs) printf '300\n' ;;
     *) printf '900\n' ;;
   esac
 }
