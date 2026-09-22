@@ -1,0 +1,35 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * oracle.h
+ * ========
+ *
+ * Client side of the oracle protocol. An oracle is a child process, so
+ * that each independent implementation keeps its own symbols and can be
+ * selected at run time without linking two of them into the runner.
+ */
+
+#ifndef NIRAPOD_SHA2_ORACLE_H
+#define NIRAPOD_SHA2_ORACLE_H
+
+#include <stddef.h>
+#include <stdint.h>
+
+typedef struct oracle oracle;
+
+/* Starts path and reads its banner. NULL when the program cannot be
+ * started or does not speak the protocol. */
+oracle *oracle_start(const char *path);
+void oracle_stop(oracle *o);
+
+/* The identity the oracle printed after its supported mask. */
+const char *oracle_identity(const oracle *o);
+
+/* 1 ok, 0 the oracle does not implement this algorithm, -1 failure. */
+int oracle_hash(oracle *o, unsigned alg, const uint8_t *in, size_t len, uint8_t *out,
+                size_t *out_len);
+int oracle_hmac(oracle *o, unsigned alg, const uint8_t *key, size_t key_len,
+                const uint8_t *msg, size_t msg_len, uint8_t *out, size_t *out_len);
+
+#endif /* NIRAPOD_SHA2_ORACLE_H */
