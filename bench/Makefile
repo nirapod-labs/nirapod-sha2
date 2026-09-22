@@ -123,9 +123,11 @@ NM ?= nm
 HACL_VEC256 := $(shell if [ -n "$(HACL_LIB)" ] && $(NM) -g "$(HACL_LIB)" 2>/dev/null | grep -q 'Hacl_SHA2_Vec256_sha256_8'; then echo 1; else echo 0; fi)
 HACL_VEC128 := $(shell if [ -n "$(HACL_LIB)" ] && $(NM) -g "$(HACL_LIB)" 2>/dev/null | grep -q 'Hacl_SHA2_Vec128_sha256_4'; then echo 1; else echo 0; fi)
 
-.PHONY: all clean check smoke stack code-size
+.PHONY: all clean check smoke stack code-size nirapod-bench
 
 all: $(BENCH)/nirapod-bench $(BASELINE_BINS)
+
+nirapod-bench: $(BENCH)/nirapod-bench
 
 $(TESTLIB):
 	$(MAKE) -C $(ROOT) all
