@@ -849,7 +849,7 @@ int main(int argc, char **argv)
                         }
                         fprintf(csv, ",%s", cycles_source);
                     } else {
-                        fprintf(csv, ",,none");
+                        fprintf(csv, ",,,none");
                     }
                     fprintf(csv, ",%s,%s,%s,PASS\n", cpu_model, arch_name, os_name);
                 }
