@@ -6,7 +6,7 @@
  * =======================
  *
  * Four independent SHA-512 compressions, portable scalar kernel behind the
- * Sha2KernelX include root:
+ * Sha512KernelX include root:
  *
  *     _sha512_x4_compress(h4, blocks, ms)
  *
@@ -20,7 +20,7 @@
  * local chaining value holds instance 3's result on return.
  */
 
-from Sha2Kernel require "sha512_compress.jinc"
+from Sha512Kernel require "sha512_compress.jinc"
 
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × msf"]

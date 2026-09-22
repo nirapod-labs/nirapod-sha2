@@ -7,7 +7,7 @@
  *
  * The SHA-512 compression function (FIPS 180-4 section 6.4.2, steps 1 to
  * 4), portable scalar kernel shared by SHA-384, SHA-512, SHA-512/224 and
- * SHA-512/256, reached through the Sha2Kernel include root. Its two entry
+ * SHA-512/256, reached through the Sha512Kernel include root. Its two entry
  * points are the kernel contract; kernel variants listed as planned in
  * src/README.md are to provide the same two:
  *

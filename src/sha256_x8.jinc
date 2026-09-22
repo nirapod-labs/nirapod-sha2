@@ -16,7 +16,7 @@
  *     buf    u8[512], instance k's pending block at bytes 64k .. 64k + 63
  *     total  bytes absorbed per instance so far
  *
- * The compression is _sha256_x8_compress from the Sha2KernelX root. Array
+ * The compression is _sha256_x8_compress from the Sha256KernelX root. Array
  * input is in sha256_x8_array.jinc (instance file).
  *
  * Security: as sha256.jinc. total and every index are public and shared by
@@ -24,7 +24,7 @@
  */
 
 from HashWord require "word.jinc"
-from Sha2KernelX require "sha256_x8_compress.jinc"
+from Sha256KernelX require "sha256_x8_compress.jinc"
 require "sha256.jinc"
 
 #[safety =

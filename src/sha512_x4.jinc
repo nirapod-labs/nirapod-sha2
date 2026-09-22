@@ -16,7 +16,7 @@
  *     buf    u8[512], instance k's pending block at bytes 128k .. 128k + 127
  *     total  bytes absorbed per instance so far
  *
- * The compression is _sha512_x4_compress from the Sha2KernelX root. Array
+ * The compression is _sha512_x4_compress from the Sha512KernelX root. Array
  * input is in sha512_x4_array.jinc (instance file).
  *
  * Security: as sha512.jinc. total and every index are public and shared by
@@ -24,7 +24,7 @@
  */
 
 from HashWord require "word.jinc"
-from Sha2KernelX require "sha512_x4_compress.jinc"
+from Sha512KernelX require "sha512_x4_compress.jinc"
 require "sha512.jinc"
 
 #[safety =

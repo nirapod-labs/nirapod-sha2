@@ -6,7 +6,7 @@
  * ====================
  *
  * The SHA-256 compression function (FIPS 180-4 section 6.2.2, steps 1 to
- * 4), portable scalar kernel, reached through the Sha2Kernel include root.
+ * 4), portable scalar kernel, reached through the Sha256Kernel include root.
  * Its two entry points are the kernel contract; kernel variants listed as
  * planned in src/README.md are to provide the same two:
  *

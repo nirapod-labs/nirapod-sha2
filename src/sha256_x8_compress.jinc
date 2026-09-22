@@ -6,7 +6,7 @@
  * =======================
  *
  * Eight independent SHA-256 compressions, portable scalar kernel behind the
- * Sha2KernelX include root:
+ * Sha256KernelX include root:
  *
  *     _sha256_x8_compress(h8, blocks, ms)
  *
@@ -22,7 +22,7 @@
  * local chaining value holds instance 7's result on return.
  */
 
-from Sha2Kernel require "sha256_compress.jinc"
+from Sha256Kernel require "sha256_compress.jinc"
 
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × msf"]

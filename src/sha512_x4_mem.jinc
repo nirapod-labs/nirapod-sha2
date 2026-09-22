@@ -21,7 +21,7 @@
  * can bound.
  *
  * The state is that of sha512_x4.jinc, and the compression is
- * _sha512_x4_compress from the Sha2KernelX root.
+ * _sha512_x4_compress from the Sha512KernelX root.
  *
  * Memory: in must be readable for 4 len bytes, and 4 len must not wrap
  * the address space. No alignment is required.

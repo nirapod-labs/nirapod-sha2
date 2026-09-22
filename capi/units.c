@@ -9,10 +9,11 @@
  * the unit's Jasmin exports and, per operation family, the CPU features
  * the family's code executes in that unit.
  *
- * A unit's kernels come from its include roots: Sha2Kernel for the
- * single-way families and, through src/sha256_x8_compress.jinc and
- * src/sha512_x4_compress.jinc, for the multi-way ones too unless the unit
- * names a multi-way kernel of its own (Sha2KernelX). The needs below
+ * A unit's kernels come from its include roots: Sha256Kernel and
+ * Sha512Kernel for the single-way families and, through
+ * src/sha256_x8_compress.jinc and src/sha512_x4_compress.jinc, for the
+ * multi-way ones too unless the unit names a multi-way kernel of its own
+ * (Sha256KernelX, Sha512KernelX). The needs below
  * follow from that:
  *
  *     unit               SHA256        SHA512        X8            X4

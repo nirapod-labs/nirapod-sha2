@@ -936,7 +936,7 @@ export fn hmac_sha512_final(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg mut p
  * ================
  *
  * Message k is the len bytes at in + k len; digest k goes to out at 32k
- * (SHA-256) or 64k (SHA-512). The kernel is the unit's Sha2KernelX: the
+ * (SHA-256) or 64k (SHA-512). The kernels are the unit's Sha256KernelX and Sha512KernelX: the
  * AVX2 kernels in the x86-64 avx2 unit, otherwise one single-way
  * compression per message (sha256_x8_mem.jinc, sha512_x4_mem.jinc).
  */

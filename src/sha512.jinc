@@ -18,7 +18,7 @@
  * The layout and the absorb and finalize logic are those of sha256.jinc
  * with 128-byte blocks; the differences are the 128-bit length field and
  * the big-endian u64 output words. The compression function comes from
- * the Sha2Kernel root (sha512_compress.jinc).
+ * the Sha512Kernel root (sha512_compress.jinc).
  *
  * Security: message, chaining value and digest are secret. Every branch,
  * loop bound and address depends only on total, lengths, pointers and
@@ -26,7 +26,7 @@
  */
 
 from HashWord require "word.jinc"
-from Sha2Kernel require "sha512_compress.jinc"
+from Sha512Kernel require "sha512_compress.jinc"
 
 /*
  * Initial hash values (FIPS 180-4 section 5.3).
