@@ -5,14 +5,13 @@
 # ========================
 #
 # Runs ci/run.sh on native hosted runners: macOS on AArch64, Linux on
-# x86-64 and Linux on AArch64. The repository is not published during this
-# mission, so the workflow does not run now; it is kept ready for the day
-# it is. Actions are pinned by full commit.
+# x86-64 and Linux on AArch64. Actions are pinned by full commit.
 #
 # The toolchain is built from toolchain/ on the runner, which needs opam
 # 2.6.0 on PATH; toolchain/build.sh refuses another version. Linux AArch64
 # has no pinned SMT prover binaries and builds the compiler with
-# --no-easycrypt, so the proof job is not selected there.
+# --no-easycrypt, so the proof job is not selected there. The proof and
+# safety jobs run on Linux only, as ci/run.sh requires.
 #
 # Inputs select the two long jobs; both are off by default.
 
@@ -88,7 +87,8 @@ jobs:
           eval "$(opam env --root="$PWD/toolchain/work/opam" --switch=nirapod-sha2 --set-root --set-switch)"
           export PATH="$PWD/toolchain/work/bin:$PATH"
           args=
-          if [ "${{ inputs.proofs }}" = true ] && [ "${{ matrix.easycrypt }}" = true ]; then
+          if [ "${{ inputs.proofs }}" = true ] && [ "${{ matrix.easycrypt }}" = true ] \
+            && [ "${{ runner.os }}" = Linux ]; then
             args="$args --proofs"
           fi
           if [ "${{ inputs.safety }}" = true ] && [ "${{ matrix.arch }}" = x86_64 ]; then
