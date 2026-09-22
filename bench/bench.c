@@ -406,11 +406,22 @@ static size_t calibrate(const bench_variant *v, const bench_workload *w,
                         double target_ns, int *rc)
 {
     double ns, cyc;
-    size_t iters;
+    size_t iters = 1;
 
-    *rc = time_batch(v, w, 1, &ns, &cyc);
-    if (*rc != 0) {
-        return 0;
+    /*
+     * One cold call costs far more than a warm one (cache misses, the
+     * clock's own overhead), so the batch is doubled until it lasts an
+     * eighth of the target, and the cost per call is taken from there.
+     */
+    for (;;) {
+        *rc = time_batch(v, w, iters, &ns, &cyc);
+        if (*rc != 0) {
+            return 0;
+        }
+        if (ns * (double)iters >= target_ns / 8.0 || iters >= 1000000) {
+            break;
+        }
+        iters *= 2;
     }
     if (ns <= 0.0) {
         return 1000000;
@@ -838,7 +849,7 @@ int main(int argc, char **argv)
                         }
                         fprintf(csv, ",%s", cycles_source);
                     } else {
-                        fprintf(csv, ",,none");
+                        fprintf(csv, ",,,none");
                     }
                     fprintf(csv, ",%s,%s,%s,PASS\n", cpu_model, arch_name, os_name);
                 }
