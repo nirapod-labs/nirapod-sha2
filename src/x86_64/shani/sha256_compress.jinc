@@ -94,25 +94,26 @@ inline fn __shani_store_state(reg mut ptr u32[8] h, reg u128 abef cdgh) -> reg p
 }
 
 /*
- * 64 rounds on message groups w[0..3] (W_0 .. W_15, already byte-swapped),
- * then the feed-forward of step 4.
+ * One block on a state held in registers: the 64 rounds on message groups
+ * w[0..3] (W_0 .. W_15, already byte-swapped), then the feed-forward of
+ * step 4. k is SHA256_K. w is returned (holding W_48 .. W_63) only so
+ * that the caller's array is updated in place rather than copied.
  */
 #[safety =
-   { requires = is_arr_init(h, 0, 32)
-   , res = { h_out }
-   , ensures = is_arr_init(h_out, 0, 32)
+   { requires = is_arr_init(k, 0, 256)
    }
  ]
-inline fn __shani_rounds(reg mut ptr u32[8] h, reg u128[4] w) -> reg ptr u32[8]
+inline fn __shani_block(
+  reg u128 abef cdgh,
+  reg u128[4] w,
+  reg const ptr u32[64] k
+) -> reg u128, reg u128, reg u128[4]
 {
-  reg ptr u32[64] k;
-  reg u128 abef cdgh abef0 cdgh0 wk t;
+  reg u128 abef0 cdgh0 wk t;
   inline int g;
 
-  abef, cdgh = __shani_load_state(h);
   abef0 = abef;
   cdgh0 = cdgh;
-  k = SHA256_K;
 
   for g = 0 to 16 {
     #[inline]
@@ -133,6 +134,25 @@ inline fn __shani_rounds(reg mut ptr u32[8] h, reg u128[4] w) -> reg ptr u32[8]
 
   abef = #VPADD_4u32(abef, abef0);
   cdgh = #VPADD_4u32(cdgh, cdgh0);
+
+  return abef, cdgh, w;
+}
+
+/* One block on h in memory: __shani_block between a load and a store of h. */
+#[safety =
+   { requires = is_arr_init(h, 0, 32)
+   , res = { h_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
+inline fn __shani_rounds(reg mut ptr u32[8] h, reg u128[4] w) -> reg ptr u32[8]
+{
+  reg ptr u32[64] k;
+  reg u128 abef cdgh;
+
+  abef, cdgh = __shani_load_state(h);
+  k = SHA256_K;
+  abef, cdgh, w = __shani_block(abef, cdgh, w, k);
   h = __shani_store_state(h, abef, cdgh);
 
   return h;
@@ -154,13 +174,21 @@ fn _sha256_compress(
 {
   reg ptr u32[4] mask_p;
   reg u128[4] w;
-  reg u128 mask;
+  reg u128 mask hi;
   inline int i;
 
+  /*
+   * block is usually the shared code's block buffer, just written in 64-bit
+   * words and single bytes (fill.jinc). 64-bit loads are forwarded from
+   * the word stores; a 128-bit load spanning two stores would wait for
+   * both to reach the cache, on the path to the first round.
+   */
   mask_p = SHA256_SHANI_BSWAP;
   mask = mask_p[:u128 0];
   for i = 0 to 4 {
-    w[i] = block[:u128 i];
+    w[i] = #VMOV_64(block[:u64 2 * i]);
+    hi = #VMOV_64(block[:u64 2 * i + 1]);
+    w[i] = #VPUNPCKL_2u64(w[i], hi);
     w[i] = #VPSHUFB_128(w[i], mask);
   }
 
@@ -169,7 +197,11 @@ fn _sha256_compress(
   return h, ms;
 }
 
-/* One block from caller memory at p; the loop body of _sha256_compress_blocks. */
+/*
+ * One block from caller memory at p, as _sha256_compress_blocks with
+ * n = 1. Every SHA-256 kernel provides it (src/README.md, "Files and
+ * kernel variants"); this one's _sha256_compress_blocks does not call it.
+ */
 #[sct = "{ ptr: public, val: secret } × public × msf → { ptr: public, val: secret } × msf"]
 #[safety =
    { requires = is_arr_init(h, 0, 32) && is_mem_init((64u) p, 64)
@@ -198,9 +230,12 @@ fn _sha256_compress_one(reg mut ptr u32[8] h, reg u64 p, reg u64 ms) -> reg ptr 
 
 /*
  * n consecutive blocks from caller memory at p, with the contract of the
- * shared kernel's _sha256_compress_blocks. p and n stay in registers
- * across the block function's calls; the register allocation keeps them
- * out of the registers the callee writes, so they are never reloaded.
+ * shared kernel's _sha256_compress_blocks. The state is loaded from h
+ * once, stays in the abef / cdgh registers through every block, and is
+ * stored once: a store and reload of h between blocks would put a
+ * store-to-load forwarding delay and the layout shuffles on the chain of
+ * dependent SHA256RNDS2, which is what bounds the speed of one stream.
+ * p and n stay in registers; nothing crosses a call.
  */
 #[sct = "{ ptr: public, val: secret } × public × public × msf → { ptr: public, val: secret } × msf"]
 #[safety =
@@ -215,15 +250,31 @@ fn _sha256_compress_blocks(
   reg u64 ms
 ) -> reg ptr u32[8], reg u64
 {
+  reg ptr u32[4] mask_p;
+  reg ptr u32[64] k;
+  reg u128[4] w;
+  reg u128 abef cdgh mask;
   reg bool more;
+  inline int i;
+
+  abef, cdgh = __shani_load_state(h);
+  k = SHA256_K;
+  mask_p = SHA256_SHANI_BSWAP;
+  mask = mask_p[:u128 0];
 
   while { more = n != 0; } (more) {
     ms = #update_msf(more, ms);
-    h, ms = _sha256_compress_one(h, p, ms);
+    for i = 0 to 4 {
+      w[i] = [:u128 p + 16 * i];
+      w[i] = #VPSHUFB_128(w[i], mask);
+    }
+    abef, cdgh, w = __shani_block(abef, cdgh, w, k);
     p += 64;
     n -= 1;
   }
   ms = #update_msf(!more, ms);
+
+  h = __shani_store_state(h, abef, cdgh);
 
   return h, ms;
 }
