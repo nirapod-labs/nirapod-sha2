@@ -493,6 +493,7 @@ fn _sha512_ctx_update(
    { requires = is_arr_init(ctx, 0, SHA256_CTX_BYTES)
    , res = { ctx_out, digest_out, status, ms_out }
    , ensures = is_arr_init(ctx_out, 0, SHA256_CTX_BYTES)
+       && is_arr_init(digest_out, 0, status == SHA2_STATUS_OK ? 32 : 0)
    }
  ]
 fn _sha256_ctx_final(
@@ -540,6 +541,7 @@ fn _sha256_ctx_final(
    { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES)
    , res = { ctx_out, digest_out, status, ms_out }
    , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
+       && is_arr_init(digest_out, 0, status == SHA2_STATUS_OK ? 64 : 0)
    }
  ]
 fn _sha512_ctx_final(
@@ -682,6 +684,7 @@ inline fn __hmac_sha512_ctx_init(
    { requires = is_arr_init(ctx, 0, HMAC_SHA256_CTX_BYTES)
    , res = { ctx_out, out_out, status, ms_out }
    , ensures = is_arr_init(ctx_out, 0, HMAC_SHA256_CTX_BYTES)
+       && is_arr_init(out_out, 0, status == SHA2_STATUS_OK ? 32 : 0)
    }
  ]
 inline fn __hmac_sha256_ctx_final(
@@ -739,6 +742,7 @@ inline fn __hmac_sha256_ctx_final(
    { requires = is_arr_init(ctx, 0, HMAC_SHA512_CTX_BYTES)
    , res = { ctx_out, out_out, status, ms_out }
    , ensures = is_arr_init(ctx_out, 0, HMAC_SHA512_CTX_BYTES)
+       && is_arr_init(out_out, 0, status == SHA2_STATUS_OK ? 64 : 0)
    }
  ]
 inline fn __hmac_sha512_ctx_final(
