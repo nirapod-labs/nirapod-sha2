@@ -48,8 +48,8 @@ typedef enum nirapod_sha2_testing_kernel {
 typedef enum nirapod_sha2_testing_family {
     NIRAPOD_SHA2_TESTING_FAMILY_SHA256 = 0,   /* SHA-224, SHA-256, HMAC-SHA-256 */
     NIRAPOD_SHA2_TESTING_FAMILY_SHA512 = 1,   /* SHA-384, SHA-512, SHA-512/t, HMAC-SHA-512 */
-    NIRAPOD_SHA2_TESTING_FAMILY_X8 = 2,       /* sha256_x8 */
-    NIRAPOD_SHA2_TESTING_FAMILY_X4 = 3        /* sha512_x4 */
+    NIRAPOD_SHA2_TESTING_FAMILY_X8 = 2,       /* sha256_x8, one-shot and incremental */
+    NIRAPOD_SHA2_TESTING_FAMILY_X4 = 3        /* sha512_x4, one-shot and incremental */
 } nirapod_sha2_testing_family;
 
 /* The unit name of a kernel ("aarch64-sha2"), or NULL if it is not built here. */
@@ -141,9 +141,30 @@ int nirapod_sha2_testing_hmac_sha512_final(nirapod_sha2_testing_kernel k,
                                            nirapod_sha2_hmac_sha512_ctx *ctx, uint8_t *out);
 
 int nirapod_sha2_testing_sha256_x8(nirapod_sha2_testing_kernel k, uint8_t *out,
-                                   const uint8_t *in, size_t len);
+                                   const uint8_t *const in[8], size_t len);
+int nirapod_sha2_testing_sha256_x8_init(nirapod_sha2_testing_kernel k,
+                                        nirapod_sha2_sha256_x8_ctx *ctx);
+int nirapod_sha2_testing_sha256_x8_init_from(nirapod_sha2_testing_kernel k,
+                                             nirapod_sha2_sha256_x8_ctx *ctx,
+                                             const nirapod_sha2_sha256_ctx *src);
+int nirapod_sha2_testing_sha256_x8_update(nirapod_sha2_testing_kernel k,
+                                          nirapod_sha2_sha256_x8_ctx *ctx,
+                                          const uint8_t *const in[8], size_t len);
+int nirapod_sha2_testing_sha256_x8_final(nirapod_sha2_testing_kernel k,
+                                         nirapod_sha2_sha256_x8_ctx *ctx, uint8_t *out);
+
 int nirapod_sha2_testing_sha512_x4(nirapod_sha2_testing_kernel k, uint8_t *out,
-                                   const uint8_t *in, size_t len);
+                                   const uint8_t *const in[4], size_t len);
+int nirapod_sha2_testing_sha512_x4_init(nirapod_sha2_testing_kernel k,
+                                        nirapod_sha2_sha512_x4_ctx *ctx);
+int nirapod_sha2_testing_sha512_x4_init_from(nirapod_sha2_testing_kernel k,
+                                             nirapod_sha2_sha512_x4_ctx *ctx,
+                                             const nirapod_sha2_sha512_ctx *src);
+int nirapod_sha2_testing_sha512_x4_update(nirapod_sha2_testing_kernel k,
+                                          nirapod_sha2_sha512_x4_ctx *ctx,
+                                          const uint8_t *const in[4], size_t len);
+int nirapod_sha2_testing_sha512_x4_final(nirapod_sha2_testing_kernel k,
+                                         nirapod_sha2_sha512_x4_ctx *ctx, uint8_t *out);
 
 #ifdef __cplusplus
 }

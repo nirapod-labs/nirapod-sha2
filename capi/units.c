@@ -49,7 +49,12 @@
     nirapod_sha2_jz_##u##__hmac_sha256_init, nirapod_sha2_jz_##u##__hmac_sha512_init, \
     nirapod_sha2_jz_##u##__hmac_sha256_update, nirapod_sha2_jz_##u##__hmac_sha512_update, \
     nirapod_sha2_jz_##u##__hmac_sha256_final, nirapod_sha2_jz_##u##__hmac_sha512_final, \
-    nirapod_sha2_jz_##u##__sha256_x8, nirapod_sha2_jz_##u##__sha512_x4
+    nirapod_sha2_jz_##u##__sha256_x8, nirapod_sha2_jz_##u##__sha256_x8_init,       \
+    nirapod_sha2_jz_##u##__sha256_x8_init_from, nirapod_sha2_jz_##u##__sha256_x8_update, \
+    nirapod_sha2_jz_##u##__sha256_x8_final,                                       \
+    nirapod_sha2_jz_##u##__sha512_x4, nirapod_sha2_jz_##u##__sha512_x4_init,       \
+    nirapod_sha2_jz_##u##__sha512_x4_init_from, nirapod_sha2_jz_##u##__sha512_x4_update, \
+    nirapod_sha2_jz_##u##__sha512_x4_final
 
 #if defined(__aarch64__)
 

@@ -154,6 +154,8 @@ extern "C" {
 #define NIRAPOD_SHA2_SHA512_CTX_BYTES      208
 #define NIRAPOD_SHA2_HMAC_SHA256_CTX_BYTES 144
 #define NIRAPOD_SHA2_HMAC_SHA512_CTX_BYTES 272
+#define NIRAPOD_SHA2_SHA256_X8_CTX_BYTES   784
+#define NIRAPOD_SHA2_SHA512_X4_CTX_BYTES   784
 
 /*
  * Context types. Each function has its own type, so that passing a
@@ -192,6 +194,14 @@ typedef struct nirapod_sha2_hmac_sha256_ctx {
 typedef struct nirapod_sha2_hmac_sha512_ctx {
     uint64_t opaque[NIRAPOD_SHA2_HMAC_SHA512_CTX_BYTES / 8];
 } nirapod_sha2_hmac_sha512_ctx;
+
+typedef struct nirapod_sha2_sha256_x8_ctx {
+    uint64_t opaque[NIRAPOD_SHA2_SHA256_X8_CTX_BYTES / 8];
+} nirapod_sha2_sha256_x8_ctx;
+
+typedef struct nirapod_sha2_sha512_x4_ctx {
+    uint64_t opaque[NIRAPOD_SHA2_SHA512_X4_CTX_BYTES / 8];
+} nirapod_sha2_sha512_x4_ctx;
 
 /*
  * One-shot hashes: out receives the digest of the len bytes at in.
@@ -291,20 +301,59 @@ int nirapod_sha2_hmac_sha512_update(nirapod_sha2_hmac_sha512_ctx *ctx,
 int nirapod_sha2_hmac_sha512_final(nirapod_sha2_hmac_sha512_ctx *ctx, uint8_t *out);
 
 /*
- * Multi-way hashes of equal-length messages packed one after another:
- * message k is the len bytes at in + k * len, and its digest is written at
- * out + k * NIRAPOD_SHA2_SHA256_BYTES (SHA-512: NIRAPOD_SHA2_SHA512_BYTES).
- * The result is that of the one-shot function on each message.
+ * Multi-way hashes: 8 SHA-256 or 4 SHA-512 hashes of messages of equal
+ * length, computed together. Lane k's message is the len bytes at in[k],
+ * and its digest is written at out + k * NIRAPOD_SHA2_SHA256_BYTES
+ * (SHA-512: NIRAPOD_SHA2_SHA512_BYTES). The result is that of the one-shot
+ * function on each message.
  *
- *     out  NIRAPOD_SHA2_SHA256_X8_BYTES (SHA512_X4) bytes, not
- *          overlapping in
- *     in   8 * len (4 * len) bytes; NULL allowed when len = 0
+ *     out  NIRAPOD_SHA2_SHA256_X8_BYTES (SHA512_X4) bytes, overlapping no
+ *          lane
+ *     in   a table of 8 (4) pointers; lanes may overlap each other and may
+ *          be NULL when len = 0. The table is an array of const uint8_t *;
+ *          an array of uint8_t * needs a cast.
  *     len  < NIRAPOD_SHA2_MAX_BYTES
  *
  * Errors: ENULL, ELENGTH, EOVERLAP.
  */
-int nirapod_sha2_sha256_x8(uint8_t *out, const uint8_t *in, size_t len);
-int nirapod_sha2_sha512_x4(uint8_t *out, const uint8_t *in, size_t len);
+int nirapod_sha2_sha256_x8(uint8_t *out, const uint8_t *const in[8], size_t len);
+int nirapod_sha2_sha512_x4(uint8_t *out, const uint8_t *const in[4], size_t len);
+
+/*
+ * Incremental multi-way hashes, with the context rules of the incremental
+ * hashes; every update appends len bytes to every lane.
+ *
+ * init:      every lane becomes a new hash of the empty message.
+ *            Errors: ENULL.
+ *
+ * init_from: every lane continues the hash in src, a SHA-256 (SHA-512)
+ *            context: its message so far becomes the first bytes of every
+ *            lane's message. src is not changed and may be used further.
+ *            ctx and src must not overlap. Errors: ENULL, EOVERLAP, ESTATE
+ *            (src is not an initialised SHA-256 (SHA-512) context, or was
+ *            finalised); on error ctx is not written.
+ *
+ * update:    appends the len bytes at in[k] to lane k. No lane may overlap
+ *            ctx. Errors: ENULL, ELENGTH, EOVERLAP, ESTATE; on error the
+ *            context is unchanged.
+ *
+ * final:     writes the 8 (4) digests to out as the one-shot form does,
+ *            then zeroes ctx. Errors: ENULL, EOVERLAP, ESTATE; on error
+ *            neither ctx nor out is written.
+ */
+int nirapod_sha2_sha256_x8_init(nirapod_sha2_sha256_x8_ctx *ctx);
+int nirapod_sha2_sha256_x8_init_from(nirapod_sha2_sha256_x8_ctx *ctx,
+                                     const nirapod_sha2_sha256_ctx *src);
+int nirapod_sha2_sha256_x8_update(nirapod_sha2_sha256_x8_ctx *ctx,
+                                  const uint8_t *const in[8], size_t len);
+int nirapod_sha2_sha256_x8_final(nirapod_sha2_sha256_x8_ctx *ctx, uint8_t *out);
+
+int nirapod_sha2_sha512_x4_init(nirapod_sha2_sha512_x4_ctx *ctx);
+int nirapod_sha2_sha512_x4_init_from(nirapod_sha2_sha512_x4_ctx *ctx,
+                                     const nirapod_sha2_sha512_ctx *src);
+int nirapod_sha2_sha512_x4_update(nirapod_sha2_sha512_x4_ctx *ctx,
+                                  const uint8_t *const in[4], size_t len);
+int nirapod_sha2_sha512_x4_final(nirapod_sha2_sha512_x4_ctx *ctx, uint8_t *out);
 
 #ifdef __cplusplus
 }

@@ -62,3 +62,67 @@ fn _sha256_x8_compress(
 
   return h8, ms;
 }
+
+/*
+ * n whole blocks of every lane, read straight from lane memory: lane k's
+ * blocks are the 64 n bytes at in[k] + off. Each lane is compressed by
+ * the single-way _sha256_compress_blocks, so no block is copied.
+ *
+ * The lane pointers are loaded from the table and protected before use;
+ * the table and the loop state cross each kernel call through the stack
+ * and are protected on reload.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: transient } × public ×
+         public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h8, 0, 256) && is_arr_init(in, 0, 64)
+       && n < (64u) 288230376151711744 && off < (64u) 2305843009213693952
+       && is_mem_init((64u) in[0] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[1] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[2] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[3] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[4] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[5] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[6] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[7] + (64u) off, 64 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
+fn _sha256_x8_compress_lanes(
+  reg mut ptr u32[64] h8,
+  reg const ptr u64[8] in,
+  reg u64 off n,
+  reg u64 ms
+) -> reg ptr u32[64], reg u64
+{
+  stack u32[8] h;
+  reg u32 x;
+  reg u64 p;
+  inline int j k;
+
+  for k = 0 to 8 {
+    for j = 0 to 8 {
+      x = h8[8 * j + k];
+      h[j] = x;
+    }
+
+    p = in[k];
+    p = #protect(p, ms);
+    p += off;
+    () = #spill(h8, in, off, n);
+    h, ms = _sha256_compress_blocks(h, p, n, ms);
+    () = #unspill(h8, in, off, n);
+    h8 = #protect_ptr(h8, ms);
+    in = #protect_ptr(in, ms);
+    off = #protect(off, ms);
+    n = #protect(n, ms);
+
+    for j = 0 to 8 {
+      x = h[j];
+      h8[8 * j + k] = x;
+    }
+  }
+
+  return h8, ms;
+}

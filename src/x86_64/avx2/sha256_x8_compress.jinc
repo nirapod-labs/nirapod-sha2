@@ -250,3 +250,72 @@ fn _sha256_x8_compress(
 
   return h8, ms;
 }
+
+/*
+ * n whole blocks of every lane from lane memory (lane k's at in[k] + off),
+ * with the interface of the portable kernel's _sha256_x8_compress_lanes.
+ * Each step gathers one block of every lane into a local u8[512] with
+ * 256-bit loads and stores (2 per lane) and runs _sha256_x8_compress on
+ * it. The lane pointers are protected after every load; the table and
+ * the loop state cross the kernel call through the stack and are
+ * protected on reload.
+ *
+ * Residue: the local block buffer holds the last block of every lane on
+ * return; clearing is the export's obligation.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: transient } × public ×
+         public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h8, 0, 256) && is_arr_init(in, 0, 64)
+       && n < (64u) 288230376151711744 && off < (64u) 2305843009213693952
+       && is_mem_init((64u) in[0] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[1] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[2] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[3] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[4] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[5] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[6] + (64u) off, 64 * (64u) n)
+       && is_mem_init((64u) in[7] + (64u) off, 64 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
+fn _sha256_x8_compress_lanes(
+  reg mut ptr u32[64] h8,
+  reg const ptr u64[8] in,
+  reg u64 off n,
+  reg u64 ms
+) -> reg ptr u32[64], reg u64
+{
+  stack u8[512] blocks;
+  reg u256 t;
+  reg u64 p;
+  reg bool more;
+  inline int i k;
+
+  while { more = n != 0; } (more) {
+    ms = #update_msf(more, ms);
+    for k = 0 to 8 {
+      p = in[k];
+      p = #protect(p, ms);
+      p += off;
+      for i = 0 to 2 {
+        t = [:u256 p + 32 * i];
+        blocks[:u256 2 * k + i] = t;
+      }
+    }
+
+    () = #spill(in, off, n);
+    h8, ms = _sha256_x8_compress(h8, blocks, ms);
+    () = #unspill(in, off, n);
+    in = #protect_ptr(in, ms);
+    off = #protect(off, ms);
+    n = #protect(n, ms);
+
+    off += 64;
+    n -= 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  return h8, ms;
+}

@@ -67,7 +67,7 @@ static int status_code(uint64_t status)
 }
 
 int nirapod_sha2_run_hash(const nirapod_sha2_unit *u, nirapod_sha2_family f,
-                          nirapod_sha2_jz_hash op, size_t ways,
+                          nirapod_sha2_jz_hash op,
                           uint8_t *out, size_t out_len, const uint8_t *in, size_t len)
 {
     uint64_t token;
@@ -78,7 +78,7 @@ int nirapod_sha2_run_hash(const nirapod_sha2_unit *u, nirapod_sha2_family f,
     if ((uint64_t)len >= NIRAPOD_SHA2_MAX_BYTES) {
         return NIRAPOD_SHA2_ELENGTH;
     }
-    if (overlaps(out, out_len, in, ways * len)) {
+    if (overlaps(out, out_len, in, len)) {
         return NIRAPOD_SHA2_EOVERLAP;
     }
 
@@ -199,6 +199,113 @@ int nirapod_sha2_run_hmac_init(const nirapod_sha2_unit *u, nirapod_sha2_family f
 }
 
 /*
+ * The lane table of a multi-way call: every pointer checked, then copied
+ * into table, the array the export reads. The copy means the export's
+ * table can overlap no argument and cannot change between these checks
+ * and its use. Copying the pointers reads no message or state byte.
+ *
+ * Returns 0, or the error code of the first failing check: ENULL for a
+ * NULL table or a NULL lane when len > 0, EOVERLAP for a lane that
+ * overlaps the writable buffer w of w_len bytes.
+ */
+static int lane_table(uint64_t *table, size_t ways, const uint8_t *const *in, size_t len,
+                      const void *w, size_t w_len)
+{
+    size_t k;
+
+    if (in == NULL) {
+        return NIRAPOD_SHA2_ENULL;
+    }
+    for (k = 0; k < ways; k++) {
+        if (in[k] == NULL && len != 0) {
+            return NIRAPOD_SHA2_ENULL;
+        }
+    }
+    if ((uint64_t)len >= NIRAPOD_SHA2_MAX_BYTES) {
+        return NIRAPOD_SHA2_ELENGTH;
+    }
+    for (k = 0; k < ways; k++) {
+        if (overlaps(w, w_len, in[k], len)) {
+            return NIRAPOD_SHA2_EOVERLAP;
+        }
+    }
+    for (k = 0; k < ways; k++) {
+        table[k] = (uint64_t)(uintptr_t)in[k];
+    }
+    return NIRAPOD_SHA2_OK;
+}
+
+int nirapod_sha2_run_lanes(const nirapod_sha2_unit *u, nirapod_sha2_family f,
+                           nirapod_sha2_jz_lanes op, size_t ways,
+                           uint8_t *out, size_t out_len,
+                           const uint8_t *const *in, size_t len)
+{
+    uint64_t table[8];
+    uint64_t token;
+    int rc;
+
+    if (out == NULL) {
+        return NIRAPOD_SHA2_ENULL;
+    }
+    rc = lane_table(table, ways, in, len, out, out_len);
+    if (rc != NIRAPOD_SHA2_OK) {
+        return rc;
+    }
+
+    token = nirapod_sha2_timing_enter();
+    op(out, table, (uint64_t)len);
+    nirapod_sha2_clear_registers(u->needs[f]);
+    nirapod_sha2_timing_leave(token);
+    return NIRAPOD_SHA2_OK;
+}
+
+int nirapod_sha2_run_lanes_from(const nirapod_sha2_unit *u, nirapod_sha2_family f,
+                                nirapod_sha2_jz_lanes_from op, void *ctx, size_t ctx_len,
+                                const void *src, size_t src_len)
+{
+    uint64_t token;
+    uint64_t status;
+
+    if (ctx == NULL || src == NULL) {
+        return NIRAPOD_SHA2_ENULL;
+    }
+    if (overlaps(ctx, ctx_len, src, src_len)) {
+        return NIRAPOD_SHA2_EOVERLAP;
+    }
+
+    token = nirapod_sha2_timing_enter();
+    status = op((uint8_t *)ctx, (const uint8_t *)src);
+    nirapod_sha2_clear_registers(u->needs[f]);
+    nirapod_sha2_timing_leave(token);
+    return status_code(status);
+}
+
+int nirapod_sha2_run_lanes_update(const nirapod_sha2_unit *u, nirapod_sha2_family f,
+                                  nirapod_sha2_jz_lanes_update op, size_t ways,
+                                  void *ctx, size_t ctx_len,
+                                  const uint8_t *const *in, size_t len)
+{
+    uint64_t table[8];
+    uint64_t token;
+    uint64_t status;
+    int rc;
+
+    if (ctx == NULL) {
+        return NIRAPOD_SHA2_ENULL;
+    }
+    rc = lane_table(table, ways, in, len, ctx, ctx_len);
+    if (rc != NIRAPOD_SHA2_OK) {
+        return rc;
+    }
+
+    token = nirapod_sha2_timing_enter();
+    status = op((uint8_t *)ctx, table, (uint64_t)len);
+    nirapod_sha2_clear_registers(u->needs[f]);
+    nirapod_sha2_timing_leave(token);
+    return status_code(status);
+}
+
+/*
  * The public functions
  * --------------------
  *
@@ -232,7 +339,7 @@ int nirapod_sha2_run_hmac_init(const nirapod_sha2_unit *u, nirapod_sha2_family f
     int nirapod_sha2_##h(uint8_t *out, const uint8_t *in, size_t len)          \
     {                                                                          \
         const nirapod_sha2_unit *u = nirapod_sha2_select(FAMILY_##h);          \
-        return nirapod_sha2_run_hash(u, FAMILY_##h, u->h, 1, out, BYTES_##h, in, len); \
+        return nirapod_sha2_run_hash(u, FAMILY_##h, u->h, out, BYTES_##h, in, len); \
     }                                                                          \
     int nirapod_sha2_##h##_init(nirapod_sha2_##h##_ctx *ctx)                   \
     {                                                                          \
@@ -335,18 +442,37 @@ int nirapod_sha2_hmac_sha512_final(nirapod_sha2_hmac_sha512_ctx *ctx, uint8_t *o
                                   out, NIRAPOD_SHA2_HMAC_SHA512_BYTES);
 }
 
-int nirapod_sha2_sha256_x8(uint8_t *out, const uint8_t *in, size_t len)
-{
-    const nirapod_sha2_unit *u = nirapod_sha2_select(NIRAPOD_SHA2_FAMILY_X8);
+#define LANES_FUNCTIONS(h, FAMILY, WAYS, CTX, SRC_CTX, SRC_BYTES)                  \
+    int nirapod_sha2_##h(uint8_t *out, const uint8_t *const in[WAYS], size_t len)  \
+    {                                                                              \
+        const nirapod_sha2_unit *u = nirapod_sha2_select(FAMILY);                  \
+        return nirapod_sha2_run_lanes(u, FAMILY, u->h, WAYS, out, 256, in, len);   \
+    }                                                                              \
+    int nirapod_sha2_##h##_init(CTX *ctx)                                          \
+    {                                                                              \
+        const nirapod_sha2_unit *u = nirapod_sha2_select(FAMILY);                  \
+        return nirapod_sha2_run_init(u, FAMILY, u->h##_init, ctx);                 \
+    }                                                                              \
+    int nirapod_sha2_##h##_init_from(CTX *ctx, const SRC_CTX *src)                 \
+    {                                                                              \
+        const nirapod_sha2_unit *u = nirapod_sha2_select(FAMILY);                  \
+        return nirapod_sha2_run_lanes_from(u, FAMILY, u->h##_init_from, ctx,       \
+                                           sizeof(CTX), src, SRC_BYTES);           \
+    }                                                                              \
+    int nirapod_sha2_##h##_update(CTX *ctx, const uint8_t *const in[WAYS], size_t len) \
+    {                                                                              \
+        const nirapod_sha2_unit *u = nirapod_sha2_select(FAMILY);                  \
+        return nirapod_sha2_run_lanes_update(u, FAMILY, u->h##_update, WAYS, ctx,  \
+                                             sizeof(CTX), in, len);                \
+    }                                                                              \
+    int nirapod_sha2_##h##_final(CTX *ctx, uint8_t *out)                           \
+    {                                                                              \
+        const nirapod_sha2_unit *u = nirapod_sha2_select(FAMILY);                  \
+        return nirapod_sha2_run_final(u, FAMILY, u->h##_final, ctx, sizeof(CTX),   \
+                                      out, 256);                                   \
+    }
 
-    return nirapod_sha2_run_hash(u, NIRAPOD_SHA2_FAMILY_X8, u->sha256_x8, 8,
-                                 out, NIRAPOD_SHA2_SHA256_X8_BYTES, in, len);
-}
-
-int nirapod_sha2_sha512_x4(uint8_t *out, const uint8_t *in, size_t len)
-{
-    const nirapod_sha2_unit *u = nirapod_sha2_select(NIRAPOD_SHA2_FAMILY_X4);
-
-    return nirapod_sha2_run_hash(u, NIRAPOD_SHA2_FAMILY_X4, u->sha512_x4, 4,
-                                 out, NIRAPOD_SHA2_SHA512_X4_BYTES, in, len);
-}
+LANES_FUNCTIONS(sha256_x8, NIRAPOD_SHA2_FAMILY_X8, 8, nirapod_sha2_sha256_x8_ctx,
+                nirapod_sha2_sha256_ctx, NIRAPOD_SHA2_SHA256_CTX_BYTES)
+LANES_FUNCTIONS(sha512_x4, NIRAPOD_SHA2_FAMILY_X4, 4, nirapod_sha2_sha512_x4_ctx,
+                nirapod_sha2_sha512_ctx, NIRAPOD_SHA2_SHA512_CTX_BYTES)

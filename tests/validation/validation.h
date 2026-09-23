@@ -52,8 +52,10 @@ typedef union validation_ctx {
     nirapod_sha2_sha512_256_ctx sha512_256;
     nirapod_sha2_hmac_sha256_ctx hmac_sha256;
     nirapod_sha2_hmac_sha512_ctx hmac_sha512;
-    uint64_t words[NIRAPOD_SHA2_HMAC_SHA512_CTX_BYTES / 8];
-    unsigned char raw[NIRAPOD_SHA2_HMAC_SHA512_CTX_BYTES];
+    nirapod_sha2_sha256_x8_ctx sha256_x8;
+    nirapod_sha2_sha512_x4_ctx sha512_x4;
+    uint64_t words[NIRAPOD_SHA2_SHA256_X8_CTX_BYTES / 8];
+    unsigned char raw[NIRAPOD_SHA2_SHA256_X8_CTX_BYTES];
 } validation_ctx;
 
 typedef int (*hash_public_fn)(uint8_t *, const uint8_t *, size_t);
@@ -150,7 +152,17 @@ int hmac_init(const hmac_alg *a, int kernel, void *ctx, const uint8_t *key, size
 int hmac_update(const hmac_alg *a, int kernel, void *ctx, const uint8_t *in, size_t len);
 int hmac_final(const hmac_alg *a, int kernel, void *ctx, uint8_t *out);
 
+/*
+ * Multi-way forms. multiway_oneshot takes packed messages, lane m at
+ * in + m len (in may be NULL), and builds the lane table; the others take
+ * a table. x4 selects sha512_x4, else sha256_x8.
+ */
 int multiway_oneshot(int x4, int kernel, uint8_t *out, const uint8_t *in, size_t len);
+int multiway_lanes(int x4, int kernel, uint8_t *out, const uint8_t *const *in, size_t len);
+int multiway_init(int x4, int kernel, void *ctx);
+int multiway_init_from(int x4, int kernel, void *ctx, const void *src);
+int multiway_update(int x4, int kernel, void *ctx, const uint8_t *const *in, size_t len);
+int multiway_final(int x4, int kernel, void *ctx, uint8_t *out);
 
 /* Memory and files. */
 void *xmalloc(size_t n);

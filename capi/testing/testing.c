@@ -108,7 +108,7 @@ nirapod_sha2_testing_kernel nirapod_sha2_testing_select_for(nirapod_sha2_testing
                                  const uint8_t *in, size_t len)                \
     {                                                                          \
         UNIT_OR_FAIL(k, FAMILY_##h)                                            \
-        return nirapod_sha2_run_hash(u, FAMILY_##h, u->h, 1, out, BYTES_##h, in, len); \
+        return nirapod_sha2_run_hash(u, FAMILY_##h, u->h, out, BYTES_##h, in, len);    \
     }                                                                          \
     int nirapod_sha2_testing_##h##_init(nirapod_sha2_testing_kernel k,         \
                                         nirapod_sha2_##h##_ctx *ctx)           \
@@ -184,18 +184,41 @@ TESTING_HASH(sha512_256)
 TESTING_HMAC_OPS(sha256)
 TESTING_HMAC_OPS(sha512)
 
-int nirapod_sha2_testing_sha256_x8(nirapod_sha2_testing_kernel k, uint8_t *out,
-                                   const uint8_t *in, size_t len)
-{
-    UNIT_OR_FAIL(k, NIRAPOD_SHA2_FAMILY_X8)
-    return nirapod_sha2_run_hash(u, NIRAPOD_SHA2_FAMILY_X8, u->sha256_x8, 8,
-                                 out, NIRAPOD_SHA2_SHA256_X8_BYTES, in, len);
-}
+#define TESTING_LANES_OPS(h, FAMILY, WAYS, CTX, SRC_CTX, SRC_BYTES)                \
+    int nirapod_sha2_testing_##h(nirapod_sha2_testing_kernel k, uint8_t *out,      \
+                                 const uint8_t *const in[WAYS], size_t len)        \
+    {                                                                              \
+        UNIT_OR_FAIL(k, FAMILY)                                                    \
+        return nirapod_sha2_run_lanes(u, FAMILY, u->h, WAYS, out, 256, in, len);   \
+    }                                                                              \
+    int nirapod_sha2_testing_##h##_init(nirapod_sha2_testing_kernel k, CTX *ctx)   \
+    {                                                                              \
+        UNIT_OR_FAIL(k, FAMILY)                                                    \
+        return nirapod_sha2_run_init(u, FAMILY, u->h##_init, ctx);                 \
+    }                                                                              \
+    int nirapod_sha2_testing_##h##_init_from(nirapod_sha2_testing_kernel k, CTX *ctx, \
+                                             const SRC_CTX *src)                   \
+    {                                                                              \
+        UNIT_OR_FAIL(k, FAMILY)                                                    \
+        return nirapod_sha2_run_lanes_from(u, FAMILY, u->h##_init_from, ctx,       \
+                                           sizeof(CTX), src, SRC_BYTES);           \
+    }                                                                              \
+    int nirapod_sha2_testing_##h##_update(nirapod_sha2_testing_kernel k, CTX *ctx, \
+                                          const uint8_t *const in[WAYS], size_t len) \
+    {                                                                              \
+        UNIT_OR_FAIL(k, FAMILY)                                                    \
+        return nirapod_sha2_run_lanes_update(u, FAMILY, u->h##_update, WAYS, ctx,  \
+                                             sizeof(CTX), in, len);                \
+    }                                                                              \
+    int nirapod_sha2_testing_##h##_final(nirapod_sha2_testing_kernel k, CTX *ctx,  \
+                                         uint8_t *out)                             \
+    {                                                                              \
+        UNIT_OR_FAIL(k, FAMILY)                                                    \
+        return nirapod_sha2_run_final(u, FAMILY, u->h##_final, ctx, sizeof(CTX),   \
+                                      out, 256);                                   \
+    }
 
-int nirapod_sha2_testing_sha512_x4(nirapod_sha2_testing_kernel k, uint8_t *out,
-                                   const uint8_t *in, size_t len)
-{
-    UNIT_OR_FAIL(k, NIRAPOD_SHA2_FAMILY_X4)
-    return nirapod_sha2_run_hash(u, NIRAPOD_SHA2_FAMILY_X4, u->sha512_x4, 4,
-                                 out, NIRAPOD_SHA2_SHA512_X4_BYTES, in, len);
-}
+TESTING_LANES_OPS(sha256_x8, NIRAPOD_SHA2_FAMILY_X8, 8, nirapod_sha2_sha256_x8_ctx,
+                  nirapod_sha2_sha256_ctx, NIRAPOD_SHA2_SHA256_CTX_BYTES)
+TESTING_LANES_OPS(sha512_x4, NIRAPOD_SHA2_FAMILY_X4, 4, nirapod_sha2_sha512_x4_ctx,
+                  nirapod_sha2_sha512_ctx, NIRAPOD_SHA2_SHA512_CTX_BYTES)

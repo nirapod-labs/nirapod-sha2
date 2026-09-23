@@ -248,7 +248,8 @@ int kernel_built(int kernel)
 
 static int probe_unavailable(int kernel, nirapod_sha2_testing_family family)
 {
-    uint8_t out[64];
+    uint8_t out[256];
+    const uint8_t *t[8] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 
     switch (family) {
     case NIRAPOD_SHA2_TESTING_FAMILY_SHA256:
@@ -256,9 +257,9 @@ static int probe_unavailable(int kernel, nirapod_sha2_testing_family family)
     case NIRAPOD_SHA2_TESTING_FAMILY_SHA512:
         return nirapod_sha2_testing_sha512((nirapod_sha2_testing_kernel)kernel, out, NULL, 0);
     case NIRAPOD_SHA2_TESTING_FAMILY_X8:
-        return nirapod_sha2_testing_sha256_x8((nirapod_sha2_testing_kernel)kernel, out, NULL, 0);
+        return nirapod_sha2_testing_sha256_x8((nirapod_sha2_testing_kernel)kernel, out, t, 0);
     default:
-        return nirapod_sha2_testing_sha512_x4((nirapod_sha2_testing_kernel)kernel, out, NULL, 0);
+        return nirapod_sha2_testing_sha512_x4((nirapod_sha2_testing_kernel)kernel, out, t, 0);
     }
 }
 
@@ -362,14 +363,72 @@ int hmac_final(const hmac_alg *a, int kernel, void *ctx, uint8_t *out)
     return a->testing_final((nirapod_sha2_testing_kernel)kernel, ctx, out);
 }
 
+int multiway_lanes(int x4, int kernel, uint8_t *out, const uint8_t *const *in, size_t len)
+{
+    nirapod_sha2_testing_kernel k = (nirapod_sha2_testing_kernel)kernel;
+
+    if (kernel == VALIDATION_PUBLIC) {
+        return x4 ? nirapod_sha2_sha512_x4(out, in, len) : nirapod_sha2_sha256_x8(out, in, len);
+    }
+    return x4 ? nirapod_sha2_testing_sha512_x4(k, out, in, len)
+              : nirapod_sha2_testing_sha256_x8(k, out, in, len);
+}
+
 int multiway_oneshot(int x4, int kernel, uint8_t *out, const uint8_t *in, size_t len)
 {
-    if (kernel == VALIDATION_PUBLIC) {
-        return x4 ? nirapod_sha2_sha512_x4(out, in, len)
-                  : nirapod_sha2_sha256_x8(out, in, len);
+    const uint8_t *t[8];
+    size_t m;
+
+    for (m = 0; m < 8; m++) {
+        t[m] = in == NULL ? NULL : in + m * len;
     }
-    return x4 ? nirapod_sha2_testing_sha512_x4((nirapod_sha2_testing_kernel)kernel, out, in, len)
-              : nirapod_sha2_testing_sha256_x8((nirapod_sha2_testing_kernel)kernel, out, in, len);
+    return multiway_lanes(x4, kernel, out, t, len);
+}
+
+int multiway_init(int x4, int kernel, void *ctx)
+{
+    nirapod_sha2_testing_kernel k = (nirapod_sha2_testing_kernel)kernel;
+
+    if (kernel == VALIDATION_PUBLIC) {
+        return x4 ? nirapod_sha2_sha512_x4_init(ctx) : nirapod_sha2_sha256_x8_init(ctx);
+    }
+    return x4 ? nirapod_sha2_testing_sha512_x4_init(k, ctx)
+              : nirapod_sha2_testing_sha256_x8_init(k, ctx);
+}
+
+int multiway_init_from(int x4, int kernel, void *ctx, const void *src)
+{
+    nirapod_sha2_testing_kernel k = (nirapod_sha2_testing_kernel)kernel;
+
+    if (kernel == VALIDATION_PUBLIC) {
+        return x4 ? nirapod_sha2_sha512_x4_init_from(ctx, src)
+                  : nirapod_sha2_sha256_x8_init_from(ctx, src);
+    }
+    return x4 ? nirapod_sha2_testing_sha512_x4_init_from(k, ctx, src)
+              : nirapod_sha2_testing_sha256_x8_init_from(k, ctx, src);
+}
+
+int multiway_update(int x4, int kernel, void *ctx, const uint8_t *const *in, size_t len)
+{
+    nirapod_sha2_testing_kernel k = (nirapod_sha2_testing_kernel)kernel;
+
+    if (kernel == VALIDATION_PUBLIC) {
+        return x4 ? nirapod_sha2_sha512_x4_update(ctx, in, len)
+                  : nirapod_sha2_sha256_x8_update(ctx, in, len);
+    }
+    return x4 ? nirapod_sha2_testing_sha512_x4_update(k, ctx, in, len)
+              : nirapod_sha2_testing_sha256_x8_update(k, ctx, in, len);
+}
+
+int multiway_final(int x4, int kernel, void *ctx, uint8_t *out)
+{
+    nirapod_sha2_testing_kernel k = (nirapod_sha2_testing_kernel)kernel;
+
+    if (kernel == VALIDATION_PUBLIC) {
+        return x4 ? nirapod_sha2_sha512_x4_final(ctx, out) : nirapod_sha2_sha256_x8_final(ctx, out);
+    }
+    return x4 ? nirapod_sha2_testing_sha512_x4_final(k, ctx, out)
+              : nirapod_sha2_testing_sha256_x8_final(k, ctx, out);
 }
 
 void *xmalloc(size_t n)

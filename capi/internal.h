@@ -58,8 +58,8 @@
  *
  *     SHA256   SHA-224, SHA-256, HMAC-SHA-256 (single-way SHA-256 kernel)
  *     SHA512   SHA-384, SHA-512, SHA-512/224, SHA-512/256, HMAC-SHA-512
- *     X8       sha256_x8 (multi-way SHA-256 kernel)
- *     X4       sha512_x4 (multi-way SHA-512 kernel)
+ *     X8       sha256_x8, one-shot and incremental (multi-way SHA-256 kernel)
+ *     X4       sha512_x4, one-shot and incremental (multi-way SHA-512 kernel)
  */
 typedef enum nirapod_sha2_family {
     NIRAPOD_SHA2_FAMILY_SHA256 = 0,
@@ -93,7 +93,16 @@ typedef struct nirapod_sha2_unit {
     nirapod_sha2_jz_hmac_init hmac_sha256_init, hmac_sha512_init;
     nirapod_sha2_jz_update hmac_sha256_update, hmac_sha512_update;
     nirapod_sha2_jz_final hmac_sha256_final, hmac_sha512_final;
-    nirapod_sha2_jz_hash sha256_x8, sha512_x4;
+    nirapod_sha2_jz_lanes sha256_x8;
+    nirapod_sha2_jz_init sha256_x8_init;
+    nirapod_sha2_jz_lanes_from sha256_x8_init_from;
+    nirapod_sha2_jz_lanes_update sha256_x8_update;
+    nirapod_sha2_jz_final sha256_x8_final;
+    nirapod_sha2_jz_lanes sha512_x4;
+    nirapod_sha2_jz_init sha512_x4_init;
+    nirapod_sha2_jz_lanes_from sha512_x4_init_from;
+    nirapod_sha2_jz_lanes_update sha512_x4_update;
+    nirapod_sha2_jz_final sha512_x4_final;
 } nirapod_sha2_unit;
 
 /*
@@ -168,11 +177,11 @@ void nirapod_sha2_clear_registers(unsigned used_features);
  *     out_len, ctx_len  the digest and context sizes of the function
  *     limit             the largest message length plus one: 2^61, or
  *                       2^61 - B for an HMAC message
- *     ways              1, or 8 and 4 for the multi-way forms, whose input
- *                       is ways * len bytes
+ *     ways              the lanes of a multi-way form, 8 or 4: in is a table
+ *                       of that many pointers to len bytes each
  */
 int nirapod_sha2_run_hash(const nirapod_sha2_unit *u, nirapod_sha2_family f,
-                          nirapod_sha2_jz_hash op, size_t ways,
+                          nirapod_sha2_jz_hash op,
                           uint8_t *out, size_t out_len, const uint8_t *in, size_t len);
 int nirapod_sha2_run_init(const nirapod_sha2_unit *u, nirapod_sha2_family f,
                           nirapod_sha2_jz_init op, void *ctx);
@@ -190,5 +199,16 @@ int nirapod_sha2_run_hmac(const nirapod_sha2_unit *u, nirapod_sha2_family f,
 int nirapod_sha2_run_hmac_init(const nirapod_sha2_unit *u, nirapod_sha2_family f,
                                nirapod_sha2_jz_hmac_init op, void *ctx, size_t ctx_len,
                                const uint8_t *key, size_t key_len);
+int nirapod_sha2_run_lanes(const nirapod_sha2_unit *u, nirapod_sha2_family f,
+                           nirapod_sha2_jz_lanes op, size_t ways,
+                           uint8_t *out, size_t out_len,
+                           const uint8_t *const *in, size_t len);
+int nirapod_sha2_run_lanes_from(const nirapod_sha2_unit *u, nirapod_sha2_family f,
+                                nirapod_sha2_jz_lanes_from op, void *ctx, size_t ctx_len,
+                                const void *src, size_t src_len);
+int nirapod_sha2_run_lanes_update(const nirapod_sha2_unit *u, nirapod_sha2_family f,
+                                  nirapod_sha2_jz_lanes_update op, size_t ways,
+                                  void *ctx, size_t ctx_len,
+                                  const uint8_t *const *in, size_t len);
 
 #endif /* NIRAPOD_SHA2_INTERNAL_H */

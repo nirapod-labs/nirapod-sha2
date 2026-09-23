@@ -222,3 +222,68 @@ fn _sha512_x4_compress(
 
   return h4, ms;
 }
+
+/*
+ * n whole blocks of every lane from lane memory (lane k's at in[k] + off),
+ * with the interface of the portable kernel's _sha512_x4_compress_lanes.
+ * Each step gathers one block of every lane into a local u8[512] with
+ * 256-bit loads and stores (4 per lane) and runs _sha512_x4_compress on
+ * it. The lane pointers are protected after every load; the table and
+ * the loop state cross the kernel call through the stack and are
+ * protected on reload.
+ *
+ * Residue: the local block buffer holds the last block of every lane on
+ * return; clearing is the export's obligation.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: transient } × public ×
+         public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h4, 0, 256) && is_arr_init(in, 0, 32)
+       && n < (64u) 144115188075855872 && off < (64u) 2305843009213693952
+       && is_mem_init((64u) in[0] + (64u) off, 128 * (64u) n)
+       && is_mem_init((64u) in[1] + (64u) off, 128 * (64u) n)
+       && is_mem_init((64u) in[2] + (64u) off, 128 * (64u) n)
+       && is_mem_init((64u) in[3] + (64u) off, 128 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
+fn _sha512_x4_compress_lanes(
+  reg mut ptr u64[32] h4,
+  reg const ptr u64[4] in,
+  reg u64 off n,
+  reg u64 ms
+) -> reg ptr u64[32], reg u64
+{
+  stack u8[512] blocks;
+  reg u256 t;
+  reg u64 p;
+  reg bool more;
+  inline int i k;
+
+  while { more = n != 0; } (more) {
+    ms = #update_msf(more, ms);
+    for k = 0 to 4 {
+      p = in[k];
+      p = #protect(p, ms);
+      p += off;
+      for i = 0 to 4 {
+        t = [:u256 p + 32 * i];
+        blocks[:u256 4 * k + i] = t;
+      }
+    }
+
+    () = #spill(in, off, n);
+    h4, ms = _sha512_x4_compress(h4, blocks, ms);
+    () = #unspill(in, off, n);
+    in = #protect_ptr(in, ms);
+    off = #protect(off, ms);
+    n = #protect(n, ms);
+
+    off += 128;
+    n -= 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  return h4, ms;
+}
