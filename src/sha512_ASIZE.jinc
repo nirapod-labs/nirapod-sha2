@@ -1,0 +1,98 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * sha512_ASIZE.jinc
+ * =================
+ *
+ * SHA-512 input from a byte array: _sha512_absorb_array, the array form of
+ * _sha512_absorb_mem in sha512.jinc. Instance file: sha512.jinc is required at
+ * top level, and this file inside a namespace that sets param int _ASIZE,
+ * the array size. Any number of namespaces may instantiate it with
+ * different sizes:
+ *
+ *     from Hash require "sha512.jinc"
+ *     namespace In96 {
+ *       param int _ASIZE = 96;
+ *       from Hash require "sha512_ASIZE.jinc"
+ *     }
+ *     h, buf, total, ms = In96::_sha512_absorb_array(h, buf, total, a, off, len, ms);
+ *
+ * _sha512_absorb_array appends the len bytes of a at offset off, any offset
+ * and length with off + len <= _ASIZE, to the state of sha512.jinc (h, buf,
+ * total), which _sha512_finalize then finishes. The result is that of
+ * _sha512_absorb_mem on the same bytes in memory.
+ *
+ * Security: the array's bytes and the state are secret; off, len and total
+ * are public and are the only values that decide a branch, a bound or an
+ * index.
+ */
+
+from Hash require "fill_ASIZE.jinc"
+
+/*
+ * Append the len bytes of a at off. Bytes go through buf, and each full
+ * buffer is compressed; afterwards total has grown by len and buf holds
+ * total mod 128 pending bytes.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public ×
+         { ptr: public, val: secret } × public × public × msf →
+         { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_arr_init(buf, 0, (64u) total % 128)
+       && (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+   , res = { h_out, buf_out, total_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+       && is_arr_init(buf_out, 0, (64u) total_out % 128)
+       && total_out == total + len
+   }
+ ]
+fn _sha512_absorb_array(
+  reg mut ptr u64[8] h,
+  reg mut ptr u8[128] buf,
+  reg u64 total,
+  reg const ptr u8[_ASIZE] a,
+  reg u64 off len,
+  reg u64 ms
+) -> reg ptr u64[8], reg ptr u8[128], reg u64, reg u64
+{
+  reg u64 fill n;
+  reg bool more full;
+
+  fill = total;
+  fill &= 127;
+  total += len;
+
+  /* Invariant: buf holds fill < 128 pending bytes at each iteration's top. */
+
+  while { more = len != 0; } (more) {
+    ms = #update_msf(more, ms);
+
+    n = 128;
+    n -= fill;
+    n = len < n ? len : n;
+    buf, ms = __fill128_array(buf, fill, a, off, n, ms);
+    fill += n;
+    off += n;
+    len -= n;
+
+    full = fill == 128;
+    if (full) {
+      ms = #update_msf(full, ms);
+      () = #spill(total, a, off, len, buf);
+      h, ms = _sha512_compress(h, buf, ms);
+      () = #unspill(total, a, off, len, buf);
+      total = #protect(total, ms);
+      a = #protect_ptr(a, ms);
+      off = #protect(off, ms);
+      len = #protect(len, ms);
+      buf = #protect_ptr(buf, ms);
+      fill = 0;
+    } else {
+      ms = #update_msf(!full, ms);
+    }
+  }
+  ms = #update_msf(!more, ms);
+
+  return h, buf, total, ms;
+}

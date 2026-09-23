@@ -1,0 +1,662 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * array.jazz
+ * ==========
+ *
+ * Test unit of the array instance files, the *_ASIZE.jinc files of src:
+ * each instantiated at the array sizes 1, 64, 128 and 333, behind
+ * test exports that hash a slice of an array from the initial value. The
+ * unit is compiled with the portable kernels, typed by jasmin-ct and
+ * jasmin-ct --sct, and linked only into tests/array/array.c, which
+ * compares every export with the library's one-shot functions.
+ *
+ * Exports, in namespace A<size>:
+ *
+ *     sha256(out, a, off, len)      SHA-256 of a[off .. off + len - 1]
+ *     sha512(out, a, off, len)      SHA-512 of the same
+ *     sha256_x8(out, a, off, stride, len)
+ *                                   lane k: SHA-256 of len bytes at off + k stride
+ *     sha512_x4(out, a, off, stride, len)
+ *                                   lane k: SHA-512 of the same
+ *
+ * The slices lie within the array; the C test keeps to it.
+ */
+
+from Hash require "sha256.jinc"
+from Hash require "sha512.jinc"
+from Hash require "sha256_x8.jinc"
+from Hash require "sha512_x4.jinc"
+
+namespace A1 {
+  param int _ASIZE = 1;
+  from Hash require "sha256_ASIZE.jinc"
+  from Hash require "sha512_ASIZE.jinc"
+  from Hash require "sha256_x8_ASIZE.jinc"
+  from Hash require "sha512_x4_ASIZE.jinc"
+
+  #[ct = "secret × secret × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 32)
+     }
+   ]
+  export fn sha256(reg mut ptr u8[32] out, reg const ptr u8[_ASIZE] a, reg u64 off len)
+    -> reg ptr u8[32]
+  {
+    stack u32[8] h;
+    stack u8[64] buf_s;
+    reg ptr u8[64] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    len = #protect(len, ms);
+
+    h = __sha256_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha256_absorb_array(h, buf, total, a, off, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha256_finalize(out, h, buf, total, ms);
+    return out;
+  }
+
+  #[ct = "secret × secret × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 64)
+     }
+   ]
+  export fn sha512(reg mut ptr u8[64] out, reg const ptr u8[_ASIZE] a, reg u64 off len)
+    -> reg ptr u8[64]
+  {
+    stack u64[8] h;
+    stack u8[128] buf_s;
+    reg ptr u8[128] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    len = #protect(len, ms);
+
+    h = __sha512_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha512_absorb_array(h, buf, total, a, off, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha512_finalize(out, h, buf, total, ms);
+    return out;
+  }
+
+  #[ct = "secret × secret × public × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient × transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + 7 * (64u) stride + (64u) len <= _ASIZE
+         && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 3 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 4 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 5 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 6 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 7 * (64u) stride, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 256)
+     }
+   ]
+  export fn sha256_x8(reg mut ptr u8[256] out, reg const ptr u8[_ASIZE] a,
+                     reg u64 off stride len) -> reg ptr u8[256]
+  {
+    stack u32[64] h;
+    stack u8[512] buf_s;
+    reg ptr u8[512] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    stride = #protect(stride, ms);
+    len = #protect(len, ms);
+
+    h = __sha256_x8_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha256_x8_absorb_array(h, buf, total, a, off, stride, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha256_x8_finalize(out, h, buf, total, ms);
+    return out;
+  }
+
+  #[ct = "secret × secret × public × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient × transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + 3 * (64u) stride + (64u) len <= _ASIZE
+         && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 3 * (64u) stride, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 256)
+     }
+   ]
+  export fn sha512_x4(reg mut ptr u8[256] out, reg const ptr u8[_ASIZE] a,
+                     reg u64 off stride len) -> reg ptr u8[256]
+  {
+    stack u64[32] h;
+    stack u8[512] buf_s;
+    reg ptr u8[512] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    stride = #protect(stride, ms);
+    len = #protect(len, ms);
+
+    h = __sha512_x4_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha512_x4_absorb_array(h, buf, total, a, off, stride, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha512_x4_finalize(out, h, buf, total, ms);
+    return out;
+  }
+}
+
+namespace A64 {
+  param int _ASIZE = 64;
+  from Hash require "sha256_ASIZE.jinc"
+  from Hash require "sha512_ASIZE.jinc"
+  from Hash require "sha256_x8_ASIZE.jinc"
+  from Hash require "sha512_x4_ASIZE.jinc"
+
+  #[ct = "secret × secret × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 32)
+     }
+   ]
+  export fn sha256(reg mut ptr u8[32] out, reg const ptr u8[_ASIZE] a, reg u64 off len)
+    -> reg ptr u8[32]
+  {
+    stack u32[8] h;
+    stack u8[64] buf_s;
+    reg ptr u8[64] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    len = #protect(len, ms);
+
+    h = __sha256_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha256_absorb_array(h, buf, total, a, off, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha256_finalize(out, h, buf, total, ms);
+    return out;
+  }
+
+  #[ct = "secret × secret × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 64)
+     }
+   ]
+  export fn sha512(reg mut ptr u8[64] out, reg const ptr u8[_ASIZE] a, reg u64 off len)
+    -> reg ptr u8[64]
+  {
+    stack u64[8] h;
+    stack u8[128] buf_s;
+    reg ptr u8[128] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    len = #protect(len, ms);
+
+    h = __sha512_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha512_absorb_array(h, buf, total, a, off, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha512_finalize(out, h, buf, total, ms);
+    return out;
+  }
+
+  #[ct = "secret × secret × public × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient × transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + 7 * (64u) stride + (64u) len <= _ASIZE
+         && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 3 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 4 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 5 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 6 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 7 * (64u) stride, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 256)
+     }
+   ]
+  export fn sha256_x8(reg mut ptr u8[256] out, reg const ptr u8[_ASIZE] a,
+                     reg u64 off stride len) -> reg ptr u8[256]
+  {
+    stack u32[64] h;
+    stack u8[512] buf_s;
+    reg ptr u8[512] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    stride = #protect(stride, ms);
+    len = #protect(len, ms);
+
+    h = __sha256_x8_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha256_x8_absorb_array(h, buf, total, a, off, stride, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha256_x8_finalize(out, h, buf, total, ms);
+    return out;
+  }
+
+  #[ct = "secret × secret × public × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient × transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + 3 * (64u) stride + (64u) len <= _ASIZE
+         && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 3 * (64u) stride, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 256)
+     }
+   ]
+  export fn sha512_x4(reg mut ptr u8[256] out, reg const ptr u8[_ASIZE] a,
+                     reg u64 off stride len) -> reg ptr u8[256]
+  {
+    stack u64[32] h;
+    stack u8[512] buf_s;
+    reg ptr u8[512] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    stride = #protect(stride, ms);
+    len = #protect(len, ms);
+
+    h = __sha512_x4_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha512_x4_absorb_array(h, buf, total, a, off, stride, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha512_x4_finalize(out, h, buf, total, ms);
+    return out;
+  }
+}
+
+namespace A128 {
+  param int _ASIZE = 128;
+  from Hash require "sha256_ASIZE.jinc"
+  from Hash require "sha512_ASIZE.jinc"
+  from Hash require "sha256_x8_ASIZE.jinc"
+  from Hash require "sha512_x4_ASIZE.jinc"
+
+  #[ct = "secret × secret × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 32)
+     }
+   ]
+  export fn sha256(reg mut ptr u8[32] out, reg const ptr u8[_ASIZE] a, reg u64 off len)
+    -> reg ptr u8[32]
+  {
+    stack u32[8] h;
+    stack u8[64] buf_s;
+    reg ptr u8[64] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    len = #protect(len, ms);
+
+    h = __sha256_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha256_absorb_array(h, buf, total, a, off, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha256_finalize(out, h, buf, total, ms);
+    return out;
+  }
+
+  #[ct = "secret × secret × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 64)
+     }
+   ]
+  export fn sha512(reg mut ptr u8[64] out, reg const ptr u8[_ASIZE] a, reg u64 off len)
+    -> reg ptr u8[64]
+  {
+    stack u64[8] h;
+    stack u8[128] buf_s;
+    reg ptr u8[128] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    len = #protect(len, ms);
+
+    h = __sha512_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha512_absorb_array(h, buf, total, a, off, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha512_finalize(out, h, buf, total, ms);
+    return out;
+  }
+
+  #[ct = "secret × secret × public × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient × transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + 7 * (64u) stride + (64u) len <= _ASIZE
+         && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 3 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 4 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 5 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 6 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 7 * (64u) stride, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 256)
+     }
+   ]
+  export fn sha256_x8(reg mut ptr u8[256] out, reg const ptr u8[_ASIZE] a,
+                     reg u64 off stride len) -> reg ptr u8[256]
+  {
+    stack u32[64] h;
+    stack u8[512] buf_s;
+    reg ptr u8[512] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    stride = #protect(stride, ms);
+    len = #protect(len, ms);
+
+    h = __sha256_x8_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha256_x8_absorb_array(h, buf, total, a, off, stride, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha256_x8_finalize(out, h, buf, total, ms);
+    return out;
+  }
+
+  #[ct = "secret × secret × public × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient × transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + 3 * (64u) stride + (64u) len <= _ASIZE
+         && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 3 * (64u) stride, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 256)
+     }
+   ]
+  export fn sha512_x4(reg mut ptr u8[256] out, reg const ptr u8[_ASIZE] a,
+                     reg u64 off stride len) -> reg ptr u8[256]
+  {
+    stack u64[32] h;
+    stack u8[512] buf_s;
+    reg ptr u8[512] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    stride = #protect(stride, ms);
+    len = #protect(len, ms);
+
+    h = __sha512_x4_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha512_x4_absorb_array(h, buf, total, a, off, stride, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha512_x4_finalize(out, h, buf, total, ms);
+    return out;
+  }
+}
+
+namespace A333 {
+  param int _ASIZE = 333;
+  from Hash require "sha256_ASIZE.jinc"
+  from Hash require "sha512_ASIZE.jinc"
+  from Hash require "sha256_x8_ASIZE.jinc"
+  from Hash require "sha512_x4_ASIZE.jinc"
+
+  #[ct = "secret × secret × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 32)
+     }
+   ]
+  export fn sha256(reg mut ptr u8[32] out, reg const ptr u8[_ASIZE] a, reg u64 off len)
+    -> reg ptr u8[32]
+  {
+    stack u32[8] h;
+    stack u8[64] buf_s;
+    reg ptr u8[64] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    len = #protect(len, ms);
+
+    h = __sha256_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha256_absorb_array(h, buf, total, a, off, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha256_finalize(out, h, buf, total, ms);
+    return out;
+  }
+
+  #[ct = "secret × secret × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 64)
+     }
+   ]
+  export fn sha512(reg mut ptr u8[64] out, reg const ptr u8[_ASIZE] a, reg u64 off len)
+    -> reg ptr u8[64]
+  {
+    stack u64[8] h;
+    stack u8[128] buf_s;
+    reg ptr u8[128] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    len = #protect(len, ms);
+
+    h = __sha512_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha512_absorb_array(h, buf, total, a, off, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha512_finalize(out, h, buf, total, ms);
+    return out;
+  }
+
+  #[ct = "secret × secret × public × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient × transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + 7 * (64u) stride + (64u) len <= _ASIZE
+         && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 3 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 4 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 5 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 6 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 7 * (64u) stride, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 256)
+     }
+   ]
+  export fn sha256_x8(reg mut ptr u8[256] out, reg const ptr u8[_ASIZE] a,
+                     reg u64 off stride len) -> reg ptr u8[256]
+  {
+    stack u32[64] h;
+    stack u8[512] buf_s;
+    reg ptr u8[512] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    stride = #protect(stride, ms);
+    len = #protect(len, ms);
+
+    h = __sha256_x8_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha256_x8_absorb_array(h, buf, total, a, off, stride, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha256_x8_finalize(out, h, buf, total, ms);
+    return out;
+  }
+
+  #[ct = "secret × secret × public × public × public -> secret"]
+  #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
+           transient × transient → { ptr: transient, val: secret }"]
+  #[safety =
+     { requires = (64u) off + 3 * (64u) stride + (64u) len <= _ASIZE
+         && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
+         && is_arr_init(a, (64u) off + 3 * (64u) stride, (64u) len)
+     , res = { out_out }
+     , ensures = is_arr_init(out_out, 0, 256)
+     }
+   ]
+  export fn sha512_x4(reg mut ptr u8[256] out, reg const ptr u8[_ASIZE] a,
+                     reg u64 off stride len) -> reg ptr u8[256]
+  {
+    stack u64[32] h;
+    stack u8[512] buf_s;
+    reg ptr u8[512] buf;
+    reg u64 ms total;
+
+    ms = #init_msf();
+    out = #protect_ptr(out, ms);
+    a = #protect_ptr(a, ms);
+    off = #protect(off, ms);
+    stride = #protect(stride, ms);
+    len = #protect(len, ms);
+
+    h = __sha512_x4_init(h);
+    buf = buf_s;
+    total = 0;
+    () = #spill(out);
+    h, buf, total, ms = _sha512_x4_absorb_array(h, buf, total, a, off, stride, len, ms);
+    () = #unspill(out);
+    out = #protect_ptr(out, ms);
+    out, h, buf, ms = _sha512_x4_finalize(out, h, buf, total, ms);
+    return out;
+  }
+}
