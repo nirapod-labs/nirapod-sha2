@@ -16,6 +16,8 @@
  *     --suite NAME        run only this suite (repeatable)
  *     --list              list the suite names and exit
  *     --require-oracle    fail when no oracle is named
+ *     --write-xarch FILE  write the xarch values of this build to FILE
+ *                         instead of checking them (suite xarch)
  */
 
 #include "validation.h"
@@ -40,6 +42,7 @@ static const struct suite_entry {
     { "negative", suite_negative },
     { "multiway", suite_multiway },
     { "differential", suite_oracle },
+    { "xarch", suite_xarch },
 };
 
 #define SUITE_COUNT (sizeof suites / sizeof suites[0])
@@ -48,7 +51,8 @@ static void usage(FILE *f)
 {
     fprintf(f,
             "usage: validation [--vectors DIR] [--oracle PATH]... [--iterations N]\n"
-            "                  [--large N] [--suite NAME]... [--list] [--require-oracle]\n");
+            "                  [--large N] [--suite NAME]... [--list] [--require-oracle]\n"
+            "                  [--write-xarch FILE]\n");
 }
 
 static unsigned long parse_ulong(const char *what, const char *s)
@@ -124,6 +128,7 @@ int main(int argc, char **argv)
     validation.iterations = 200;
     validation.large_bytes = (1u << 20) + 3;
     validation.require_oracle = 0;
+    validation.write_xarch = NULL;
     validation.oracle_count = 0;
     memset(selected, 0, sizeof selected);
 
@@ -163,6 +168,8 @@ int main(int argc, char **argv)
                 printf("%s\n", suites[s].name);
             }
             return 0;
+        } else if (strcmp(arg, "--write-xarch") == 0 && i + 1 < argc) {
+            validation.write_xarch = argv[++i];
         } else if (strcmp(arg, "--require-oracle") == 0) {
             validation.require_oracle = 1;
         } else if (strcmp(arg, "--help") == 0 || strcmp(arg, "-h") == 0) {

@@ -121,6 +121,7 @@ typedef struct validation_env {
     size_t iterations;
     size_t large_bytes;
     int require_oracle;
+    const char *write_xarch;
     int oracle_count;
     const char *oracle[VALIDATION_MAX_ORACLES];
 } validation_env;
@@ -206,5 +207,6 @@ int suite_cross(void);
 int suite_negative(void);
 int suite_multiway(void);
 int suite_oracle(void);
+int suite_xarch(void);
 
 #endif /* NIRAPOD_SHA2_VALIDATION_H */
