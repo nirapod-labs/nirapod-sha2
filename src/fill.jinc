@@ -1,0 +1,239 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * fill.jinc
+ * =========
+ *
+ * Moving message bytes into a block buffer, and the zero bytes of the
+ * padding, a word at a time:
+ *
+ *     __fill64_mem, __fill128_mem    n bytes of memory at p into buf at dst
+ *     __zero64, __zero128            zero bytes of buf from lo up to hi
+ *
+ * A block buffer is u8[64] (SHA-224, SHA-256) or u8[128] (the SHA-512
+ * family); the multi-way buffers pass one lane's block as a sub-array.
+ * Each function writes single bytes until the buffer position is a
+ * multiple of 8, then u64 words, then the last bytes, so a buffer that is
+ * filled from position 0 moves almost entirely in words. No alignment of
+ * p is required.
+ *
+ * Every write lands inside the range the contract names, and the bytes
+ * before it are left as they were, so a buffer initialised up to dst is
+ * initialised up to dst + n afterwards.
+ *
+ * Security: the bytes moved are secret; p, dst, n, lo and hi are public
+ * and are the only values that decide a branch, a bound or an address.
+ */
+
+#[safety =
+   { requires = (64u) dst_ + (64u) n_ <= 64 && is_arr_init(buf, 0, (64u) dst_)
+       && is_mem_init((64u) p_, (64u) n_)
+   , res = { buf_out, ms_out }
+   , ensures = is_arr_init(buf_out, 0, (64u) dst_ + (64u) n_)
+   }
+ ]
+inline fn __fill64_mem(
+  reg mut ptr u8[64] buf,
+  reg u64 dst_ p_ n_,
+  reg u64 ms
+) -> reg ptr u8[64], reg u64
+{
+  reg u64 dst p n head end t;
+  reg bool more;
+
+  dst = dst_;
+  p = p_;
+  n = n_;
+
+  head = dst;
+  head = -head;
+  head &= 7;
+  head = n < head ? n : head;
+  n -= head;
+
+  end = dst;
+  end += head;
+  while { more = dst < end; } (more) {
+    ms = #update_msf(more, ms);
+    t = (64u)[:u8 p];
+    buf[dst] = (8u)t;
+    dst += 1;
+    p += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  while { more = n >= 8; } (more) {
+    ms = #update_msf(more, ms);
+    t = [:u64 p];
+    buf.[:u64 dst] = t;
+    dst += 8;
+    p += 8;
+    n -= 8;
+  }
+  ms = #update_msf(!more, ms);
+
+  end = dst;
+  end += n;
+  while { more = dst < end; } (more) {
+    ms = #update_msf(more, ms);
+    t = (64u)[:u8 p];
+    buf[dst] = (8u)t;
+    dst += 1;
+    p += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  return buf, ms;
+}
+
+#[safety =
+   { requires = (64u) dst_ + (64u) n_ <= 128 && is_arr_init(buf, 0, (64u) dst_)
+       && is_mem_init((64u) p_, (64u) n_)
+   , res = { buf_out, ms_out }
+   , ensures = is_arr_init(buf_out, 0, (64u) dst_ + (64u) n_)
+   }
+ ]
+inline fn __fill128_mem(
+  reg mut ptr u8[128] buf,
+  reg u64 dst_ p_ n_,
+  reg u64 ms
+) -> reg ptr u8[128], reg u64
+{
+  reg u64 dst p n head end t;
+  reg bool more;
+
+  dst = dst_;
+  p = p_;
+  n = n_;
+
+  head = dst;
+  head = -head;
+  head &= 7;
+  head = n < head ? n : head;
+  n -= head;
+
+  end = dst;
+  end += head;
+  while { more = dst < end; } (more) {
+    ms = #update_msf(more, ms);
+    t = (64u)[:u8 p];
+    buf[dst] = (8u)t;
+    dst += 1;
+    p += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  while { more = n >= 8; } (more) {
+    ms = #update_msf(more, ms);
+    t = [:u64 p];
+    buf.[:u64 dst] = t;
+    dst += 8;
+    p += 8;
+    n -= 8;
+  }
+  ms = #update_msf(!more, ms);
+
+  end = dst;
+  end += n;
+  while { more = dst < end; } (more) {
+    ms = #update_msf(more, ms);
+    t = (64u)[:u8 p];
+    buf[dst] = (8u)t;
+    dst += 1;
+    p += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  return buf, ms;
+}
+
+#[safety =
+   { requires = (64u) lo_ <= (64u) hi && (64u) hi <= 64 && is_arr_init(buf, 0, (64u) lo_)
+   , res = { buf_out, ms_out }
+   , ensures = is_arr_init(buf_out, 0, (64u) hi)
+   }
+ ]
+inline fn __zero64(
+  reg mut ptr u8[64] buf,
+  reg u64 lo_ hi,
+  reg u64 ms
+) -> reg ptr u8[64], reg u64
+{
+  reg u64 lo end z;
+  reg bool more;
+
+  lo = lo_;
+  z = 0;
+  end = lo;
+  end += 7;
+  end &= -8;
+  end = hi < end ? hi : end;
+  while { more = lo < end; } (more) {
+    ms = #update_msf(more, ms);
+    buf[lo] = (8u)z;
+    lo += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  while { end = lo; end += 8; more = end <= hi; } (more) {
+    ms = #update_msf(more, ms);
+    buf.[:u64 lo] = z;
+    lo += 8;
+  }
+  ms = #update_msf(!more, ms);
+
+  while { more = lo < hi; } (more) {
+    ms = #update_msf(more, ms);
+    buf[lo] = (8u)z;
+    lo += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  return buf, ms;
+}
+
+#[safety =
+   { requires = (64u) lo_ <= (64u) hi && (64u) hi <= 128 && is_arr_init(buf, 0, (64u) lo_)
+   , res = { buf_out, ms_out }
+   , ensures = is_arr_init(buf_out, 0, (64u) hi)
+   }
+ ]
+inline fn __zero128(
+  reg mut ptr u8[128] buf,
+  reg u64 lo_ hi,
+  reg u64 ms
+) -> reg ptr u8[128], reg u64
+{
+  reg u64 lo end z;
+  reg bool more;
+
+  lo = lo_;
+  z = 0;
+  end = lo;
+  end += 7;
+  end &= -8;
+  end = hi < end ? hi : end;
+  while { more = lo < end; } (more) {
+    ms = #update_msf(more, ms);
+    buf[lo] = (8u)z;
+    lo += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  while { end = lo; end += 8; more = end <= hi; } (more) {
+    ms = #update_msf(more, ms);
+    buf.[:u64 lo] = z;
+    lo += 8;
+  }
+  ms = #update_msf(!more, ms);
+
+  while { more = lo < hi; } (more) {
+    ms = #update_msf(more, ms);
+    buf[lo] = (8u)z;
+    lo += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  return buf, ms;
+}

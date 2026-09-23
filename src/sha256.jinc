@@ -32,6 +32,7 @@
  */
 
 from HashWord require "word.jinc"
+from Hash require "fill.jinc"
 from Sha256Kernel require "sha256_compress.jinc"
 
 /*
@@ -110,31 +111,26 @@ fn _sha256_absorb_mem(
   reg u64 ms
 ) -> reg ptr u32[8], reg ptr u8[64], reg u64, reg u64
 {
-  reg u64 fill n end off t;
+  reg u64 fill n off;
   reg bool more full;
 
   fill = total;
   fill &= 63;
   total += inlen;
 
-  /* Complete a partly filled block. */
+  /*
+   * Complete a partly filled block. When nothing is pending the step is
+   * skipped, so that whole blocks compress straight from memory below.
+   */
 
   n = 64;
   n -= fill;
   n = inlen < n ? inlen : n;
   n = fill == 0 ? fill : n;
   inlen -= n;
-
-  end = fill;
-  end += n;
-  while { more = fill < end; } (more) {
-    ms = #update_msf(more, ms);
-    t = (64u)[:u8 in];
-    buf[fill] = (8u)t;
-    fill += 1;
-    in += 1;
-  }
-  ms = #update_msf(!more, ms);
+  buf, ms = __fill64_mem(buf, fill, in, n, ms);
+  fill += n;
+  in += n;
 
   full = fill == 64;
   if (full) {
@@ -151,16 +147,17 @@ fn _sha256_absorb_mem(
     in = #protect(in, ms);
     inlen = #protect(inlen, ms);
     buf = #protect_ptr(buf, ms);
+    fill = 0;
   } else {
     ms = #update_msf(!full, ms);
   }
 
   /*
    * Whole blocks straight from memory, in one kernel call made only when
-   * there is at least one. Either fill was 0 on entry, or the block above
-   * completed, or inlen is now 0; in all three cases buf has no pending
-   * bytes here. The values needed after the call cross it through the
-   * stack and are protected on reload.
+   * there is at least one. Either nothing was pending on entry, or the
+   * block above completed, or inlen is now 0, so fill is 0 whenever a
+   * block is compressed here. The values needed after the call cross it
+   * through the stack and are protected on reload.
    */
 
   off = 0;
@@ -179,35 +176,19 @@ fn _sha256_absorb_mem(
     off = inlen;
     off >>= 6;
     off <<= 6;
+    fill = 0;
   } else {
     ms = #update_msf(!more, ms);
   }
 
   /*
-   * The remainder is inlen mod 64 on both paths; when no block was
-   * compressed inlen is already below 64 and the mask changes nothing.
-   * Masking after the branch makes the bound on the copy below explicit
-   * instead of leaving it implied by n = 0, which jasmin-checksafety
-   * does not invert.
-   */
-  inlen &= 63;
-
-  /*
-   * Keep the remainder; buf is empty at this point when inlen > 0. It
-   * starts off bytes past in, after the whole blocks. in itself is not
-   * advanced by that length, so the address keeps in as its base, as in
-   * keccak/sponge.jinc.
+   * Keep the remainder, inlen - off = inlen mod 64 bytes after the whole
+   * blocks, behind the fill pending bytes. It is empty unless fill is 0.
    */
 
-  fill = 0;
-  while { more = fill < inlen; } (more) {
-    ms = #update_msf(more, ms);
-    t = (64u)[:u8 in + off];
-    buf[fill] = (8u)t;
-    fill += 1;
-    off += 1;
-  }
-  ms = #update_msf(!more, ms);
+  inlen -= off;
+  in += off;
+  buf, ms = __fill64_mem(buf, fill, in, inlen, ms);
 
   return h, buf, total, ms;
 }
@@ -244,14 +225,13 @@ fn _sha256_finalize(
   reg u64 ms
 ) -> reg ptr u8[32], reg ptr u32[8], reg ptr u8[64], reg u64
 {
-  reg u64 fill z t;
+  reg u64 fill hi t;
   reg u32 x;
-  reg bool more two_blocks;
+  reg bool two_blocks;
   inline int i;
 
   fill = total;
   fill &= 63;
-  z = 0;
 
   t = 0x80;
   buf[fill] = (8u)t;
@@ -260,12 +240,8 @@ fn _sha256_finalize(
   two_blocks = fill > 56;
   if (two_blocks) {
     ms = #update_msf(two_blocks, ms);
-    while { more = fill < 64; } (more) {
-      ms = #update_msf(more, ms);
-      buf[fill] = (8u)z;
-      fill += 1;
-    }
-    ms = #update_msf(!more, ms);
+    hi = 64;
+    buf, ms = __zero64(buf, fill, hi, ms);
 
     () = #spill(out, buf, total);
     h, ms = _sha256_compress(h, buf, ms);
@@ -274,17 +250,12 @@ fn _sha256_finalize(
     buf = #protect_ptr(buf, ms);
     total = #protect(total, ms);
     fill = 0;
-    z = 0;
   } else {
     ms = #update_msf(!two_blocks, ms);
   }
 
-  while { more = fill < 56; } (more) {
-    ms = #update_msf(more, ms);
-    buf[fill] = (8u)z;
-    fill += 1;
-  }
-  ms = #update_msf(!more, ms);
+  hi = 56;
+  buf, ms = __zero64(buf, fill, hi, ms);
 
   t = total;
   t <<= 3;
@@ -322,22 +293,7 @@ inline fn __sha256_mem_from(
   stack u8[64] buf_s;
   reg ptr u8[64] buf;
   reg u64 total;
-  inline int i;
 
-  /*
-   * Source workaround for a safety-checker limitation, not a security
-   * measure. With the pinned toolchain (toolchain/jasmin/PIN, SERIES and
-   * PATCHES.md), jasmin-checksafety does not see that the run-time-indexed
-   * writes of absorb (the remaining bytes) and of finalize (the padding)
-   * together cover every byte the last compressions read, and reports
-   * is_init on the compression's message load. Zeroing the buffer once
-   * removes that alarm. The functions never read a byte of buf they have
-   * not written for this hash (the state invariant in README.md). Remove
-   * the zeroing when the checker proves the form without it.
-   */
-  for i = 0 to 8 {
-    buf_s[:u64 i] = 0;
-  }
   buf = buf_s;
   total = 0;
   /*

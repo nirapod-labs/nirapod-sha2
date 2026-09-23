@@ -53,23 +53,9 @@ fn _hmac_sha256_keyblock_mem(
 ) -> reg ptr u8[64], reg u64
 {
   stack u8[32] digest;
-  reg u64 i z t;
+  reg u64 i hi t;
   inline int j;
-  reg bool long more;
-
-  /*
-   * Source workaround for a safety-checker limitation, not part of K0.
-   * The copy and the padding below write k0 at run-time indices, which
-   * the pinned jasmin-checksafety does not count as initialising, so it
-   * cannot see k0 initialised where __hmac_sha256_init reads it. Zeroing
-   * k0 at constant indices first gives every byte a write it counts. The
-   * copy and the padding still write every byte of k0 themselves; the
-   * fill check (tests/hash/tools/fill_check.sh) replaces this zeroing
-   * with 0xa5 bytes and requires every test to pass.
-   */
-  for j = 0 to 8 {
-    k0[:u64 j] = 0;
-  }
+  reg bool long;
 
   long = keylen > 64;
   if (long) {
@@ -90,22 +76,12 @@ fn _hmac_sha256_keyblock_mem(
   } else {
     ms = #update_msf(!long, ms);
     i = 0;
-    while { more = i < keylen; } (more) {
-      ms = #update_msf(more, ms);
-      t = (64u)[:u8 key + i];
-      k0[i] = (8u)t;
-      i += 1;
-    }
-    ms = #update_msf(!more, ms);
+    k0, ms = __fill64_mem(k0, i, key, keylen, ms);
+    i = keylen;
   }
 
-  z = 0;
-  while { more = i < 64; } (more) {
-    ms = #update_msf(more, ms);
-    k0[i] = (8u)z;
-    i += 1;
-  }
-  ms = #update_msf(!more, ms);
+  hi = 64;
+  k0, ms = __zero64(k0, i, hi, ms);
 
   return k0, ms;
 }
@@ -125,23 +101,9 @@ fn _hmac_sha512_keyblock_mem(
 ) -> reg ptr u8[128], reg u64
 {
   stack u8[64] digest;
-  reg u64 i z t;
+  reg u64 i hi t;
   inline int j;
-  reg bool long more;
-
-  /*
-   * Source workaround for a safety-checker limitation, not part of K0.
-   * The copy and the padding below write k0 at run-time indices, which
-   * the pinned jasmin-checksafety does not count as initialising, so it
-   * cannot see k0 initialised where __hmac_sha512_init reads it. Zeroing
-   * k0 at constant indices first gives every byte a write it counts. The
-   * copy and the padding still write every byte of k0 themselves; the
-   * fill check (tests/hash/tools/fill_check.sh) replaces this zeroing
-   * with 0xa5 bytes and requires every test to pass.
-   */
-  for j = 0 to 16 {
-    k0[:u64 j] = 0;
-  }
+  reg bool long;
 
   long = keylen > 128;
   if (long) {
@@ -162,22 +124,12 @@ fn _hmac_sha512_keyblock_mem(
   } else {
     ms = #update_msf(!long, ms);
     i = 0;
-    while { more = i < keylen; } (more) {
-      ms = #update_msf(more, ms);
-      t = (64u)[:u8 key + i];
-      k0[i] = (8u)t;
-      i += 1;
-    }
-    ms = #update_msf(!more, ms);
+    k0, ms = __fill128_mem(k0, i, key, keylen, ms);
+    i = keylen;
   }
 
-  z = 0;
-  while { more = i < 128; } (more) {
-    ms = #update_msf(more, ms);
-    k0[i] = (8u)z;
-    i += 1;
-  }
-  ms = #update_msf(!more, ms);
+  hi = 128;
+  k0, ms = __zero128(k0, i, hi, ms);
 
   return k0, ms;
 }
