@@ -108,7 +108,8 @@
  *         x86-64, other CPUs      the caller depends on the CPU
  *
  *     Before returning, each call clears the stack its Jasmin code used
- *     and the caller-saved registers. Contexts hold secret state between
+ *     and the caller-saved registers. The stack each call needs is listed
+ *     per kernel in tests/stack/stack.txt (README.md, "Stack use"). Contexts hold secret state between
  *     calls; final zeroes them, and a caller that abandons a context
  *     should clear it.
  *
