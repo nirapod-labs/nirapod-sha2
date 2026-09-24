@@ -12,7 +12,8 @@
 #     ci/run.sh [--all] [--safety] [--proofs] [--only JOBS] [--no-clean]
 #     ci/run.sh --list
 #
-# Default jobs: toolchain build tests exports ct.
+# Default jobs: toolchain build tests exports ct on a host with the pinned
+# Jasmin (the analysis host).
 # Opt-in jobs: safety (long, Linux only) and proofs (long, Linux only).
 #
 # A job passes only when it exits zero and its log holds a line that
@@ -70,6 +71,7 @@ while [ $# -gt 0 ]; do
     --no-clean) clean=0 ;;
     --list)
       printf 'default: %s\n' "$ALL_JOBS"
+      printf 'default without Jasmin: %s\n' "$NATIVE_JOBS"
       printf 'opt-in:  %s\n' "$OPT_JOBS"
       exit 0
       ;;

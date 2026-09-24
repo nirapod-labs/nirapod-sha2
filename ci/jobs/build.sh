@@ -5,15 +5,12 @@
 # ci/jobs/build.sh
 # =================
 #
-# Builds every unit and both libraries of the host architecture.
+# Builds the host architecture's units and both libraries.
 #
-#   make asm   the assembly of the three units of the host architecture
+#   make asm   the assembly of the host's three units,
+#              compiled by the pinned Jasmin
 #   make all   the host objects, the production library and the testing
-#              library
-#
-# A host builds its own architecture. The same entry point on the other
-# architecture builds the other three units, so the two runs together
-# cover all six.
+#              library, from that assembly
 #
 # Then checks that every expected file exists, and on AArch64 that the
 # assembly does not touch x18, which macOS reserves and the C layer does
@@ -25,22 +22,25 @@ set -euo pipefail
 cd "${CI_REPO_ROOT:?}" || ci_fail "CI_REPO_ROOT is not set"
 
 ci_need make
-ci_need jasminc
 ci_need cc
 ci_need ar
 
 jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '4')
 [ "$jobs" -le 8 ] || jobs=8
 
+ci_need jasminc
 make -j"$jobs" asm
+echo "assembly: build/asm/$CI_HOST_SYSTEM"
 make -j"$jobs" all
 
 out=$(ci_out)
 missing=0
 for unit in $(ci_units "$CI_HOST_ARCH"); do
-  [ -f "build/units/$unit.jazz" ] || { echo "missing build/units/$unit.jazz"; missing=1; }
-  [ -f "build/asm/$CI_HOST_SYSTEM/$unit.s" ] \
-    || { echo "missing build/asm/$CI_HOST_SYSTEM/$unit.s"; missing=1; }
+  if [ "$asm" = jasmin ]; then
+    [ -f "build/units/$unit.jazz" ] || { echo "missing build/units/$unit.jazz"; missing=1; }
+  fi
+  [ -f "$root/asm/$CI_HOST_SYSTEM/$unit.s" ] \
+    || { echo "missing $root/asm/$CI_HOST_SYSTEM/$unit.s"; missing=1; }
 done
 for lib in libnirapod_sha2.a libnirapod_sha2_testing.a; do
   [ -f "$out/lib/$lib" ] || { echo "missing $out/lib/$lib"; missing=1; }
@@ -54,7 +54,7 @@ done
 
 if [ "$CI_HOST_ARCH" = aarch64 ]; then
   bad=0
-  for f in build/asm/"$CI_HOST_SYSTEM"/aarch64-*.s; do
+  for f in "$root"/asm/"$CI_HOST_SYSTEM"/aarch64-*.s; do
     [ -f "$f" ] || continue
     if grep -E -n '(^|[^a-z0-9_])[xw]18([^0-9]|$)' "$f"; then
       echo "asm-policy: $f uses x18"
@@ -68,5 +68,5 @@ else
 fi
 
 echo "units: $units assembly files, $out/lib/libnirapod_sha2.a, $out/lib/libnirapod_sha2_testing.a"
-PASS="PASS: build: $units $CI_HOST_ARCH units and both libraries"
+PASS="PASS: build: $units $CI_HOST_ARCH units ($asm assembly) and both libraries"
 echo "$PASS"

@@ -73,6 +73,12 @@ ci_jarch() {
   esac
 }
 
+# The architectures the analysis jobs (ct, safety) cover. The analyses are
+# per target, not per host, so one analysis host covers both.
+ci_analysis_arches() {
+  printf 'aarch64 x86_64\n'
+}
+
 ci_unit_roots() {
   make -s "print-roots-$1"
 }

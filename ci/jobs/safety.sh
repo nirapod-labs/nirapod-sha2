@@ -5,9 +5,10 @@
 # ci/jobs/safety.sh
 # ==================
 #
-# The memory-safety checker gives a verdict on every export of the host
-# architecture. One run per unit; without --slice the checker takes every
-# export function of the unit, and the job requires each export of
+# The memory-safety checker gives a verdict on every export of both
+# architectures (the analysis is per target, so one host covers both).
+# One run per unit; without --slice the checker takes every export
+# function of the unit, and the job requires each export of
 # src/nirapod_sha2.jinc to appear in the run.
 #
 # This job is opt-in (ci/run.sh --safety) and long. It does not run on
@@ -32,7 +33,8 @@ sed -n 's/^export fn \([a-z0-9_]*\)(.*/\1/p' src/nirapod_sha2.jinc \
   | LC_ALL=C sort -u > "$exports"
 [ -s "$exports" ] || ci_fail "src/nirapod_sha2.jinc has no export"
 
-for unit in $(ci_units "$CI_HOST_ARCH"); do
+arches=$(ci_analysis_arches)
+for unit in $(for a in $arches; do ci_units "$a"; done); do
   jazz=build/units/$unit.jazz
   log=$CI_RUN_DIR/safety-$unit.log
   roots=$(ci_unit_roots "$unit")
@@ -71,6 +73,6 @@ for unit in $(ci_units "$CI_HOST_ARCH"); do
   echo "safety: $unit: No Safety Violation, $(wc -l < "$exports" | tr -d ' ') exports"
 done
 
-units=$(ci_units "$CI_HOST_ARCH" | wc -w | tr -d ' ')
-PASS="PASS: safety: $units $CI_HOST_ARCH units, every export checked"
+units=$(for a in $arches; do ci_units "$a"; done | wc -w | tr -d ' ')
+PASS="PASS: safety: $units units of $(echo $arches), every export checked"
 echo "$PASS"
