@@ -52,7 +52,7 @@
 #         unfinished must be exactly those of jasmin/ADMITS (Rocq) and
 #         jasmin/ECLIB_AXIOMS (Jasmin EasyCrypt library). Hand-written OCaml
 #         (front end, printers, safety and constant-time checkers) is
-#         outside the proofs: docs/TOOLCHAIN.md gives the boundary.
+#         outside the proofs.
 #
 # test    The compiler's dune test suites (printing, negative, safety and
 #         speculative constant-time tests, cram tests), all built and run
@@ -207,7 +207,7 @@ check_inputs() {
   fi
 }
 
-# Tools and libraries the build needs from the host (docs/TOOLCHAIN.md);
+# Tools and libraries the build needs from the host;
 # PPL is checked by opam's conf-ppl.
 preflight() {
   local t tools=(git curl make m4 pkg-config cc c++ opam) libs=(gmp mpfr)

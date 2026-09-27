@@ -22,8 +22,10 @@
  *     hmac_<hash>_init, _update, _final   incremental HMAC over a context
  *
  *     sha256_x8, sha512_x4                SHA-256 of 8, SHA-512 of 4
- *                                          equal-length messages packed in
- *                                          memory, one-shot
+ *                                          equal-length messages, one per
+ *                                          lane pointer, one-shot
+ *     sha256_x8_<op>, sha512_x4_<op>      incremental multi-way hash over a
+ *                                          multi-way context (context_x.jinc)
  *
  * Each export is a short composition of functions in the other files of
  * src/, so that its correctness reduces to theirs.
@@ -972,7 +974,8 @@ export fn hmac_sha512_final(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg mut p
  * table. One-shot, and incremental over a multi-way context
  * (context_x.jinc): init, init_from (every lane continues one single-way
  * context), update, final. The kernels are the unit's Sha256KernelX and
- * Sha512KernelX: AVX2 in the x86-64 avx2 unit, otherwise one single-way
+ * Sha512KernelX, which src/README.md lists per unit: lanes in vector
+ * registers, lanes interleaved on the SHA instructions, or one single-way
  * compression per lane.
  *
  * Results of init_from, update and final as for the single-way contexts;
