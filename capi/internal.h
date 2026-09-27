@@ -51,6 +51,7 @@
 #define NIRAPOD_SHA2_CPU_SHA256   0x20u  /* AArch64: FEAT_SHA256 */
 #define NIRAPOD_SHA2_CPU_SHA512   0x40u  /* AArch64: FEAT_SHA512 */
 #define NIRAPOD_SHA2_CPU_DIT      0x80u  /* AArch64: FEAT_DIT */
+#define NIRAPOD_SHA2_CPU_BMI2     0x100u /* x86-64: BMI1 and BMI2 (ANDN, RORX) */
 
 /*
  * Operation families. Within a family every operation runs the same
@@ -75,8 +76,9 @@ typedef enum nirapod_sha2_family {
  * features that the code of family f in this unit executes; it is what
  * dispatch.c and the testing entry points require of the CPU before they
  * run that family, and what clear.c is told after the call. A unit's
- * other families may need nothing: the shani unit's SHA-512 code is the
- * portable kernel. Records are const data.
+ * families may need different features, or none: the shani unit's SHA-512
+ * code is the AVX2 kernel, and the scalar unit's single-way code needs
+ * nothing. Records are const data.
  */
 typedef struct nirapod_sha2_unit {
     const char *name;
