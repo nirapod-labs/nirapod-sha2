@@ -149,8 +149,15 @@ print-roots-%:
 
 # -stack-zero: each export clears the stack it used before it returns
 # (src/nirapod_sha2.jinc, "Stack"). $(1) is the unit, $(2) the system.
+# The clearing stores are 64-bit words, except in the x86_64-avx2 unit,
+# which clears with 256-bit stores: a 64-bit store loop over the 1.5 KiB
+# frame of a multi-way one-shot export took about a fifth of the call for
+# one-block messages. Every export of that unit therefore runs AVX
+# instructions, and capi/units.c gives each of its families the AVX2
+# requirement.
+SZ_x86_64-avx2 := u256
 unit_flags = -arch $(call unit_jarch,$(1)) -system $(2) \
-             -stack-zero loop -stack-zero-size u64
+             -stack-zero loop -stack-zero-size $(or $(SZ_$(1)),u64)
 unit_asm   = $(BUILD)/asm/$(SYSTEM_$(call unit_arch,$(1)))/$(1).s
 
 ASM_ROOT := $(BUILD)

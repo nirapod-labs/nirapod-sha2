@@ -22,12 +22,15 @@
  *     aarch64 sha2       ASIMD SHA256  ASIMD SHA512  ASIMD SHA256  ASIMD SHA512
  *     x86_64 portable    -             -             -             -
  *     x86_64 shani       SHANI         -             SHANI         -
- *     x86_64 avx2        -             -             AVX2          AVX2
+ *     x86_64 avx2        AVX2          AVX2          AVX2          AVX2
  *
  * In the shani unit the 8-way form runs the SHA-NI kernel once per
  * message, since the portable multi-way kernel calls the unit's
- * single-way one; its SHA-512 code is the portable kernel. Index 0 is the
- * portable unit on both architectures.
+ * single-way one; its SHA-512 code is the portable kernel. The avx2 unit's
+ * single-way kernels are the portable ones, but every export of that unit
+ * clears its stack with 256-bit AVX stores (Makefile, unit_flags), so each
+ * of its families needs AVX2, the feature the unit is built for. Index 0
+ * is the portable unit on both architectures.
  */
 
 #include "internal.h"
@@ -72,7 +75,9 @@ const nirapod_sha2_unit nirapod_sha2_units[] = {
 const nirapod_sha2_unit nirapod_sha2_units[] = {
     { "x86_64-portable", { 0, 0, 0, 0 }, UNIT_OPS(x86_64_portable) },
     { "x86_64-shani", { NIRAPOD_SHA2_CPU_SHANI, 0, NIRAPOD_SHA2_CPU_SHANI, 0 }, UNIT_OPS(x86_64_shani) },
-    { "x86_64-avx2", { 0, 0, NIRAPOD_SHA2_CPU_AVX2, NIRAPOD_SHA2_CPU_AVX2 }, UNIT_OPS(x86_64_avx2) },
+    { "x86_64-avx2",
+      { NIRAPOD_SHA2_CPU_AVX2, NIRAPOD_SHA2_CPU_AVX2, NIRAPOD_SHA2_CPU_AVX2, NIRAPOD_SHA2_CPU_AVX2 },
+      UNIT_OPS(x86_64_avx2) },
 };
 
 #else
