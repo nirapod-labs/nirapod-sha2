@@ -24,6 +24,11 @@
 #                      the array test unit (src/*_ASIZE.jinc instantiated)
 #     make asm-policy  properties of the AArch64 assembly the C layer relies
 #                      on (x18 unused)
+#     make extract     the EasyCrypt models of every unit (normal and
+#                      safety) into build/extract/models; with
+#                      check-extraction, extraction-identity and
+#                      extraction-control, the checks on them (see
+#                      "EasyCrypt models" below)
 #     make clean       remove build/
 #
 # Assembly comes from the Jasmin sources, compiled by JASMINC.
@@ -375,6 +380,65 @@ $(BUILD)/ct/array-%.ok: $(ARRAY_JAZZ) $(JASMIN_DEPS)
 	  echo "array unit, $*: $$n exports, $$t typed by jasmin-ct, $$s by --sct" >&2; exit 1; fi; \
 	echo "array unit, $*: jasmin-ct and --sct PASS ($$n exports)"
 	@touch $@
+
+# EasyCrypt models (tests/extraction/models.py). Each unit has a normal
+# model and a safety model (jasmin2ec -m safety), extracted from an entry
+# that requires src/nirapod_sha2.jinc with no namespace, under the unit's
+# include roots, so a procedure has one name in every unit:
+#
+#     make extract              both models of every unit into EXTRACT
+#                               (default build/extract/models), as
+#                               <arch>/<variant>/NirapodSha2.ec,
+#                               NirapodSha2Safety.ec and the array theories
+#     make check-extraction     extract again and require MODELS (default
+#                               proofs/extracted) to hold the same files,
+#                               byte for byte: a stale, hand-edited or
+#                               missing model fails
+#     make extraction-identity  every procedure, global and operator outside
+#                               the kernel files extracts to the same text in
+#                               every unit of an architecture, in both
+#                               models, and each model is the program of the
+#                               namespaced unit the library is compiled from
+#     make extraction-control   the negative controls of the two checks
+#                               (tests/extraction/control.py): a shared
+#                               procedure altered in one unit, models
+#                               extracted from altered sources, a model
+#                               edited by hand, and a unit given another
+#                               unit's models must each be rejected
+#
+# models.py states what is shared, what the comparison leaves out and why.
+# The identity work and its report are under build/extract/identity, the
+# controls' work under build/extract/control. JASMIN2EC must be the build
+# of the pinned toolchain, as JASMINC must.
+JASMIN2EC ?= jasmin2ec
+PYTHON    ?= python3
+EXTRACT   ?= $(BUILD)/extract/models
+MODELS    ?= proofs/extracted
+
+EXTRACT_ENTRY := $(BUILD)/extract/nirapod_sha2.jazz
+EXTRACT_UNITS := $(foreach u,$(ALL_UNITS),--unit '$(u):$(call unit_jarch,$(u)):$(call unit_roots,$(u))')
+MODELS_PY     := $(PYTHON) -I $(TESTS)/extraction/models.py --jasmin2ec $(JASMIN2EC) \
+                 --entry $(EXTRACT_ENTRY) --units $(BUILD)/units
+
+$(EXTRACT_ENTRY): Makefile
+	@mkdir -p $(@D)
+	@printf 'from Hash require "nirapod_sha2.jinc"\n' > $@
+
+.PHONY: extract check-extraction extraction-identity extraction-control
+
+extract: $(EXTRACT_ENTRY) $(UNIT_FILES)
+	$(MODELS_PY) extract --out $(EXTRACT) $(EXTRACT_UNITS)
+
+check-extraction: $(EXTRACT_ENTRY) $(UNIT_FILES)
+	$(MODELS_PY) check --models $(MODELS) $(EXTRACT_UNITS)
+
+extraction-identity: extract
+	$(MODELS_PY) identity --models $(EXTRACT) --work $(BUILD)/extract/identity $(EXTRACT_UNITS)
+
+extraction-control: extract
+	$(PYTHON) -I $(TESTS)/extraction/control.py --jasmin2ec $(JASMIN2EC) \
+	  --entry $(EXTRACT_ENTRY) --units $(BUILD)/units --src $(SRC) \
+	  --models $(EXTRACT) --work $(BUILD)/extract/control $(EXTRACT_UNITS)
 
 clean:
 	rm -rf $(BUILD)
