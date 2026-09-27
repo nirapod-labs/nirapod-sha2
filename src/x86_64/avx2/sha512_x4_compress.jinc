@@ -1,30 +1,137 @@
 /*
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * sha512_x4_compress.jinc (x86-64, avx2)
  * ======================================
  *
- * Four independent SHA-512 compressions in AVX2, with the entry point and
- * contract of the scalar 4-way kernel (src/sha512_x4_compress.jinc):
+ * Four independent SHA-512 compressions in AVX2, with the entry points and
+ * contracts of the scalar 4-way kernel (src/sha512_x4_compress.jinc):
  *
  *     _sha512_x4_compress(h4, blocks, ms)
+ *     _sha512_x4_compress_lanes(h4, in, off, n, ms)
  *
- * The structure of sha256_x8_compress.jinc in this directory with 64-bit
- * lanes: one 256-bit register holds the same word of the four instances,
- * qword k for instance k, so state register j is h4[:u256 j]. Each quarter
- * block (four words) of the four instances is a 4 x 4 matrix of qwords,
- * transposed by VPUNPCK{L,H}_4u64 and VPERM2I128 and made big-endian by
- * VPSHUFB. Rotations are two shifts and an OR; K_t is broadcast.
+ * Lane layout: one 256-bit register holds the same word of the four
+ * instances, qword k for instance k, so state register j is h4[:u256 j].
+ * Each quarter block (four words) of the four instances is a 4 x 4 matrix
+ * of qwords, transposed by VPUNPCK{L,H}_4u64 and VPERM2I128 and made
+ * big-endian by VPSHUFB (FIPS 180-4 section 3.1). Both entry points
+ * transpose into a 16-word schedule window on the stack, _compress from
+ * the block array and _compress_lanes straight from lane memory, and run
+ * _sha512_x4_block on it.
+ *
+ * Rounds (_sha512_x4_block): rounds 0 to 15 are unrolled, rounds 16 to 79
+ * are a loop of four passes over 16 unrolled rounds, a third of the code of
+ * a full unroll, which made one-block calls slower (src/README.md, "Kernel
+ * notes"); after 16 rounds the state rotation and the window are back in
+ * place. AVX2 has no 64-bit rotate, so ROTR by r is a right shift, a left
+ * shift by 64 - r and an XOR, except ROTR 8 in sigma0, which is a byte
+ * shuffle. Further savings per round:
+ *
+ *     K_t is read from a table holding it four times, as the memory
+ *     operand of the addition, instead of being broadcast
+ *     Maj(a, b, c) = ((a ^ b) & (b ^ c)) ^ b, where b ^ c is the a ^ b of
+ *     the round before, so Maj costs three operations
+ *     T1 is accumulated in the register of h, whose old value is dead,
+ *     with W_t + K_t, Ch and h added before Sigma1(e), so that e' = d + T1
+ *     waits only for Sigma1
  *
  * Required CPU feature: AVX2.
  *
- * Security: as the 8-way SHA-256 kernel. Residue: the local schedule window
- * holds 16 schedule words of every instance on return (W_63 .. W_78 as
- * compiled); clearing is the export's obligation.
+ * Security: h4 and the blocks are secret. Every address is fixed at
+ * compile time or derived from the public round counter and the public
+ * lane pointers. Residue: the local schedule window holds 16 schedule
+ * words of every instance on return, W_64 .. W_79; clearing is the
+ * export's obligation.
  */
 
-from Hash require "sha512_k.jinc"
+/*
+ * SHA-512 constants K_0 .. K_79 (FIPS 180-4 section 4.2.3), each repeated
+ * four times, so that K_t for every lane is the 256-bit word t.
+ */
+u64[320] SHA512_X4_K = {
+  0x428a2f98d728ae22, 0x428a2f98d728ae22, 0x428a2f98d728ae22, 0x428a2f98d728ae22,
+  0x7137449123ef65cd, 0x7137449123ef65cd, 0x7137449123ef65cd, 0x7137449123ef65cd,
+  0xb5c0fbcfec4d3b2f, 0xb5c0fbcfec4d3b2f, 0xb5c0fbcfec4d3b2f, 0xb5c0fbcfec4d3b2f,
+  0xe9b5dba58189dbbc, 0xe9b5dba58189dbbc, 0xe9b5dba58189dbbc, 0xe9b5dba58189dbbc,
+  0x3956c25bf348b538, 0x3956c25bf348b538, 0x3956c25bf348b538, 0x3956c25bf348b538,
+  0x59f111f1b605d019, 0x59f111f1b605d019, 0x59f111f1b605d019, 0x59f111f1b605d019,
+  0x923f82a4af194f9b, 0x923f82a4af194f9b, 0x923f82a4af194f9b, 0x923f82a4af194f9b,
+  0xab1c5ed5da6d8118, 0xab1c5ed5da6d8118, 0xab1c5ed5da6d8118, 0xab1c5ed5da6d8118,
+  0xd807aa98a3030242, 0xd807aa98a3030242, 0xd807aa98a3030242, 0xd807aa98a3030242,
+  0x12835b0145706fbe, 0x12835b0145706fbe, 0x12835b0145706fbe, 0x12835b0145706fbe,
+  0x243185be4ee4b28c, 0x243185be4ee4b28c, 0x243185be4ee4b28c, 0x243185be4ee4b28c,
+  0x550c7dc3d5ffb4e2, 0x550c7dc3d5ffb4e2, 0x550c7dc3d5ffb4e2, 0x550c7dc3d5ffb4e2,
+  0x72be5d74f27b896f, 0x72be5d74f27b896f, 0x72be5d74f27b896f, 0x72be5d74f27b896f,
+  0x80deb1fe3b1696b1, 0x80deb1fe3b1696b1, 0x80deb1fe3b1696b1, 0x80deb1fe3b1696b1,
+  0x9bdc06a725c71235, 0x9bdc06a725c71235, 0x9bdc06a725c71235, 0x9bdc06a725c71235,
+  0xc19bf174cf692694, 0xc19bf174cf692694, 0xc19bf174cf692694, 0xc19bf174cf692694,
+  0xe49b69c19ef14ad2, 0xe49b69c19ef14ad2, 0xe49b69c19ef14ad2, 0xe49b69c19ef14ad2,
+  0xefbe4786384f25e3, 0xefbe4786384f25e3, 0xefbe4786384f25e3, 0xefbe4786384f25e3,
+  0x0fc19dc68b8cd5b5, 0x0fc19dc68b8cd5b5, 0x0fc19dc68b8cd5b5, 0x0fc19dc68b8cd5b5,
+  0x240ca1cc77ac9c65, 0x240ca1cc77ac9c65, 0x240ca1cc77ac9c65, 0x240ca1cc77ac9c65,
+  0x2de92c6f592b0275, 0x2de92c6f592b0275, 0x2de92c6f592b0275, 0x2de92c6f592b0275,
+  0x4a7484aa6ea6e483, 0x4a7484aa6ea6e483, 0x4a7484aa6ea6e483, 0x4a7484aa6ea6e483,
+  0x5cb0a9dcbd41fbd4, 0x5cb0a9dcbd41fbd4, 0x5cb0a9dcbd41fbd4, 0x5cb0a9dcbd41fbd4,
+  0x76f988da831153b5, 0x76f988da831153b5, 0x76f988da831153b5, 0x76f988da831153b5,
+  0x983e5152ee66dfab, 0x983e5152ee66dfab, 0x983e5152ee66dfab, 0x983e5152ee66dfab,
+  0xa831c66d2db43210, 0xa831c66d2db43210, 0xa831c66d2db43210, 0xa831c66d2db43210,
+  0xb00327c898fb213f, 0xb00327c898fb213f, 0xb00327c898fb213f, 0xb00327c898fb213f,
+  0xbf597fc7beef0ee4, 0xbf597fc7beef0ee4, 0xbf597fc7beef0ee4, 0xbf597fc7beef0ee4,
+  0xc6e00bf33da88fc2, 0xc6e00bf33da88fc2, 0xc6e00bf33da88fc2, 0xc6e00bf33da88fc2,
+  0xd5a79147930aa725, 0xd5a79147930aa725, 0xd5a79147930aa725, 0xd5a79147930aa725,
+  0x06ca6351e003826f, 0x06ca6351e003826f, 0x06ca6351e003826f, 0x06ca6351e003826f,
+  0x142929670a0e6e70, 0x142929670a0e6e70, 0x142929670a0e6e70, 0x142929670a0e6e70,
+  0x27b70a8546d22ffc, 0x27b70a8546d22ffc, 0x27b70a8546d22ffc, 0x27b70a8546d22ffc,
+  0x2e1b21385c26c926, 0x2e1b21385c26c926, 0x2e1b21385c26c926, 0x2e1b21385c26c926,
+  0x4d2c6dfc5ac42aed, 0x4d2c6dfc5ac42aed, 0x4d2c6dfc5ac42aed, 0x4d2c6dfc5ac42aed,
+  0x53380d139d95b3df, 0x53380d139d95b3df, 0x53380d139d95b3df, 0x53380d139d95b3df,
+  0x650a73548baf63de, 0x650a73548baf63de, 0x650a73548baf63de, 0x650a73548baf63de,
+  0x766a0abb3c77b2a8, 0x766a0abb3c77b2a8, 0x766a0abb3c77b2a8, 0x766a0abb3c77b2a8,
+  0x81c2c92e47edaee6, 0x81c2c92e47edaee6, 0x81c2c92e47edaee6, 0x81c2c92e47edaee6,
+  0x92722c851482353b, 0x92722c851482353b, 0x92722c851482353b, 0x92722c851482353b,
+  0xa2bfe8a14cf10364, 0xa2bfe8a14cf10364, 0xa2bfe8a14cf10364, 0xa2bfe8a14cf10364,
+  0xa81a664bbc423001, 0xa81a664bbc423001, 0xa81a664bbc423001, 0xa81a664bbc423001,
+  0xc24b8b70d0f89791, 0xc24b8b70d0f89791, 0xc24b8b70d0f89791, 0xc24b8b70d0f89791,
+  0xc76c51a30654be30, 0xc76c51a30654be30, 0xc76c51a30654be30, 0xc76c51a30654be30,
+  0xd192e819d6ef5218, 0xd192e819d6ef5218, 0xd192e819d6ef5218, 0xd192e819d6ef5218,
+  0xd69906245565a910, 0xd69906245565a910, 0xd69906245565a910, 0xd69906245565a910,
+  0xf40e35855771202a, 0xf40e35855771202a, 0xf40e35855771202a, 0xf40e35855771202a,
+  0x106aa07032bbd1b8, 0x106aa07032bbd1b8, 0x106aa07032bbd1b8, 0x106aa07032bbd1b8,
+  0x19a4c116b8d2d0c8, 0x19a4c116b8d2d0c8, 0x19a4c116b8d2d0c8, 0x19a4c116b8d2d0c8,
+  0x1e376c085141ab53, 0x1e376c085141ab53, 0x1e376c085141ab53, 0x1e376c085141ab53,
+  0x2748774cdf8eeb99, 0x2748774cdf8eeb99, 0x2748774cdf8eeb99, 0x2748774cdf8eeb99,
+  0x34b0bcb5e19b48a8, 0x34b0bcb5e19b48a8, 0x34b0bcb5e19b48a8, 0x34b0bcb5e19b48a8,
+  0x391c0cb3c5c95a63, 0x391c0cb3c5c95a63, 0x391c0cb3c5c95a63, 0x391c0cb3c5c95a63,
+  0x4ed8aa4ae3418acb, 0x4ed8aa4ae3418acb, 0x4ed8aa4ae3418acb, 0x4ed8aa4ae3418acb,
+  0x5b9cca4f7763e373, 0x5b9cca4f7763e373, 0x5b9cca4f7763e373, 0x5b9cca4f7763e373,
+  0x682e6ff3d6b2b8a3, 0x682e6ff3d6b2b8a3, 0x682e6ff3d6b2b8a3, 0x682e6ff3d6b2b8a3,
+  0x748f82ee5defb2fc, 0x748f82ee5defb2fc, 0x748f82ee5defb2fc, 0x748f82ee5defb2fc,
+  0x78a5636f43172f60, 0x78a5636f43172f60, 0x78a5636f43172f60, 0x78a5636f43172f60,
+  0x84c87814a1f0ab72, 0x84c87814a1f0ab72, 0x84c87814a1f0ab72, 0x84c87814a1f0ab72,
+  0x8cc702081a6439ec, 0x8cc702081a6439ec, 0x8cc702081a6439ec, 0x8cc702081a6439ec,
+  0x90befffa23631e28, 0x90befffa23631e28, 0x90befffa23631e28, 0x90befffa23631e28,
+  0xa4506cebde82bde9, 0xa4506cebde82bde9, 0xa4506cebde82bde9, 0xa4506cebde82bde9,
+  0xbef9a3f7b2c67915, 0xbef9a3f7b2c67915, 0xbef9a3f7b2c67915, 0xbef9a3f7b2c67915,
+  0xc67178f2e372532b, 0xc67178f2e372532b, 0xc67178f2e372532b, 0xc67178f2e372532b,
+  0xca273eceea26619c, 0xca273eceea26619c, 0xca273eceea26619c, 0xca273eceea26619c,
+  0xd186b8c721c0c207, 0xd186b8c721c0c207, 0xd186b8c721c0c207, 0xd186b8c721c0c207,
+  0xeada7dd6cde0eb1e, 0xeada7dd6cde0eb1e, 0xeada7dd6cde0eb1e, 0xeada7dd6cde0eb1e,
+  0xf57d4f7fee6ed178, 0xf57d4f7fee6ed178, 0xf57d4f7fee6ed178, 0xf57d4f7fee6ed178,
+  0x06f067aa72176fba, 0x06f067aa72176fba, 0x06f067aa72176fba, 0x06f067aa72176fba,
+  0x0a637dc5a2c898a6, 0x0a637dc5a2c898a6, 0x0a637dc5a2c898a6, 0x0a637dc5a2c898a6,
+  0x113f9804bef90dae, 0x113f9804bef90dae, 0x113f9804bef90dae, 0x113f9804bef90dae,
+  0x1b710b35131c471b, 0x1b710b35131c471b, 0x1b710b35131c471b, 0x1b710b35131c471b,
+  0x28db77f523047d84, 0x28db77f523047d84, 0x28db77f523047d84, 0x28db77f523047d84,
+  0x32caab7b40c72493, 0x32caab7b40c72493, 0x32caab7b40c72493, 0x32caab7b40c72493,
+  0x3c9ebe0a15c9bebc, 0x3c9ebe0a15c9bebc, 0x3c9ebe0a15c9bebc, 0x3c9ebe0a15c9bebc,
+  0x431d67c49c100d4c, 0x431d67c49c100d4c, 0x431d67c49c100d4c, 0x431d67c49c100d4c,
+  0x4cc5d4becb3e42b6, 0x4cc5d4becb3e42b6, 0x4cc5d4becb3e42b6, 0x4cc5d4becb3e42b6,
+  0x597f299cfc657e2a, 0x597f299cfc657e2a, 0x597f299cfc657e2a, 0x597f299cfc657e2a,
+  0x5fcb6fab3ad6faec, 0x5fcb6fab3ad6faec, 0x5fcb6fab3ad6faec, 0x5fcb6fab3ad6faec,
+  0x6c44198c4a475817, 0x6c44198c4a475817, 0x6c44198c4a475817, 0x6c44198c4a475817
+};
 
 /* VPSHUFB mask reversing the bytes of each qword, in both 128-bit halves. */
 u64[4] SHA512_X4_BSWAP = {
@@ -32,106 +139,259 @@ u64[4] SHA512_X4_BSWAP = {
   0x0001020304050607, 0x08090a0b0c0d0e0f
 };
 
-inline fn __rotr_4u64(reg u256 x, inline int r) -> reg u256
-{
-  reg u256 t;
+/* VPSHUFB mask rotating each qword right by 8 bits: byte i takes byte i + 1 mod 8. */
+u64[4] SHA512_X4_ROR8 = {
+  0x0007060504030201, 0x080f0e0d0c0b0a09,
+  0x0007060504030201, 0x080f0e0d0c0b0a09
+};
 
-  t = x >>4u64 r;
-  x = x <<4u64 (64 - r);
-  x |= t;
-  return x;
-}
-
+/* Σ0(x) = ROTR^28(x) ^ ROTR^34(x) ^ ROTR^39(x), as shifts and a tree of XORs. */
 inline fn __Sigma0_4x(reg u256 x) -> reg u256
 {
-  reg u256 r t;
+  reg u256 r s t;
 
-  r = __rotr_4u64(x, 28);
-  t = __rotr_4u64(x, 34);
-  r ^= t;
-  t = __rotr_4u64(x, 39);
-  r ^= t;
+  r = x >>4u64 28;
+  s = x <<4u64 36;
+  r ^= s;
+  s = x >>4u64 34;
+  t = x <<4u64 30;
+  s ^= t;
+  r ^= s;
+  s = x >>4u64 39;
+  t = x <<4u64 25;
+  s ^= t;
+  r ^= s;
   return r;
 }
 
+/* Σ1(x) = ROTR^14(x) ^ ROTR^18(x) ^ ROTR^41(x) */
 inline fn __Sigma1_4x(reg u256 x) -> reg u256
 {
-  reg u256 r t;
+  reg u256 r s t;
 
-  r = __rotr_4u64(x, 14);
-  t = __rotr_4u64(x, 18);
-  r ^= t;
-  t = __rotr_4u64(x, 41);
-  r ^= t;
+  r = x >>4u64 14;
+  s = x <<4u64 50;
+  r ^= s;
+  s = x >>4u64 18;
+  t = x <<4u64 46;
+  s ^= t;
+  r ^= s;
+  s = x >>4u64 41;
+  t = x <<4u64 23;
+  s ^= t;
+  r ^= s;
   return r;
 }
 
-inline fn __sigma0_4x(reg u256 x) -> reg u256
+/* σ0(x) = ROTR^1(x) ^ ROTR^8(x) ^ SHR^7(x); ror8 is SHA512_X4_ROR8. */
+inline fn __sigma0_4x(reg u256 x, reg u256 ror8) -> reg u256
 {
-  reg u256 r t;
+  reg u256 r s;
 
-  r = __rotr_4u64(x, 1);
-  t = __rotr_4u64(x, 8);
-  r ^= t;
-  t = x >>4u64 7;
-  r ^= t;
+  r = x >>4u64 1;
+  s = x <<4u64 63;
+  r ^= s;
+  s = #VPSHUFB_256(x, ror8);
+  r ^= s;
+  s = x >>4u64 7;
+  r ^= s;
   return r;
 }
 
+/* σ1(x) = ROTR^19(x) ^ ROTR^61(x) ^ SHR^6(x) */
 inline fn __sigma1_4x(reg u256 x) -> reg u256
 {
-  reg u256 r t;
+  reg u256 r s t;
 
-  r = __rotr_4u64(x, 19);
-  t = __rotr_4u64(x, 61);
-  r ^= t;
-  t = x >>4u64 6;
-  r ^= t;
+  r = x >>4u64 19;
+  s = x <<4u64 45;
+  r ^= s;
+  s = x >>4u64 61;
+  t = x <<4u64 3;
+  s ^= t;
+  r ^= s;
+  s = x >>4u64 6;
+  r ^= s;
   return r;
 }
 
 /*
- * Words 4q .. 4q + 3 of the four blocks into w[4q .. 4q + 3], transposed
- * and byte-swapped. Row k is instance k's 32 bytes at 128k + 32q.
+ * Round t of section 6.4.2 step 3 on every lane. Variable k (a = 0 .. h =
+ * 7) of round t is v[(k - t) mod 8]; wk is W_t + K_t; cc is b ^ c, the
+ * a ^ b of round t - 1 (b ^ c of the initial state for round 0). Returns
+ * the state and this round's a ^ b.
+ */
+inline fn __sha512_x4_round(reg u256[8] v, reg u256 wk cc, inline int t) -> reg u256[8], reg u256
+{
+  reg u256 x y;
+  inline int a b d e f g h;
+
+  a = (0 + 80 - t) % 8;
+  b = (1 + 80 - t) % 8;
+  d = (3 + 80 - t) % 8;
+  e = (4 + 80 - t) % 8;
+  f = (5 + 80 - t) % 8;
+  g = (6 + 80 - t) % 8;
+  h = (7 + 80 - t) % 8;
+
+  /* T1 = h + Σ1(e) + Ch(e, f, g) + K_t + W_t, in the register of h */
+
+  v[h] = v[h] +4u64 wk;
+  x = v[f] ^ v[g];
+  x &= v[e];
+  x ^= v[g];
+  v[h] = v[h] +4u64 x;
+  x = __Sigma1_4x(v[e]);
+  v[h] = v[h] +4u64 x;
+
+  /* e' = d + T1 */
+
+  v[d] = v[d] +4u64 v[h];
+
+  /* a' = T1 + Σ0(a) + Maj(a, b, c) */
+
+  x = __Sigma0_4x(v[a]);
+  v[h] = v[h] +4u64 x;
+  y = v[a] ^ v[b];
+  cc &= y;
+  cc ^= v[b];
+  v[h] = v[h] +4u64 cc;
+
+  return v, y;
+}
+
+/*
+ * W_t for t >= 16 into w[t mod 16] (section 6.4.2 step 1); returns W_t.
+ * The window holds W_{t-16} .. W_{t-1} at their indices mod 16.
  */
 #[safety =
-   { requires = 0 <= q && q < 4 && is_arr_init(w, 0, 128 * q) && is_arr_init(blocks, 0, 512)
-   , res = { w_out }
-   , ensures = is_arr_init(w_out, 0, 128 * (q + 1))
+   { requires = is_arr_init(w, 0, 512)
+   , res = { w_out, wt_out }
+   , ensures = is_arr_init(w_out, 0, 512)
    }
  ]
-inline fn __sha512_x4_load_quarter(
-  stack u256[16] w,
-  reg const ptr u8[512] blocks,
-  inline int q,
-  reg u256 mask
-) -> stack u256[16]
+inline fn __sha512_x4_schedule(reg mut ptr u256[16] w, inline int t, reg u256 ror8)
+  -> reg ptr u256[16], reg u256
 {
-  reg u256[4] r t;
-  reg u256 c;
-  inline int k;
+  reg u256 s x wt;
 
-  for k = 0 to 4 {
-    r[k] = blocks[:u256 4 * k + q];
+  s = w[(t - 15) % 16];
+  x = __sigma0_4x(s, ror8);
+  wt = x +4u64 w[t % 16];
+  wt = wt +4u64 w[(t - 7) % 16];
+  s = w[(t - 2) % 16];
+  x = __sigma1_4x(s);
+  wt = wt +4u64 x;
+  w[t % 16] = wt;
+  return w, wt;
+}
+
+/*
+ * h4 <- compress(h4, M) on every lane, with the 16 message words of the
+ * four blocks already in w, transposed and big-endian (w[j] holds M_j of
+ * every lane). The window is overwritten by the schedule.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
+         { ptr: public, val: secret } × { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h4, 0, 256) && is_arr_init(w, 0, 512)
+   , res = { h_out, w_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256) && is_arr_init(w_out, 0, 512)
+   }
+ ]
+fn _sha512_x4_block(
+  reg mut ptr u64[32] h4,
+  reg mut ptr u256[16] w,
+  reg u64 ms
+) -> reg ptr u64[32], reg ptr u256[16], reg u64
+{
+  reg ptr u64[320] kp;
+  reg ptr u64[4] mp;
+  reg u256[8] v;
+  reg u256 c0 c1 wk ror8 x;
+  reg u64 o;
+  reg bool more;
+  inline int i t;
+
+  for i = 0 to 8 {
+    v[i] = h4[:u256 i];
+  }
+  kp = SHA512_X4_K;
+  mp = SHA512_X4_ROR8;
+  ror8 = mp[:u256 0];
+
+  /* Rounds 0 .. 15 on the message words. c0 carries b ^ c into even rounds. */
+
+  c0 = v[1] ^ v[2];
+  for t = 0 to 16 {
+    wk = w[t];
+    wk = wk +4u64 kp[:u256 t];
+    #[inline]
+    if (t % 2 == 0) {
+      v, c1 = __sha512_x4_round(v, wk, c0, t);
+    } else {
+      v, c0 = __sha512_x4_round(v, wk, c1, t);
+    }
   }
 
-  /* row pairs: qwords 0 | 2 in t[0], t[2]; qwords 1 | 3 in t[1], t[3] */
-  t[0] = #VPUNPCKL_4u64(r[0], r[1]);
-  t[1] = #VPUNPCKH_4u64(r[0], r[1]);
-  t[2] = #VPUNPCKL_4u64(r[2], r[3]);
-  t[3] = #VPUNPCKH_4u64(r[2], r[3]);
+  /*
+   * Rounds 16 .. 79: four passes over rounds 16 .. 31; o is the byte
+   * offset in SHA512_X4_K of K_t for the pass's first round.
+   */
 
-  /* halves: instances 0-1 from t[m], 2-3 from t[m + 2] */
-  for k = 0 to 2 {
-    c = #VPERM2I128(t[k], t[k + 2], 0x20);
-    c = #VPSHUFB_256(c, mask);
-    w[4 * q + k] = c;
-    c = #VPERM2I128(t[k], t[k + 2], 0x31);
-    c = #VPSHUFB_256(c, mask);
-    w[4 * q + k + 2] = c;
+  o = 512;
+  while { more = o <= 2048; } (more) {
+    ms = #update_msf(more, ms);
+    for t = 16 to 32 {
+      w, wk = __sha512_x4_schedule(w, t, ror8);
+      wk = wk +4u64 kp.[:u256 o + 32 * (t - 16)];
+      #[inline]
+      if (t % 2 == 0) {
+        v, c1 = __sha512_x4_round(v, wk, c0, t);
+      } else {
+        v, c0 = __sha512_x4_round(v, wk, c1, t);
+      }
+    }
+    o += 512;
+  }
+  ms = #update_msf(!more, ms);
+
+  /* Step 4 */
+
+  for i = 0 to 8 {
+    x = h4[:u256 i];
+    x = x +4u64 v[i];
+    h4[:u256 i] = x;
   }
 
-  return w;
+  return h4, w, ms;
+}
+
+/*
+ * Rows r0 .. r3 (row k: four words of instance k) into columns, each
+ * byte-swapped: column j holds word j of the four instances.
+ */
+inline fn __sha512_x4_transpose(reg u256 r0 r1 r2 r3 mask)
+  -> reg u256, reg u256, reg u256, reg u256
+{
+  reg u256 t0 t1 t2 t3 c0 c1 c2 c3;
+
+  /* row pairs: qwords 0 | 2 in t0, t2; qwords 1 | 3 in t1, t3 */
+  t0 = #VPUNPCKL_4u64(r0, r1);
+  t1 = #VPUNPCKH_4u64(r0, r1);
+  t2 = #VPUNPCKL_4u64(r2, r3);
+  t3 = #VPUNPCKH_4u64(r2, r3);
+
+  /* halves: instances 0-1 from t0, t1; 2-3 from t2, t3 */
+  c0 = #VPERM2I128(t0, t2, 0x20);
+  c0 = #VPSHUFB_256(c0, mask);
+  c1 = #VPERM2I128(t1, t3, 0x20);
+  c1 = #VPSHUFB_256(c1, mask);
+  c2 = #VPERM2I128(t0, t2, 0x31);
+  c2 = #VPSHUFB_256(c2, mask);
+  c3 = #VPERM2I128(t1, t3, 0x31);
+  c3 = #VPSHUFB_256(c3, mask);
+  return c0, c1, c2, c3;
 }
 
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
@@ -150,75 +410,27 @@ fn _sha512_x4_compress(
 {
   stack u256[16] w;
   reg ptr u64[4] mask_p;
-  reg ptr u64[80] k;
-  reg u256[8] v;
-  reg u256 mask t1 x y;
-  inline int t i;
+  reg u256 mask r0 r1 r2 r3;
+  inline int q;
 
   mask_p = SHA512_X4_BSWAP;
   mask = mask_p[:u256 0];
-  for i = 0 to 4 {
-    w = __sha512_x4_load_quarter(w, blocks, i, mask);
+
+  /* Quarter q: instance k's 32 bytes at 128 k + 32 q are row k. */
+
+  for q = 0 to 4 {
+    r0 = blocks[:u256 q];
+    r1 = blocks[:u256 4 + q];
+    r2 = blocks[:u256 8 + q];
+    r3 = blocks[:u256 12 + q];
+    r0, r1, r2, r3 = __sha512_x4_transpose(r0, r1, r2, r3, mask);
+    w[4 * q] = r0;
+    w[4 * q + 1] = r1;
+    w[4 * q + 2] = r2;
+    w[4 * q + 3] = r3;
   }
 
-  for i = 0 to 8 {
-    v[i] = h4[:u256 i];
-  }
-  k = SHA512_K;
-
-  /*
-   * Rounds of section 6.4.2 step 3; variable k (a = 0 .. h = 7) of round t
-   * is v[(k - t) mod 8].
-   */
-
-  for t = 0 to 80 {
-    #[inline]
-    if (t >= 16) {
-      t1 = __sigma1_4x(w[(t - 2) % 16]);
-      x = __sigma0_4x(w[(t - 15) % 16]);
-      t1 = t1 +4u64 x;
-      t1 = t1 +4u64 w[(t - 7) % 16];
-      t1 = t1 +4u64 w[t % 16];
-      w[t % 16] = t1;
-    } else {
-      t1 = w[t];
-    }
-
-    /* T1 = h + Σ1(e) + Ch(e, f, g) + K_t + W_t */
-
-    t1 = t1 +4u64 v[(7 + 80 - t) % 8];
-    x = __Sigma1_4x(v[(4 + 80 - t) % 8]);
-    t1 = t1 +4u64 x;
-    x = v[(5 + 80 - t) % 8] ^ v[(6 + 80 - t) % 8];
-    x &= v[(4 + 80 - t) % 8];
-    x ^= v[(6 + 80 - t) % 8];
-    t1 = t1 +4u64 x;
-    x = #VPBROADCAST_4u64(k[t]);
-    t1 = t1 +4u64 x;
-
-    /* e' = d + T1 */
-
-    v[(3 + 80 - t) % 8] = v[(3 + 80 - t) % 8] +4u64 t1;
-
-    /* a' = T1 + Σ0(a) + Maj(a, b, c) */
-
-    x = __Sigma0_4x(v[(0 + 80 - t) % 8]);
-    t1 = t1 +4u64 x;
-    x = v[(0 + 80 - t) % 8] ^ v[(1 + 80 - t) % 8];
-    x &= v[(2 + 80 - t) % 8];
-    y = v[(0 + 80 - t) % 8] & v[(1 + 80 - t) % 8];
-    x ^= y;
-    t1 = t1 +4u64 x;
-    v[(7 + 80 - t) % 8] = t1;
-  }
-
-  /* Step 4 */
-
-  for i = 0 to 8 {
-    x = h4[:u256 i];
-    x = x +4u64 v[i];
-    h4[:u256 i] = x;
-  }
+  h4, w, ms = _sha512_x4_block(h4, w, ms);
 
   return h4, ms;
 }
@@ -226,14 +438,13 @@ fn _sha512_x4_compress(
 /*
  * n whole blocks of every lane from lane memory (lane k's at in[k] + off),
  * with the interface of the portable kernel's _sha512_x4_compress_lanes.
- * Each step gathers one block of every lane into a local u8[512] with
- * 256-bit loads and stores (4 per lane) and runs _sha512_x4_compress on
- * it. The lane pointers are protected after every load; the table and
- * the loop state cross the kernel call through the stack and are
- * protected on reload.
+ * Each step loads one block of every lane straight into the schedule
+ * window, transposed, and runs the rounds on it; no block is copied. The
+ * lane pointers are protected after every load; the table and the loop
+ * state cross the call of the rounds through the stack and are protected
+ * on reload.
  *
- * Residue: the local block buffer holds the last block of every lane on
- * return; clearing is the export's obligation.
+ * Residue: that of _sha512_x4_block, for the last block.
  */
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: transient } × public ×
          public × msf → { ptr: public, val: secret } × msf"]
@@ -255,26 +466,49 @@ fn _sha512_x4_compress_lanes(
   reg u64 ms
 ) -> reg ptr u64[32], reg u64
 {
-  stack u8[512] blocks;
-  reg u256 t;
-  reg u64 p;
+  stack u256[16] w;
+  reg ptr u64[4] mask_p;
+  reg u256 mask r0 r1 r2 r3;
+  reg u64 p0 p1 p2 p3;
   reg bool more;
-  inline int i k;
+  inline int q;
 
   while { more = n != 0; } (more) {
     ms = #update_msf(more, ms);
-    for k = 0 to 4 {
-      p = in[k];
-      p = #protect(p, ms);
-      p += off;
-      for i = 0 to 4 {
-        t = [:u256 p + 32 * i];
-        blocks[:u256 4 * k + i] = t;
-      }
+    /*
+     * Loads, then protects, then offsets, so that the protects form one
+     * run. Named registers rather than an array: the speculative
+     * constant-time checker gives a register array one type.
+     */
+    p0 = in[0];
+    p1 = in[1];
+    p2 = in[2];
+    p3 = in[3];
+    p0 = #protect(p0, ms);
+    p1 = #protect(p1, ms);
+    p2 = #protect(p2, ms);
+    p3 = #protect(p3, ms);
+    p0 += off;
+    p1 += off;
+    p2 += off;
+    p3 += off;
+
+    mask_p = SHA512_X4_BSWAP;
+    mask = mask_p[:u256 0];
+    for q = 0 to 4 {
+      r0 = [:u256 p0 + 32 * q];
+      r1 = [:u256 p1 + 32 * q];
+      r2 = [:u256 p2 + 32 * q];
+      r3 = [:u256 p3 + 32 * q];
+      r0, r1, r2, r3 = __sha512_x4_transpose(r0, r1, r2, r3, mask);
+      w[4 * q] = r0;
+      w[4 * q + 1] = r1;
+      w[4 * q + 2] = r2;
+      w[4 * q + 3] = r3;
     }
 
     () = #spill(in, off, n);
-    h4, ms = _sha512_x4_compress(h4, blocks, ms);
+    h4, w, ms = _sha512_x4_block(h4, w, ms);
     () = #unspill(in, off, n);
     in = #protect_ptr(in, ms);
     off = #protect(off, ms);

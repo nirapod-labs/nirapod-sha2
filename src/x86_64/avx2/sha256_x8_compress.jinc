@@ -1,14 +1,16 @@
 /*
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * sha256_x8_compress.jinc (x86-64, avx2)
  * ======================================
  *
- * Eight independent SHA-256 compressions in AVX2, with the entry point and
- * contract of the scalar 8-way kernel (src/sha256_x8_compress.jinc):
+ * Eight independent SHA-256 compressions in AVX2, with the entry points
+ * and contracts of the scalar 8-way kernel (src/sha256_x8_compress.jinc):
  *
  *     _sha256_x8_compress(h8, blocks, ms)
+ *     _sha256_x8_compress_lanes(h8, in, off, n, ms)
  *
  * Lane layout: one 256-bit register holds the same word of all eight
  * instances, dword k for instance k. h8 is already in that layout (H_j of
@@ -21,23 +23,105 @@
  *     VPUNPCK{L,H}_4u64   quadruples of rows, interleaved qwords
  *     VPERM2I128          the two 128-bit halves: instances 0-3 and 4-7
  *
- * VPSHUFB then makes each dword big-endian (FIPS 180-4 section 3.1).
+ * VPSHUFB then makes each dword big-endian (FIPS 180-4 section 3.1). Both
+ * entry points transpose into a 16-word schedule window on the stack,
+ * _compress from the block array and _compress_lanes straight from lane
+ * memory, and run _sha256_x8_block on it.
  *
- * Rounds: the round, schedule and slot-rotation structure of the scalar
- * kernel (src/sha256_compress.jinc), with every operation applied to the
- * eight lanes. AVX2 has no 32-bit rotate, so ROTR by r is a right shift, a
- * left shift by 32 - r and an OR. K_t is broadcast from the shared table.
+ * Rounds (_sha256_x8_block): rounds 0 to 15 are unrolled, rounds 16 to 63
+ * are a loop of three passes over 16 unrolled rounds, a third of the code of
+ * a full unroll, which made one-block calls slower (src/README.md, "Kernel
+ * notes"); after 16 rounds the state rotation and the window are back in
+ * place. AVX2 has no 32-bit rotate, so ROTR by r is a right shift, a left
+ * shift by 32 - r and an XOR. Further savings per round:
+ *
+ *     K_t is read from a table holding it eight times, as the memory
+ *     operand of the addition, instead of being broadcast
+ *     Maj(a, b, c) = ((a ^ b) & (b ^ c)) ^ b, where b ^ c is the a ^ b of
+ *     the round before, so Maj costs three operations
+ *     T1 is accumulated in the register of h, whose old value is dead,
+ *     with W_t + K_t, Ch and h added before Sigma1(e), so that e' = d + T1
+ *     waits only for Sigma1
  *
  * Required CPU feature: AVX2.
  *
- * Security: h8 and the blocks are secret. Straight-line code; every
- * address is fixed at compile time. ms passes through unchanged. Residue:
- * the local schedule window holds 16 schedule words of every instance on
- * return (W_47 .. W_62 as compiled: the store of W_63 is dead and is
- * removed); clearing is the export's obligation.
+ * Security: h8 and the blocks are secret. Every address is fixed at
+ * compile time or derived from the public round counter and the public
+ * lane pointers. Residue: the local schedule window holds 16 schedule
+ * words of every instance on return, W_48 .. W_63; clearing is the
+ * export's obligation.
  */
 
-from Hash require "sha256_k.jinc"
+/*
+ * SHA-256 constants K_0 .. K_63 (FIPS 180-4 section 4.2.2), each repeated
+ * eight times, so that K_t for every lane is the 256-bit word t.
+ */
+u32[512] SHA256_X8_K = {
+  0x428a2f98, 0x428a2f98, 0x428a2f98, 0x428a2f98, 0x428a2f98, 0x428a2f98, 0x428a2f98, 0x428a2f98,
+  0x71374491, 0x71374491, 0x71374491, 0x71374491, 0x71374491, 0x71374491, 0x71374491, 0x71374491,
+  0xb5c0fbcf, 0xb5c0fbcf, 0xb5c0fbcf, 0xb5c0fbcf, 0xb5c0fbcf, 0xb5c0fbcf, 0xb5c0fbcf, 0xb5c0fbcf,
+  0xe9b5dba5, 0xe9b5dba5, 0xe9b5dba5, 0xe9b5dba5, 0xe9b5dba5, 0xe9b5dba5, 0xe9b5dba5, 0xe9b5dba5,
+  0x3956c25b, 0x3956c25b, 0x3956c25b, 0x3956c25b, 0x3956c25b, 0x3956c25b, 0x3956c25b, 0x3956c25b,
+  0x59f111f1, 0x59f111f1, 0x59f111f1, 0x59f111f1, 0x59f111f1, 0x59f111f1, 0x59f111f1, 0x59f111f1,
+  0x923f82a4, 0x923f82a4, 0x923f82a4, 0x923f82a4, 0x923f82a4, 0x923f82a4, 0x923f82a4, 0x923f82a4,
+  0xab1c5ed5, 0xab1c5ed5, 0xab1c5ed5, 0xab1c5ed5, 0xab1c5ed5, 0xab1c5ed5, 0xab1c5ed5, 0xab1c5ed5,
+  0xd807aa98, 0xd807aa98, 0xd807aa98, 0xd807aa98, 0xd807aa98, 0xd807aa98, 0xd807aa98, 0xd807aa98,
+  0x12835b01, 0x12835b01, 0x12835b01, 0x12835b01, 0x12835b01, 0x12835b01, 0x12835b01, 0x12835b01,
+  0x243185be, 0x243185be, 0x243185be, 0x243185be, 0x243185be, 0x243185be, 0x243185be, 0x243185be,
+  0x550c7dc3, 0x550c7dc3, 0x550c7dc3, 0x550c7dc3, 0x550c7dc3, 0x550c7dc3, 0x550c7dc3, 0x550c7dc3,
+  0x72be5d74, 0x72be5d74, 0x72be5d74, 0x72be5d74, 0x72be5d74, 0x72be5d74, 0x72be5d74, 0x72be5d74,
+  0x80deb1fe, 0x80deb1fe, 0x80deb1fe, 0x80deb1fe, 0x80deb1fe, 0x80deb1fe, 0x80deb1fe, 0x80deb1fe,
+  0x9bdc06a7, 0x9bdc06a7, 0x9bdc06a7, 0x9bdc06a7, 0x9bdc06a7, 0x9bdc06a7, 0x9bdc06a7, 0x9bdc06a7,
+  0xc19bf174, 0xc19bf174, 0xc19bf174, 0xc19bf174, 0xc19bf174, 0xc19bf174, 0xc19bf174, 0xc19bf174,
+  0xe49b69c1, 0xe49b69c1, 0xe49b69c1, 0xe49b69c1, 0xe49b69c1, 0xe49b69c1, 0xe49b69c1, 0xe49b69c1,
+  0xefbe4786, 0xefbe4786, 0xefbe4786, 0xefbe4786, 0xefbe4786, 0xefbe4786, 0xefbe4786, 0xefbe4786,
+  0x0fc19dc6, 0x0fc19dc6, 0x0fc19dc6, 0x0fc19dc6, 0x0fc19dc6, 0x0fc19dc6, 0x0fc19dc6, 0x0fc19dc6,
+  0x240ca1cc, 0x240ca1cc, 0x240ca1cc, 0x240ca1cc, 0x240ca1cc, 0x240ca1cc, 0x240ca1cc, 0x240ca1cc,
+  0x2de92c6f, 0x2de92c6f, 0x2de92c6f, 0x2de92c6f, 0x2de92c6f, 0x2de92c6f, 0x2de92c6f, 0x2de92c6f,
+  0x4a7484aa, 0x4a7484aa, 0x4a7484aa, 0x4a7484aa, 0x4a7484aa, 0x4a7484aa, 0x4a7484aa, 0x4a7484aa,
+  0x5cb0a9dc, 0x5cb0a9dc, 0x5cb0a9dc, 0x5cb0a9dc, 0x5cb0a9dc, 0x5cb0a9dc, 0x5cb0a9dc, 0x5cb0a9dc,
+  0x76f988da, 0x76f988da, 0x76f988da, 0x76f988da, 0x76f988da, 0x76f988da, 0x76f988da, 0x76f988da,
+  0x983e5152, 0x983e5152, 0x983e5152, 0x983e5152, 0x983e5152, 0x983e5152, 0x983e5152, 0x983e5152,
+  0xa831c66d, 0xa831c66d, 0xa831c66d, 0xa831c66d, 0xa831c66d, 0xa831c66d, 0xa831c66d, 0xa831c66d,
+  0xb00327c8, 0xb00327c8, 0xb00327c8, 0xb00327c8, 0xb00327c8, 0xb00327c8, 0xb00327c8, 0xb00327c8,
+  0xbf597fc7, 0xbf597fc7, 0xbf597fc7, 0xbf597fc7, 0xbf597fc7, 0xbf597fc7, 0xbf597fc7, 0xbf597fc7,
+  0xc6e00bf3, 0xc6e00bf3, 0xc6e00bf3, 0xc6e00bf3, 0xc6e00bf3, 0xc6e00bf3, 0xc6e00bf3, 0xc6e00bf3,
+  0xd5a79147, 0xd5a79147, 0xd5a79147, 0xd5a79147, 0xd5a79147, 0xd5a79147, 0xd5a79147, 0xd5a79147,
+  0x06ca6351, 0x06ca6351, 0x06ca6351, 0x06ca6351, 0x06ca6351, 0x06ca6351, 0x06ca6351, 0x06ca6351,
+  0x14292967, 0x14292967, 0x14292967, 0x14292967, 0x14292967, 0x14292967, 0x14292967, 0x14292967,
+  0x27b70a85, 0x27b70a85, 0x27b70a85, 0x27b70a85, 0x27b70a85, 0x27b70a85, 0x27b70a85, 0x27b70a85,
+  0x2e1b2138, 0x2e1b2138, 0x2e1b2138, 0x2e1b2138, 0x2e1b2138, 0x2e1b2138, 0x2e1b2138, 0x2e1b2138,
+  0x4d2c6dfc, 0x4d2c6dfc, 0x4d2c6dfc, 0x4d2c6dfc, 0x4d2c6dfc, 0x4d2c6dfc, 0x4d2c6dfc, 0x4d2c6dfc,
+  0x53380d13, 0x53380d13, 0x53380d13, 0x53380d13, 0x53380d13, 0x53380d13, 0x53380d13, 0x53380d13,
+  0x650a7354, 0x650a7354, 0x650a7354, 0x650a7354, 0x650a7354, 0x650a7354, 0x650a7354, 0x650a7354,
+  0x766a0abb, 0x766a0abb, 0x766a0abb, 0x766a0abb, 0x766a0abb, 0x766a0abb, 0x766a0abb, 0x766a0abb,
+  0x81c2c92e, 0x81c2c92e, 0x81c2c92e, 0x81c2c92e, 0x81c2c92e, 0x81c2c92e, 0x81c2c92e, 0x81c2c92e,
+  0x92722c85, 0x92722c85, 0x92722c85, 0x92722c85, 0x92722c85, 0x92722c85, 0x92722c85, 0x92722c85,
+  0xa2bfe8a1, 0xa2bfe8a1, 0xa2bfe8a1, 0xa2bfe8a1, 0xa2bfe8a1, 0xa2bfe8a1, 0xa2bfe8a1, 0xa2bfe8a1,
+  0xa81a664b, 0xa81a664b, 0xa81a664b, 0xa81a664b, 0xa81a664b, 0xa81a664b, 0xa81a664b, 0xa81a664b,
+  0xc24b8b70, 0xc24b8b70, 0xc24b8b70, 0xc24b8b70, 0xc24b8b70, 0xc24b8b70, 0xc24b8b70, 0xc24b8b70,
+  0xc76c51a3, 0xc76c51a3, 0xc76c51a3, 0xc76c51a3, 0xc76c51a3, 0xc76c51a3, 0xc76c51a3, 0xc76c51a3,
+  0xd192e819, 0xd192e819, 0xd192e819, 0xd192e819, 0xd192e819, 0xd192e819, 0xd192e819, 0xd192e819,
+  0xd6990624, 0xd6990624, 0xd6990624, 0xd6990624, 0xd6990624, 0xd6990624, 0xd6990624, 0xd6990624,
+  0xf40e3585, 0xf40e3585, 0xf40e3585, 0xf40e3585, 0xf40e3585, 0xf40e3585, 0xf40e3585, 0xf40e3585,
+  0x106aa070, 0x106aa070, 0x106aa070, 0x106aa070, 0x106aa070, 0x106aa070, 0x106aa070, 0x106aa070,
+  0x19a4c116, 0x19a4c116, 0x19a4c116, 0x19a4c116, 0x19a4c116, 0x19a4c116, 0x19a4c116, 0x19a4c116,
+  0x1e376c08, 0x1e376c08, 0x1e376c08, 0x1e376c08, 0x1e376c08, 0x1e376c08, 0x1e376c08, 0x1e376c08,
+  0x2748774c, 0x2748774c, 0x2748774c, 0x2748774c, 0x2748774c, 0x2748774c, 0x2748774c, 0x2748774c,
+  0x34b0bcb5, 0x34b0bcb5, 0x34b0bcb5, 0x34b0bcb5, 0x34b0bcb5, 0x34b0bcb5, 0x34b0bcb5, 0x34b0bcb5,
+  0x391c0cb3, 0x391c0cb3, 0x391c0cb3, 0x391c0cb3, 0x391c0cb3, 0x391c0cb3, 0x391c0cb3, 0x391c0cb3,
+  0x4ed8aa4a, 0x4ed8aa4a, 0x4ed8aa4a, 0x4ed8aa4a, 0x4ed8aa4a, 0x4ed8aa4a, 0x4ed8aa4a, 0x4ed8aa4a,
+  0x5b9cca4f, 0x5b9cca4f, 0x5b9cca4f, 0x5b9cca4f, 0x5b9cca4f, 0x5b9cca4f, 0x5b9cca4f, 0x5b9cca4f,
+  0x682e6ff3, 0x682e6ff3, 0x682e6ff3, 0x682e6ff3, 0x682e6ff3, 0x682e6ff3, 0x682e6ff3, 0x682e6ff3,
+  0x748f82ee, 0x748f82ee, 0x748f82ee, 0x748f82ee, 0x748f82ee, 0x748f82ee, 0x748f82ee, 0x748f82ee,
+  0x78a5636f, 0x78a5636f, 0x78a5636f, 0x78a5636f, 0x78a5636f, 0x78a5636f, 0x78a5636f, 0x78a5636f,
+  0x84c87814, 0x84c87814, 0x84c87814, 0x84c87814, 0x84c87814, 0x84c87814, 0x84c87814, 0x84c87814,
+  0x8cc70208, 0x8cc70208, 0x8cc70208, 0x8cc70208, 0x8cc70208, 0x8cc70208, 0x8cc70208, 0x8cc70208,
+  0x90befffa, 0x90befffa, 0x90befffa, 0x90befffa, 0x90befffa, 0x90befffa, 0x90befffa, 0x90befffa,
+  0xa4506ceb, 0xa4506ceb, 0xa4506ceb, 0xa4506ceb, 0xa4506ceb, 0xa4506ceb, 0xa4506ceb, 0xa4506ceb,
+  0xbef9a3f7, 0xbef9a3f7, 0xbef9a3f7, 0xbef9a3f7, 0xbef9a3f7, 0xbef9a3f7, 0xbef9a3f7, 0xbef9a3f7,
+  0xc67178f2, 0xc67178f2, 0xc67178f2, 0xc67178f2, 0xc67178f2, 0xc67178f2, 0xc67178f2, 0xc67178f2
+};
 
 /* VPSHUFB mask reversing the bytes of each dword, in both 128-bit halves. */
 u32[8] SHA256_X8_BSWAP = {
@@ -45,88 +129,235 @@ u32[8] SHA256_X8_BSWAP = {
   0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f
 };
 
-inline fn __rotr_8u32(reg u256 x, inline int r) -> reg u256
-{
-  reg u256 t;
-
-  t = x >>8u32 r;
-  x = x <<8u32 (32 - r);
-  x |= t;
-  return x;
-}
-
+/* Σ0(x) = ROTR^2(x) ^ ROTR^13(x) ^ ROTR^22(x), as shifts and a tree of XORs. */
 inline fn __Sigma0_8x(reg u256 x) -> reg u256
 {
-  reg u256 r t;
+  reg u256 r s t;
 
-  r = __rotr_8u32(x, 2);
-  t = __rotr_8u32(x, 13);
-  r ^= t;
-  t = __rotr_8u32(x, 22);
-  r ^= t;
+  r = x >>8u32 2;
+  s = x <<8u32 30;
+  r ^= s;
+  s = x >>8u32 13;
+  t = x <<8u32 19;
+  s ^= t;
+  r ^= s;
+  s = x >>8u32 22;
+  t = x <<8u32 10;
+  s ^= t;
+  r ^= s;
   return r;
 }
 
+/* Σ1(x) = ROTR^6(x) ^ ROTR^11(x) ^ ROTR^25(x) */
 inline fn __Sigma1_8x(reg u256 x) -> reg u256
 {
-  reg u256 r t;
+  reg u256 r s t;
 
-  r = __rotr_8u32(x, 6);
-  t = __rotr_8u32(x, 11);
-  r ^= t;
-  t = __rotr_8u32(x, 25);
-  r ^= t;
+  r = x >>8u32 6;
+  s = x <<8u32 26;
+  r ^= s;
+  s = x >>8u32 11;
+  t = x <<8u32 21;
+  s ^= t;
+  r ^= s;
+  s = x >>8u32 25;
+  t = x <<8u32 7;
+  s ^= t;
+  r ^= s;
   return r;
 }
 
+/* σ0(x) = ROTR^7(x) ^ ROTR^18(x) ^ SHR^3(x) */
 inline fn __sigma0_8x(reg u256 x) -> reg u256
 {
-  reg u256 r t;
+  reg u256 r s t;
 
-  r = __rotr_8u32(x, 7);
-  t = __rotr_8u32(x, 18);
-  r ^= t;
-  t = x >>8u32 3;
-  r ^= t;
+  r = x >>8u32 7;
+  s = x <<8u32 25;
+  r ^= s;
+  s = x >>8u32 18;
+  t = x <<8u32 14;
+  s ^= t;
+  r ^= s;
+  s = x >>8u32 3;
+  r ^= s;
   return r;
 }
 
+/* σ1(x) = ROTR^17(x) ^ ROTR^19(x) ^ SHR^10(x) */
 inline fn __sigma1_8x(reg u256 x) -> reg u256
 {
-  reg u256 r t;
+  reg u256 r s t;
 
-  r = __rotr_8u32(x, 17);
-  t = __rotr_8u32(x, 19);
-  r ^= t;
-  t = x >>8u32 10;
-  r ^= t;
+  r = x >>8u32 17;
+  s = x <<8u32 15;
+  r ^= s;
+  s = x >>8u32 19;
+  t = x <<8u32 13;
+  s ^= t;
+  r ^= s;
+  s = x >>8u32 10;
+  r ^= s;
   return r;
 }
 
 /*
- * Words 8q .. 8q + 7 of the eight blocks into w[8q .. 8q + 7], transposed
- * and byte-swapped. Row k is instance k's 32 bytes at 64k + 32q.
+ * Round t of section 6.2.2 step 3 on every lane. Variable k (a = 0 .. h =
+ * 7) of round t is v[(k - t) mod 8]; wk is W_t + K_t; cc is b ^ c, the
+ * a ^ b of round t - 1 (b ^ c of the initial state for round 0). Returns
+ * the state and this round's a ^ b.
+ */
+inline fn __sha256_x8_round(reg u256[8] v, reg u256 wk cc, inline int t) -> reg u256[8], reg u256
+{
+  reg u256 x y;
+  inline int a b d e f g h;
+
+  a = (0 + 64 - t) % 8;
+  b = (1 + 64 - t) % 8;
+  d = (3 + 64 - t) % 8;
+  e = (4 + 64 - t) % 8;
+  f = (5 + 64 - t) % 8;
+  g = (6 + 64 - t) % 8;
+  h = (7 + 64 - t) % 8;
+
+  /* T1 = h + Σ1(e) + Ch(e, f, g) + K_t + W_t, in the register of h */
+
+  v[h] = v[h] +8u32 wk;
+  x = v[f] ^ v[g];
+  x &= v[e];
+  x ^= v[g];
+  v[h] = v[h] +8u32 x;
+  x = __Sigma1_8x(v[e]);
+  v[h] = v[h] +8u32 x;
+
+  /* e' = d + T1 */
+
+  v[d] = v[d] +8u32 v[h];
+
+  /* a' = T1 + Σ0(a) + Maj(a, b, c) */
+
+  x = __Sigma0_8x(v[a]);
+  v[h] = v[h] +8u32 x;
+  y = v[a] ^ v[b];
+  cc &= y;
+  cc ^= v[b];
+  v[h] = v[h] +8u32 cc;
+
+  return v, y;
+}
+
+/*
+ * W_t for t >= 16 into w[t mod 16] (section 6.2.2 step 1); returns W_t.
+ * The window holds W_{t-16} .. W_{t-1} at their indices mod 16.
  */
 #[safety =
-   { requires = 0 <= q && q < 2 && is_arr_init(w, 0, 256 * q) && is_arr_init(blocks, 0, 512)
-   , res = { w_out }
-   , ensures = is_arr_init(w_out, 0, 256 * (q + 1))
+   { requires = is_arr_init(w, 0, 512)
+   , res = { w_out, wt_out }
+   , ensures = is_arr_init(w_out, 0, 512)
    }
  ]
-inline fn __sha256_x8_load_half(
-  stack u256[16] w,
-  reg const ptr u8[512] blocks,
-  inline int q,
-  reg u256 mask
-) -> stack u256[16]
+inline fn __sha256_x8_schedule(reg mut ptr u256[16] w, inline int t) -> reg ptr u256[16], reg u256
 {
-  reg u256[8] r t;
-  reg u256 c;
-  inline int k;
+  reg u256 s x wt;
 
-  for k = 0 to 8 {
-    r[k] = blocks[:u256 2 * k + q];
+  s = w[(t - 15) % 16];
+  x = __sigma0_8x(s);
+  wt = x +8u32 w[t % 16];
+  wt = wt +8u32 w[(t - 7) % 16];
+  s = w[(t - 2) % 16];
+  x = __sigma1_8x(s);
+  wt = wt +8u32 x;
+  w[t % 16] = wt;
+  return w, wt;
+}
+
+/*
+ * h8 <- compress(h8, M) on every lane, with the 16 message words of the
+ * eight blocks already in w, transposed and big-endian (w[j] holds M_j of
+ * every lane). The window is overwritten by the schedule.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
+         { ptr: public, val: secret } × { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h8, 0, 256) && is_arr_init(w, 0, 512)
+   , res = { h_out, w_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256) && is_arr_init(w_out, 0, 512)
+   }
+ ]
+fn _sha256_x8_block(
+  reg mut ptr u32[64] h8,
+  reg mut ptr u256[16] w,
+  reg u64 ms
+) -> reg ptr u32[64], reg ptr u256[16], reg u64
+{
+  reg ptr u32[512] kp;
+  reg u256[8] v;
+  reg u256 c0 c1 wk x;
+  reg u64 o;
+  reg bool more;
+  inline int i t;
+
+  for i = 0 to 8 {
+    v[i] = h8[:u256 i];
   }
+  kp = SHA256_X8_K;
+
+  /* Rounds 0 .. 15 on the message words. c0 carries b ^ c into even rounds. */
+
+  c0 = v[1] ^ v[2];
+  for t = 0 to 16 {
+    wk = w[t];
+    wk = wk +8u32 kp[:u256 t];
+    #[inline]
+    if (t % 2 == 0) {
+      v, c1 = __sha256_x8_round(v, wk, c0, t);
+    } else {
+      v, c0 = __sha256_x8_round(v, wk, c1, t);
+    }
+  }
+
+  /*
+   * Rounds 16 .. 63: three passes over rounds 16 .. 31; o is the byte
+   * offset in SHA256_X8_K of K_t for the pass's first round.
+   */
+
+  o = 512;
+  while { more = o <= 1536; } (more) {
+    ms = #update_msf(more, ms);
+    for t = 16 to 32 {
+      w, wk = __sha256_x8_schedule(w, t);
+      wk = wk +8u32 kp.[:u256 o + 32 * (t - 16)];
+      #[inline]
+      if (t % 2 == 0) {
+        v, c1 = __sha256_x8_round(v, wk, c0, t);
+      } else {
+        v, c0 = __sha256_x8_round(v, wk, c1, t);
+      }
+    }
+    o += 512;
+  }
+  ms = #update_msf(!more, ms);
+
+  /* Step 4 */
+
+  for i = 0 to 8 {
+    x = h8[:u256 i];
+    x = x +8u32 v[i];
+    h8[:u256 i] = x;
+  }
+
+  return h8, w, ms;
+}
+
+/*
+ * Rows r[0] .. r[7] (row k: eight words of instance k) into columns, each
+ * byte-swapped: column j holds word j of the eight instances.
+ */
+inline fn __sha256_x8_transpose(reg u256[8] r, reg u256 mask) -> reg u256[8]
+{
+  reg u256[8] t;
+  reg u256[8] c;
+  inline int k;
 
   /*
    * row pairs (2i, 2i + 1): dwords 0,1 | 4,5 in t[2i], dwords 2,3 | 6,7 in
@@ -152,15 +383,13 @@ inline fn __sha256_x8_load_half(
 
   /* halves: instances 0-3 from r[m], 4-7 from r[m + 4] */
   for k = 0 to 4 {
-    c = #VPERM2I128(r[k], r[k + 4], 0x20);
-    c = #VPSHUFB_256(c, mask);
-    w[8 * q + k] = c;
-    c = #VPERM2I128(r[k], r[k + 4], 0x31);
-    c = #VPSHUFB_256(c, mask);
-    w[8 * q + k + 4] = c;
+    c[k] = #VPERM2I128(r[k], r[k + 4], 0x20);
+    c[k] = #VPSHUFB_256(c[k], mask);
+    c[k + 4] = #VPERM2I128(r[k], r[k + 4], 0x31);
+    c[k + 4] = #VPSHUFB_256(c[k + 4], mask);
   }
 
-  return w;
+  return c;
 }
 
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
@@ -179,74 +408,26 @@ fn _sha256_x8_compress(
 {
   stack u256[16] w;
   reg ptr u32[8] mask_p;
-  reg ptr u32[64] k;
-  reg u256[8] v;
-  reg u256 mask t1 x y;
-  inline int t i;
+  reg u256[8] r;
+  reg u256 mask;
+  inline int k q;
 
   mask_p = SHA256_X8_BSWAP;
   mask = mask_p[:u256 0];
-  w = __sha256_x8_load_half(w, blocks, 0, mask);
-  w = __sha256_x8_load_half(w, blocks, 1, mask);
 
-  for i = 0 to 8 {
-    v[i] = h8[:u256 i];
-  }
-  k = SHA256_K;
+  /* Half q: instance k's 32 bytes at 64 k + 32 q are row k. */
 
-  /*
-   * Rounds of section 6.2.2 step 3; variable k (a = 0 .. h = 7) of round t
-   * is v[(k - t) mod 8].
-   */
-
-  for t = 0 to 64 {
-    #[inline]
-    if (t >= 16) {
-      t1 = __sigma1_8x(w[(t - 2) % 16]);
-      x = __sigma0_8x(w[(t - 15) % 16]);
-      t1 = t1 +8u32 x;
-      t1 = t1 +8u32 w[(t - 7) % 16];
-      t1 = t1 +8u32 w[t % 16];
-      w[t % 16] = t1;
-    } else {
-      t1 = w[t];
+  for q = 0 to 2 {
+    for k = 0 to 8 {
+      r[k] = blocks[:u256 2 * k + q];
     }
-
-    /* T1 = h + Σ1(e) + Ch(e, f, g) + K_t + W_t */
-
-    t1 = t1 +8u32 v[(7 + 64 - t) % 8];
-    x = __Sigma1_8x(v[(4 + 64 - t) % 8]);
-    t1 = t1 +8u32 x;
-    x = v[(5 + 64 - t) % 8] ^ v[(6 + 64 - t) % 8];
-    x &= v[(4 + 64 - t) % 8];
-    x ^= v[(6 + 64 - t) % 8];
-    t1 = t1 +8u32 x;
-    x = #VPBROADCAST_8u32(k[t]);
-    t1 = t1 +8u32 x;
-
-    /* e' = d + T1 */
-
-    v[(3 + 64 - t) % 8] = v[(3 + 64 - t) % 8] +8u32 t1;
-
-    /* a' = T1 + Σ0(a) + Maj(a, b, c) */
-
-    x = __Sigma0_8x(v[(0 + 64 - t) % 8]);
-    t1 = t1 +8u32 x;
-    x = v[(0 + 64 - t) % 8] ^ v[(1 + 64 - t) % 8];
-    x &= v[(2 + 64 - t) % 8];
-    y = v[(0 + 64 - t) % 8] & v[(1 + 64 - t) % 8];
-    x ^= y;
-    t1 = t1 +8u32 x;
-    v[(7 + 64 - t) % 8] = t1;
+    r = __sha256_x8_transpose(r, mask);
+    for k = 0 to 8 {
+      w[8 * q + k] = r[k];
+    }
   }
 
-  /* Step 4 */
-
-  for i = 0 to 8 {
-    x = h8[:u256 i];
-    x = x +8u32 v[i];
-    h8[:u256 i] = x;
-  }
+  h8, w, ms = _sha256_x8_block(h8, w, ms);
 
   return h8, ms;
 }
@@ -254,14 +435,13 @@ fn _sha256_x8_compress(
 /*
  * n whole blocks of every lane from lane memory (lane k's at in[k] + off),
  * with the interface of the portable kernel's _sha256_x8_compress_lanes.
- * Each step gathers one block of every lane into a local u8[512] with
- * 256-bit loads and stores (2 per lane) and runs _sha256_x8_compress on
- * it. The lane pointers are protected after every load; the table and
- * the loop state cross the kernel call through the stack and are
- * protected on reload.
+ * Each step loads one block of every lane straight into the schedule
+ * window, transposed, and runs the rounds on it; no block is copied. The
+ * lane pointers are protected after every load; the table and the loop
+ * state cross the call of the rounds through the stack and are protected
+ * on reload.
  *
- * Residue: the local block buffer holds the last block of every lane on
- * return; clearing is the export's obligation.
+ * Residue: that of _sha256_x8_block, for the last block.
  */
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: transient } × public ×
          public × msf → { ptr: public, val: secret } × msf"]
@@ -287,26 +467,65 @@ fn _sha256_x8_compress_lanes(
   reg u64 ms
 ) -> reg ptr u32[64], reg u64
 {
-  stack u8[512] blocks;
-  reg u256 t;
-  reg u64 p;
+  stack u256[16] w;
+  reg ptr u32[8] mask_p;
+  reg u256[8] r;
+  reg u256 mask;
+  reg u64 p0 p1 p2 p3 p4 p5 p6 p7;
   reg bool more;
-  inline int i k;
+  inline int k q;
 
   while { more = n != 0; } (more) {
     ms = #update_msf(more, ms);
-    for k = 0 to 8 {
-      p = in[k];
-      p = #protect(p, ms);
-      p += off;
-      for i = 0 to 2 {
-        t = [:u256 p + 32 * i];
-        blocks[:u256 2 * k + i] = t;
+    /*
+     * Loads, then protects, then offsets, so that the protects form one
+     * run. Named registers rather than an array: the speculative
+     * constant-time checker gives a register array one type.
+     */
+    p0 = in[0];
+    p1 = in[1];
+    p2 = in[2];
+    p3 = in[3];
+    p4 = in[4];
+    p5 = in[5];
+    p6 = in[6];
+    p7 = in[7];
+    p0 = #protect(p0, ms);
+    p1 = #protect(p1, ms);
+    p2 = #protect(p2, ms);
+    p3 = #protect(p3, ms);
+    p4 = #protect(p4, ms);
+    p5 = #protect(p5, ms);
+    p6 = #protect(p6, ms);
+    p7 = #protect(p7, ms);
+    p0 += off;
+    p1 += off;
+    p2 += off;
+    p3 += off;
+    p4 += off;
+    p5 += off;
+    p6 += off;
+    p7 += off;
+
+    mask_p = SHA256_X8_BSWAP;
+    mask = mask_p[:u256 0];
+    for q = 0 to 2 {
+      r[0] = [:u256 p0 + 32 * q];
+      r[1] = [:u256 p1 + 32 * q];
+      r[2] = [:u256 p2 + 32 * q];
+      r[3] = [:u256 p3 + 32 * q];
+      r[4] = [:u256 p4 + 32 * q];
+      r[5] = [:u256 p5 + 32 * q];
+      r[6] = [:u256 p6 + 32 * q];
+      r[7] = [:u256 p7 + 32 * q];
+      r = __sha256_x8_transpose(r, mask);
+      for k = 0 to 8 {
+        w[8 * q + k] = r[k];
       }
     }
 
     () = #spill(in, off, n);
-    h8, ms = _sha256_x8_compress(h8, blocks, ms);
+    h8, w, ms = _sha256_x8_block(h8, w, ms);
     () = #unspill(in, off, n);
     in = #protect_ptr(in, ms);
     off = #protect(off, ms);
