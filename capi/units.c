@@ -18,16 +18,18 @@
  *
  *     unit               SHA256        SHA512        X8            X4
  *     aarch64 portable   -             -             -             -
- *     aarch64 scalar     -             -             -             -
+ *     aarch64 scalar     -             -             ASIMD         -
  *     aarch64 sha2       ASIMD SHA256  ASIMD SHA512  ASIMD SHA256  ASIMD SHA512
  *     x86_64 portable    -             -             -             -
  *     x86_64 shani       SHANI         -             SHANI         -
  *     x86_64 avx2        -             -             AVX2          AVX2
  *
- * In the shani unit the 8-way form runs the SHA-NI kernel once per
- * message, since the portable multi-way kernel calls the unit's
- * single-way one; its SHA-512 code is the portable kernel. Index 0 is the
- * portable unit on both architectures.
+ * The scalar unit's 8-way kernel is in Advanced SIMD (src/aarch64/neon),
+ * which every ARMv8-A CPU has; the need is stated all the same. The
+ * shani unit's 8-way kernel runs two lanes at a time on the SHA
+ * extensions (src/x86_64/shani); its SHA-512 code, single-way and 4-way,
+ * is the portable kernel. Index 0 is the portable unit on both
+ * architectures.
  */
 
 #include "internal.h"
@@ -63,7 +65,7 @@
 
 const nirapod_sha2_unit nirapod_sha2_units[] = {
     { "aarch64-portable", { 0, 0, 0, 0 }, UNIT_OPS(aarch64_portable) },
-    { "aarch64-scalar", { 0, 0, 0, 0 }, UNIT_OPS(aarch64_scalar) },
+    { "aarch64-scalar", { 0, 0, NIRAPOD_SHA2_CPU_ASIMD, 0 }, UNIT_OPS(aarch64_scalar) },
     { "aarch64-sha2", { A64_SHA256, A64_SHA512, A64_SHA256, A64_SHA512 }, UNIT_OPS(aarch64_sha2) },
 };
 
