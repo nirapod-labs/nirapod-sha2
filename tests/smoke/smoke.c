@@ -240,16 +240,115 @@ static int hmac_final(int k, int h512, any_ctx *c, uint8_t *out)
                 : nirapod_sha2_hmac_sha256_final(&c->hmac256, out);
 }
 
+/* The multi-way one-shot on packed messages: lane m reads in + m len. */
 static int multiway(int k, int x4, uint8_t *out, const uint8_t *in, size_t len)
 {
+    const uint8_t *t[8];
+    size_t m;
+
+    for (m = 0; m < 8; m++) {
+        t[m] = in == NULL ? NULL : in + m * len;
+    }
 #ifdef SMOKE_TESTING
     if (k >= 0) {
-        return x4 ? nirapod_sha2_testing_sha512_x4(TK(k), out, in, len)
-                  : nirapod_sha2_testing_sha256_x8(TK(k), out, in, len);
+        return x4 ? nirapod_sha2_testing_sha512_x4(TK(k), out, t, len)
+                  : nirapod_sha2_testing_sha256_x8(TK(k), out, t, len);
     }
 #endif
     (void)k;
-    return x4 ? nirapod_sha2_sha512_x4(out, in, len) : nirapod_sha2_sha256_x8(out, in, len);
+    return x4 ? nirapod_sha2_sha512_x4(out, t, len) : nirapod_sha2_sha256_x8(out, t, len);
+}
+
+/*
+ * The same digests through a multi-way context: init, then the messages
+ * in two updates split at cut, then final.
+ */
+static int multiway_ctx(int k, int x4, uint8_t *out, const uint8_t *in, size_t len, size_t cut)
+{
+    nirapod_sha2_sha256_x8_ctx c8;
+    nirapod_sha2_sha512_x4_ctx c4;
+    const uint8_t *a[8], *b[8];
+    size_t m;
+    int rc;
+
+    for (m = 0; m < 8; m++) {
+        a[m] = in + m * len;
+        b[m] = in + m * len + cut;
+    }
+#ifdef SMOKE_TESTING
+    if (k >= 0) {
+        if (x4) {
+            rc = nirapod_sha2_testing_sha512_x4_init(TK(k), &c4);
+            rc = rc ? rc : nirapod_sha2_testing_sha512_x4_update(TK(k), &c4, a, cut);
+            rc = rc ? rc : nirapod_sha2_testing_sha512_x4_update(TK(k), &c4, b, len - cut);
+            return rc ? rc : nirapod_sha2_testing_sha512_x4_final(TK(k), &c4, out);
+        }
+        rc = nirapod_sha2_testing_sha256_x8_init(TK(k), &c8);
+        rc = rc ? rc : nirapod_sha2_testing_sha256_x8_update(TK(k), &c8, a, cut);
+        rc = rc ? rc : nirapod_sha2_testing_sha256_x8_update(TK(k), &c8, b, len - cut);
+        return rc ? rc : nirapod_sha2_testing_sha256_x8_final(TK(k), &c8, out);
+    }
+#endif
+    (void)k;
+    if (x4) {
+        rc = nirapod_sha2_sha512_x4_init(&c4);
+        rc = rc ? rc : nirapod_sha2_sha512_x4_update(&c4, a, cut);
+        rc = rc ? rc : nirapod_sha2_sha512_x4_update(&c4, b, len - cut);
+        return rc ? rc : nirapod_sha2_sha512_x4_final(&c4, out);
+    }
+    rc = nirapod_sha2_sha256_x8_init(&c8);
+    rc = rc ? rc : nirapod_sha2_sha256_x8_update(&c8, a, cut);
+    rc = rc ? rc : nirapod_sha2_sha256_x8_update(&c8, b, len - cut);
+    return rc ? rc : nirapod_sha2_sha256_x8_final(&c8, out);
+}
+
+/*
+ * Every lane continuing one single-way context that has absorbed the
+ * prefix pre of plen bytes; lane m then gets in + m len.
+ */
+static int multiway_from(int k, int x4, uint8_t *out, const uint8_t *pre, size_t plen,
+                         const uint8_t *in, size_t len)
+{
+    nirapod_sha2_sha256_x8_ctx c8;
+    nirapod_sha2_sha512_x4_ctx c4;
+    nirapod_sha2_sha256_ctx s8;
+    nirapod_sha2_sha512_ctx s4;
+    const uint8_t *a[8];
+    size_t m;
+    int rc;
+
+    for (m = 0; m < 8; m++) {
+        a[m] = in + m * len;
+    }
+#ifdef SMOKE_TESTING
+    if (k >= 0) {
+        if (x4) {
+            rc = nirapod_sha2_testing_sha512_init(TK(k), &s4);
+            rc = rc ? rc : nirapod_sha2_testing_sha512_update(TK(k), &s4, pre, plen);
+            rc = rc ? rc : nirapod_sha2_testing_sha512_x4_init_from(TK(k), &c4, &s4);
+            rc = rc ? rc : nirapod_sha2_testing_sha512_x4_update(TK(k), &c4, a, len);
+            return rc ? rc : nirapod_sha2_testing_sha512_x4_final(TK(k), &c4, out);
+        }
+        rc = nirapod_sha2_testing_sha256_init(TK(k), &s8);
+        rc = rc ? rc : nirapod_sha2_testing_sha256_update(TK(k), &s8, pre, plen);
+        rc = rc ? rc : nirapod_sha2_testing_sha256_x8_init_from(TK(k), &c8, &s8);
+        rc = rc ? rc : nirapod_sha2_testing_sha256_x8_update(TK(k), &c8, a, len);
+        return rc ? rc : nirapod_sha2_testing_sha256_x8_final(TK(k), &c8, out);
+    }
+#endif
+    (void)k;
+    if (x4) {
+        rc = nirapod_sha2_sha512_init(&s4);
+        rc = rc ? rc : nirapod_sha2_sha512_update(&s4, pre, plen);
+        rc = rc ? rc : nirapod_sha2_sha512_x4_init_from(&c4, &s4);
+        rc = rc ? rc : nirapod_sha2_sha512_x4_update(&c4, a, len);
+        return rc ? rc : nirapod_sha2_sha512_x4_final(&c4, out);
+    }
+    rc = nirapod_sha2_sha256_init(&s8);
+    rc = rc ? rc : nirapod_sha2_sha256_update(&s8, pre, plen);
+    rc = rc ? rc : nirapod_sha2_sha256_x8_init_from(&c8, &s8);
+    rc = rc ? rc : nirapod_sha2_sha256_x8_update(&c8, a, len);
+    return rc ? rc : nirapod_sha2_sha256_x8_final(&c8, out);
 }
 
 #define GUARD 0xa5
@@ -426,6 +525,32 @@ static void test_multiway(int k, const char *kn)
             }
             snprintf(what, sizeof(what), "%s length %zu", x4 ? "sha512_x4" : "sha256_x8", len);
             check(ok, what, kn);
+
+            if (len > 0) {
+                uint8_t ref[256], pre_one[64];
+                size_t plen = len < 70 ? len : 70;
+
+                memcpy(ref, out, 256);
+                ok = multiway_ctx(k, x4, out, in, len, len / 3) == NIRAPOD_SHA2_OK &&
+                     memcmp(out, ref, 256) == 0;
+                snprintf(what, sizeof(what), "%s context length %zu split at %zu",
+                         x4 ? "sha512_x4" : "sha256_x8", len, len / 3);
+                check(ok, what, kn);
+
+                /* Lane m's message: the first plen bytes of in, then lane m's own. */
+                ok = multiway_from(k, x4, out, in, plen, in, len) == NIRAPOD_SHA2_OK;
+                for (m = 0; m < ways && ok; m++) {
+                    static uint8_t joined[70 + 300];
+
+                    memcpy(joined, in, plen);
+                    memcpy(joined + plen, in + m * len, len);
+                    ok = h->oneshot(-1, pre_one, joined, plen + len) == NIRAPOD_SHA2_OK &&
+                         memcmp(out + m * bytes, pre_one, bytes) == 0;
+                }
+                snprintf(what, sizeof(what), "%s from a context of %zu bytes, length %zu",
+                         x4 ? "sha512_x4" : "sha256_x8", plen, len);
+                check(ok, what, kn);
+            }
         }
 
         /* The "abc" answer in every lane. */
@@ -466,14 +591,26 @@ static void test_misuse(void)
     check(nirapod_sha2_hmac_sha256(out, NULL, 0, NULL, 0) == NIRAPOD_SHA2_OK &&
           nirapod_sha2_hmac_sha512(out, NULL, 0, NULL, 0) == NIRAPOD_SHA2_OK,
           "HMAC with empty key and message accepted", kn);
-    check(nirapod_sha2_sha256_x8(out, NULL, 1) == NIRAPOD_SHA2_ENULL, "NULL multi-way input", kn);
+    check(nirapod_sha2_sha256_x8(buf, NULL, 1) == NIRAPOD_SHA2_ENULL, "NULL multi-way table", kn);
+    {
+        const uint8_t *t[8] = { buf, buf, buf, NULL, buf, buf, buf, buf };
+        uint8_t o8[256];
+
+        check(nirapod_sha2_sha256_x8(o8, t, 1) == NIRAPOD_SHA2_ENULL, "NULL multi-way lane", kn);
+        check(nirapod_sha2_sha256_x8(o8, t, 0) == NIRAPOD_SHA2_OK,
+              "NULL multi-way lane accepted at length 0", kn);
+    }
 
     /* Length limit, checked before any byte is read. */
     memset(out, GUARD, sizeof(out));
     check(nirapod_sha2_sha256(out, buf, (size_t)NIRAPOD_SHA2_MAX_BYTES) == NIRAPOD_SHA2_ELENGTH &&
           guard_intact(out, sizeof(out)), "one-shot length 2^61", kn);
-    check(nirapod_sha2_sha512_x4(buf, buf + 256, (size_t)NIRAPOD_SHA2_MAX_BYTES) ==
-          NIRAPOD_SHA2_ELENGTH, "multi-way length 2^61", kn);
+    {
+        const uint8_t *t[4] = { buf + 256, buf + 256, buf + 256, buf + 256 };
+
+        check(nirapod_sha2_sha512_x4(buf, t, (size_t)NIRAPOD_SHA2_MAX_BYTES) ==
+              NIRAPOD_SHA2_ELENGTH, "multi-way length 2^61", kn);
+    }
     check(nirapod_sha2_hmac_sha256(out, buf, 1, buf, (size_t)(NIRAPOD_SHA2_MAX_BYTES - 64)) ==
           NIRAPOD_SHA2_ELENGTH, "HMAC-SHA-256 message 2^61 - 64", kn);
     check(nirapod_sha2_hmac_sha512(out, buf, 1, buf, (size_t)(NIRAPOD_SHA2_MAX_BYTES - 128)) ==
@@ -499,8 +636,25 @@ static void test_misuse(void)
           "HMAC out overlaps key", kn);
     check(nirapod_sha2_hmac_sha256_init(&c.hmac256, (const uint8_t *)&c, 8) == NIRAPOD_SHA2_EOVERLAP,
           "HMAC init key overlaps context", kn);
-    check(nirapod_sha2_sha256_x8(buf, buf + 200, 8) == NIRAPOD_SHA2_EOVERLAP,
-          "multi-way out overlaps the eighth message", kn);
+    {
+        const uint8_t *t[8] = { buf + 300, buf + 300, buf + 300, buf + 300,
+                                buf + 300, buf + 300, buf + 300, buf + 250 };
+        nirapod_sha2_sha256_x8_ctx c8;
+
+        check(nirapod_sha2_sha256_x8(buf, t, 8) == NIRAPOD_SHA2_EOVERLAP,
+              "multi-way out overlaps the eighth lane", kn);
+        t[7] = buf + 300;
+        check(nirapod_sha2_sha256_x8(buf, t, 8) == NIRAPOD_SHA2_OK,
+              "multi-way lanes sharing one buffer accepted", kn);
+        nirapod_sha2_sha256_x8_init(&c8);
+        t[2] = (const uint8_t *)&c8 + 700;
+        check(nirapod_sha2_sha256_x8_update(&c8, t, 8) == NIRAPOD_SHA2_EOVERLAP,
+              "multi-way update lane overlaps the context", kn);
+        check(nirapod_sha2_sha256_x8_final(&c8, (uint8_t *)&c8 + 600) == NIRAPOD_SHA2_EOVERLAP,
+              "multi-way final output overlaps the context", kn);
+        check(nirapod_sha2_sha256_x8_init_from(&c8, (const nirapod_sha2_sha256_ctx *)&c8) ==
+              NIRAPOD_SHA2_EOVERLAP, "multi-way init_from source is the context", kn);
+    }
 
     /* Update and final after final. */
     nirapod_sha2_sha256_init(&c.sha256);

@@ -12,7 +12,8 @@
 #     ci/run.sh [--all] [--safety] [--proofs] [--only JOBS] [--no-clean]
 #     ci/run.sh --list
 #
-# Default jobs: toolchain build tests exports ct.
+# Default jobs: toolchain build tests exports ct extraction on a host with
+# the pinned Jasmin (the analysis host).
 # Opt-in jobs: safety (long, Linux only) and proofs (long, Linux only).
 #
 # A job passes only when it exits zero and its log holds a line that
@@ -29,9 +30,9 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 . "$ROOT/ci/lib.sh"
 cd "$ROOT" || exit 1
 
-ALL_JOBS="toolchain build tests exports ct"
+ALL_JOBS="toolchain build tests exports ct extraction"
 OPT_JOBS="safety proofs"
-ORDER="toolchain build tests exports ct safety proofs"
+ORDER="toolchain build tests exports ct extraction safety proofs"
 
 usage() {
   cat <<'EOF'
@@ -70,6 +71,7 @@ while [ $# -gt 0 ]; do
     --no-clean) clean=0 ;;
     --list)
       printf 'default: %s\n' "$ALL_JOBS"
+      printf 'default without Jasmin: %s\n' "$NATIVE_JOBS"
       printf 'opt-in:  %s\n' "$OPT_JOBS"
       exit 0
       ;;
@@ -127,7 +129,7 @@ esac
 
 if [ "$clean" = 1 ]; then
   case " $selection " in
-    *" build "*|*" tests "*|*" exports "*|*" ct "*|*" safety "*)
+    *" build "*|*" tests "*|*" exports "*|*" ct "*|*" extraction "*|*" safety "*)
       make clean >/dev/null 2>&1 || ci_fail "make clean failed"
       ;;
   esac
@@ -157,6 +159,7 @@ ci_timeout() {
     tests) printf '900\n' ;;
     exports) printf '300\n' ;;
     ct) printf '3600\n' ;;
+    extraction) printf '900\n' ;;
     safety) printf '43200\n' ;;
     proofs) printf '28800\n' ;;
     *) printf '900\n' ;;

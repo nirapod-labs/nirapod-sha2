@@ -1,0 +1,145 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * fill_ASIZE.jinc
+ * ===============
+ *
+ * Block-buffer fill from a byte array: __fill64_array and __fill128_array,
+ * the array forms of __fill64_mem and __fill128_mem in fill.jinc, with the
+ * same three steps (single bytes up to the next 8-byte position of the
+ * buffer, u64 words, the remaining bytes). Instance file, included inside
+ * a namespace that sets param int _ASIZE, the array size; the other
+ * *_ASIZE.jinc files require it themselves (README.md, "Array instances").
+ *
+ * Security: the array's bytes are secret; dst, off and n are public and
+ * are the only values that decide a branch, a bound or an index.
+ */
+
+/* Copy n bytes of a from offset off into buf at dst. */
+#[safety =
+   { requires = (64u) dst_ + (64u) n_ <= 64 && is_arr_init(buf, 0, (64u) dst_)
+       && (64u) off_ + (64u) n_ <= _ASIZE && is_arr_init(a, (64u) off_, (64u) n_)
+   , res = { buf_out, ms_out }
+   , ensures = is_arr_init(buf_out, 0, (64u) dst_ + (64u) n_)
+   }
+ ]
+inline fn __fill64_array(
+  reg mut ptr u8[64] buf,
+  reg u64 dst_,
+  reg const ptr u8[_ASIZE] a,
+  reg u64 off_ n_,
+  reg u64 ms
+) -> reg ptr u8[64], reg u64
+{
+  reg u64 dst off n head end t;
+  reg bool more;
+
+  dst = dst_;
+  off = off_;
+  n = n_;
+
+  head = dst;
+  head = -head;
+  head &= 7;
+  head = n < head ? n : head;
+  n -= head;
+
+  end = dst;
+  end += head;
+  while { more = dst < end; } (more) {
+    ms = #update_msf(more, ms);
+    t = (64u)a[off];
+    buf[dst] = (8u)t;
+    dst += 1;
+    off += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  while { more = n >= 8; } (more) {
+    ms = #update_msf(more, ms);
+    t = a.[:u64 off];
+    buf.[:u64 dst] = t;
+    dst += 8;
+    off += 8;
+    n -= 8;
+  }
+  ms = #update_msf(!more, ms);
+
+  end = dst;
+  end += n;
+  while { more = dst < end; } (more) {
+    ms = #update_msf(more, ms);
+    t = (64u)a[off];
+    buf[dst] = (8u)t;
+    dst += 1;
+    off += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  return buf, ms;
+}
+
+/* Copy n bytes of a from offset off into buf at dst. */
+#[safety =
+   { requires = (64u) dst_ + (64u) n_ <= 128 && is_arr_init(buf, 0, (64u) dst_)
+       && (64u) off_ + (64u) n_ <= _ASIZE && is_arr_init(a, (64u) off_, (64u) n_)
+   , res = { buf_out, ms_out }
+   , ensures = is_arr_init(buf_out, 0, (64u) dst_ + (64u) n_)
+   }
+ ]
+inline fn __fill128_array(
+  reg mut ptr u8[128] buf,
+  reg u64 dst_,
+  reg const ptr u8[_ASIZE] a,
+  reg u64 off_ n_,
+  reg u64 ms
+) -> reg ptr u8[128], reg u64
+{
+  reg u64 dst off n head end t;
+  reg bool more;
+
+  dst = dst_;
+  off = off_;
+  n = n_;
+
+  head = dst;
+  head = -head;
+  head &= 7;
+  head = n < head ? n : head;
+  n -= head;
+
+  end = dst;
+  end += head;
+  while { more = dst < end; } (more) {
+    ms = #update_msf(more, ms);
+    t = (64u)a[off];
+    buf[dst] = (8u)t;
+    dst += 1;
+    off += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  while { more = n >= 8; } (more) {
+    ms = #update_msf(more, ms);
+    t = a.[:u64 off];
+    buf.[:u64 dst] = t;
+    dst += 8;
+    off += 8;
+    n -= 8;
+  }
+  ms = #update_msf(!more, ms);
+
+  end = dst;
+  end += n;
+  while { more = dst < end; } (more) {
+    ms = #update_msf(more, ms);
+    t = (64u)a[off];
+    buf[dst] = (8u)t;
+    dst += 1;
+    off += 1;
+  }
+  ms = #update_msf(!more, ms);
+
+  return buf, ms;
+}

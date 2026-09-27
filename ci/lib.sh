@@ -55,18 +55,16 @@ ci_out() {
   printf 'build/%s-%s\n' "$CI_HOST_ARCH" "$CI_HOST_SYSTEM"
 }
 
-# The units of an architecture, in the order of the Makefile.
+# The units of an architecture and the include roots of a unit, as the
+# Makefile defines them (print-units, print-roots-<unit>).
 ci_units() {
   case $1 in
-    aarch64) printf 'aarch64-portable aarch64-scalar aarch64-sha2\n' ;;
-    x86_64) printf 'x86_64-portable x86_64-shani x86_64-avx2\n' ;;
+    aarch64 | x86_64) make -s print-units "ARCH=$1" ;;
     *) return 1 ;;
   esac
 }
 
-# The Jasmin target architecture and the toolkit roots of a unit. These
-# repeat unit_jarch and unit_roots of the Makefile. Each host builds its
-# three units; the two host builds cover all six.
+# The Jasmin target architecture of a unit (unit_jarch of the Makefile).
 ci_jarch() {
   case ${1%%-*} in
     aarch64) printf 'armv8a\n' ;;
@@ -75,22 +73,14 @@ ci_jarch() {
   esac
 }
 
+# The architectures the analysis jobs (ct, safety) cover. The analyses are
+# per target, not per host, so one analysis host covers both.
+ci_analysis_arches() {
+  printf 'aarch64 x86_64\n'
+}
+
 ci_unit_roots() {
-  local unit=$1 arch variant kernel kernelx
-  arch=${unit%%-*}
-  variant=${unit#*-}
-  kernel=src
-  kernelx=src
-  case $variant in
-    portable) ;;
-    scalar) kernel=src/$arch/scalar ;;
-    sha2) kernel=src/$arch/sha2 ;;
-    shani) kernel=src/$arch/shani ;;
-    avx2) kernelx=src/$arch/avx2 ;;
-    *) return 1 ;;
-  esac
-  printf -- '-I Hash=src -I HashWord=src/%s -I Sha2Kernel=%s -I Sha2KernelX=%s\n' \
-    "$arch" "$kernel" "$kernelx"
+  make -s "print-roots-$1"
 }
 
 # Run a command under a wall-clock limit, killing the whole process group

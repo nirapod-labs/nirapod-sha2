@@ -55,6 +55,9 @@ typedef uint64_t (*nirapod_sha2_jz_final)(uint8_t *ctx, uint8_t *out);
 typedef void (*nirapod_sha2_jz_hmac)(uint8_t *out, const uint8_t *key, uint64_t key_len,
                                      const uint8_t *msg, uint64_t msg_len);
 typedef void (*nirapod_sha2_jz_hmac_init)(uint8_t *ctx, const uint8_t *key, uint64_t key_len);
+typedef void (*nirapod_sha2_jz_lanes)(uint8_t *out, const uint64_t *in, uint64_t len);
+typedef uint64_t (*nirapod_sha2_jz_lanes_from)(uint8_t *ctx, const uint8_t *src);
+typedef uint64_t (*nirapod_sha2_jz_lanes_update)(uint8_t *ctx, const uint64_t *in, uint64_t len);
 
 #define NIRAPOD_SHA2_JZ_HASH_OPS(unit, h)                                         \
   void nirapod_sha2_jz_##unit##__##h(uint8_t *out, const uint8_t *in, uint64_t len); \
@@ -73,6 +76,18 @@ typedef void (*nirapod_sha2_jz_hmac_init)(uint8_t *ctx, const uint8_t *key, uint
                                                        uint64_t len);            \
   uint64_t nirapod_sha2_jz_##unit##__hmac_##h##_final(uint8_t *ctx, uint8_t *out);
 
+/*
+ * Multi-way exports: in is a table of lane pointers (8 for sha256_x8, 4 for
+ * sha512_x4), as 64-bit integers.
+ */
+#define NIRAPOD_SHA2_JZ_LANES_OPS(unit, h)                                        \
+  void nirapod_sha2_jz_##unit##__##h(uint8_t *out, const uint64_t *in, uint64_t len); \
+  void nirapod_sha2_jz_##unit##__##h##_init(uint8_t *ctx);                        \
+  uint64_t nirapod_sha2_jz_##unit##__##h##_init_from(uint8_t *ctx, const uint8_t *src); \
+  uint64_t nirapod_sha2_jz_##unit##__##h##_update(uint8_t *ctx, const uint64_t *in, \
+                                                  uint64_t len);                 \
+  uint64_t nirapod_sha2_jz_##unit##__##h##_final(uint8_t *ctx, uint8_t *out);
+
 #define NIRAPOD_SHA2_JZ_DECLARE(unit)                                             \
   NIRAPOD_SHA2_JZ_HASH_OPS(unit, sha224)                                          \
   NIRAPOD_SHA2_JZ_HASH_OPS(unit, sha256)                                          \
@@ -82,8 +97,8 @@ typedef void (*nirapod_sha2_jz_hmac_init)(uint8_t *ctx, const uint8_t *key, uint
   NIRAPOD_SHA2_JZ_HASH_OPS(unit, sha512_256)                                      \
   NIRAPOD_SHA2_JZ_HMAC_OPS(unit, sha256)                                          \
   NIRAPOD_SHA2_JZ_HMAC_OPS(unit, sha512)                                          \
-  void nirapod_sha2_jz_##unit##__sha256_x8(uint8_t *out, const uint8_t *in, uint64_t len); \
-  void nirapod_sha2_jz_##unit##__sha512_x4(uint8_t *out, const uint8_t *in, uint64_t len);
+  NIRAPOD_SHA2_JZ_LANES_OPS(unit, sha256_x8)                                      \
+  NIRAPOD_SHA2_JZ_LANES_OPS(unit, sha512_x4)
 
 #if defined(__aarch64__)
 NIRAPOD_SHA2_JZ_DECLARE(aarch64_portable)

@@ -50,7 +50,7 @@ fn _hmac_sha256_mem(
   stack u8[64] k0 buf;
   stack u32[8] inner outer;
   stack u8[32] mac;
-  reg u64 total t z;
+  reg u64 total t;
   inline int i;
 
   () = #spill(out, msg, msglen);
@@ -60,14 +60,6 @@ fn _hmac_sha256_mem(
   msg = #protect(msg, ms);
   msglen = #protect(msglen, ms);
 
-  /*
-   * Zeroed for the safety checker only, as in __sha256_mem_from; every
-   * byte the compressions read is written for this hash first.
-   */
-  z = 0;
-  for i = 0 to 8 {
-    buf[:u64 i] = z;
-  }
   total = 64;
   inner, buf, total, ms = _sha256_absorb_mem(inner, buf, total, msg, msglen, ms);
   mac, inner, buf, ms = __hmac_sha256_finalize(mac, inner, buf, total, outer, ms);
@@ -100,7 +92,7 @@ fn _hmac_sha512_mem(
   stack u8[128] k0 buf;
   stack u64[8] inner outer;
   stack u8[64] mac;
-  reg u64 total t z;
+  reg u64 total t;
   inline int i;
 
   () = #spill(out, msg, msglen);
@@ -110,11 +102,6 @@ fn _hmac_sha512_mem(
   msg = #protect(msg, ms);
   msglen = #protect(msglen, ms);
 
-  /* Zeroed for the safety checker only, as in _hmac_sha256_mem. */
-  z = 0;
-  for i = 0 to 16 {
-    buf[:u64 i] = z;
-  }
   total = 128;
   inner, buf, total, ms = _sha512_absorb_mem(inner, buf, total, msg, msglen, ms);
   mac, inner, buf, ms = __hmac_sha512_finalize(mac, inner, buf, total, outer, ms);

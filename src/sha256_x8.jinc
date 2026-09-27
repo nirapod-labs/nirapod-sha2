@@ -1,30 +1,44 @@
 /*
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * sha256_x8.jinc
  * ==============
  *
- * 8 SHA-256 hashes advanced together, for independent inputs of the same
- * shape. The instances share total and follow the single-way logic of
- * sha256.jinc in lockstep; each computes exactly what sha256.jinc computes
- * on its own input.
+ * 8 SHA-256 hashes advanced together, one per lane. The lanes share
+ * total and follow the single-way logic of sha256.jinc in lockstep; each
+ * computes exactly what sha256.jinc computes on its own message.
  *
- * Representation:
+ *     __sha256_x8_init          every lane at the SHA-256 initial value
+ *     __sha256_x8_from          every lane at one single-way state
+ *     _sha256_x8_absorb_lanes   append inlen bytes to every lane, lane k's
+ *                               from the pointer in[k]
+ *     _sha256_x8_finalize       padding, last compressions, 8 digests
+ *     _sha256_x8_lanes          one-shot: the digests of 8 messages
  *
- *     h      u32[64], H_j of instance k at index 8j + k
- *     buf    u8[512], instance k's pending block at bytes 64k .. 64k + 63
- *     total  bytes absorbed per instance so far
+ * Representation, the same in every unit (the multi-way contexts store
+ * it as it is):
  *
- * The compression is _sha256_x8_compress from the Sha2KernelX root. Array
- * input is in sha256_x8_array.jinc (instance file).
+ *     h      u32[64], H_j of lane k at index 8 j + k
+ *     buf    u8[512], lane k's pending block at bytes 64 k .. 64 k + 63
+ *     total  bytes absorbed per lane so far
  *
- * Security: as sha256.jinc. total and every index are public and shared by
- * the instances.
+ * Lanes: in is a table of 8 pointers, lane k's message at in[k]. Every
+ * pointer loaded from it is protected before it is used as an address.
+ * Lanes may point at the same or overlapping memory; they are only read.
+ *
+ * The compression is _sha256_x8_compress (one block per lane from buf)
+ * and _sha256_x8_compress_lanes (whole blocks straight from lane
+ * memory) from the Sha256KernelX root.
+ *
+ * Security: as sha256.jinc. total, lengths, offsets and the lane pointers
+ * are public and shared by the lanes.
  */
 
 from HashWord require "word.jinc"
-from Sha2KernelX require "sha256_x8_compress.jinc"
+from Hash require "fill.jinc"
+from Sha256KernelX require "sha256_x8_compress.jinc"
 require "sha256.jinc"
 
 #[safety =
@@ -47,65 +61,191 @@ inline fn __sha256_x8_init(reg mut ptr u32[64] h) -> reg ptr u32[64]
   return h;
 }
 
+/*
+ * Every lane at the single-way state hs, bs: the chaining value and the
+ * whole block buffer, pending bytes included, so that the lanes continue
+ * a hash whose first bytes they share.
+ */
 #[safety =
-   { res = { h_out }, ensures = is_arr_init(h_out, 0, 256)
+   { requires = is_arr_init(hs, 0, 32) && is_arr_init(bs, 0, 64)
+   , res = { h_out, buf_out }
+   , ensures = is_arr_init(h_out, 0, 256) && is_arr_init(buf_out, 0, 512)
    }
  ]
-inline fn __sha224_x8_init(reg mut ptr u32[64] h) -> reg ptr u32[64]
-{
-  reg ptr u32[8] iv;
-  reg u32 t;
-  inline int j k;
-
-  iv = SHA224_IV;
-  for j = 0 to 8 {
-    t = iv[j];
-    for k = 0 to 8 {
-      h[8 * j + k] = t;
-    }
-  }
-  return h;
-}
-
-/* Zero bytes [lo, hi) of every instance's pending block. */
-#[safety =
-   { requires = 0 <= (64u) lo && (64u) lo <= (64u) hi && (64u) hi <= 64
-   , res = { buf_out, ms_out }
-   }
- ]
-inline fn __sha256_x8_zero(
+inline fn __sha256_x8_from(
+  reg mut ptr u32[64] h,
   reg mut ptr u8[512] buf,
-  reg u64 lo hi,
-  reg u64 ms
-) -> reg ptr u8[512], reg u64
+  reg const ptr u32[8] hs,
+  reg const ptr u8[64] bs
+) -> reg ptr u32[64], reg ptr u8[512]
 {
-  reg u64 at z;
-  reg bool more;
-  inline int k;
+  reg u32 x;
+  reg u64 t;
+  inline int i j k;
 
-  z = 0;
-  while { more = lo < hi; } (more) {
-    ms = #update_msf(more, ms);
-    at = lo;
+  for j = 0 to 8 {
+    x = hs[j];
     for k = 0 to 8 {
-      buf[at] = (8u)z;
-      at += 64;
+      h[8 * j + k] = x;
     }
-    lo += 1;
   }
-  ms = #update_msf(!more, ms);
-
-  return buf, ms;
+  for i = 0 to 8 {
+    t = bs[:u64 i];
+    for k = 0 to 8 {
+      buf.[:u64 64 * k + 8 * i] = t;
+    }
+  }
+  return h, buf;
 }
 
 /*
- * Padding and output, per instance as _sha256_finalize (FIPS 180-4
- * sections 5.1.1 and 6.2.2): pending bytes, 0x80, zeros, and the 64-bit
+ * Append inlen bytes to every lane; lane k's bytes are at in[k].
+ *
+ * The plan of _sha256_absorb_mem, applied to every lane at once: complete
+ * the pending blocks, compress whole blocks straight from lane memory,
+ * keep the remainder. Afterwards total has grown by inlen and every
+ * lane's pending block holds total mod 64 bytes. Any inlen, including 0.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public ×
+         { ptr: public, val: transient } × public × msf →
+         { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 256)
+       && is_arr_init(buf, 0, (64u) total % 64)
+       && is_arr_init(buf, 64, (64u) total % 64)
+       && is_arr_init(buf, 128, (64u) total % 64)
+       && is_arr_init(buf, 192, (64u) total % 64)
+       && is_arr_init(buf, 256, (64u) total % 64)
+       && is_arr_init(buf, 320, (64u) total % 64)
+       && is_arr_init(buf, 384, (64u) total % 64)
+       && is_arr_init(buf, 448, (64u) total % 64)
+       && inlen < (64u) 2305843009213693952 && is_arr_init(in, 0, 64)
+       && is_mem_init((64u) in[0], (64u) inlen)
+       && is_mem_init((64u) in[1], (64u) inlen)
+       && is_mem_init((64u) in[2], (64u) inlen)
+       && is_mem_init((64u) in[3], (64u) inlen)
+       && is_mem_init((64u) in[4], (64u) inlen)
+       && is_mem_init((64u) in[5], (64u) inlen)
+       && is_mem_init((64u) in[6], (64u) inlen)
+       && is_mem_init((64u) in[7], (64u) inlen)
+   , res = { h_out, buf_out, total_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+       && is_arr_init(buf_out, 0, (64u) total_out % 64)
+       && is_arr_init(buf_out, 64, (64u) total_out % 64)
+       && is_arr_init(buf_out, 128, (64u) total_out % 64)
+       && is_arr_init(buf_out, 192, (64u) total_out % 64)
+       && is_arr_init(buf_out, 256, (64u) total_out % 64)
+       && is_arr_init(buf_out, 320, (64u) total_out % 64)
+       && is_arr_init(buf_out, 384, (64u) total_out % 64)
+       && is_arr_init(buf_out, 448, (64u) total_out % 64)
+       && total_out == total + inlen
+   }
+ ]
+fn _sha256_x8_absorb_lanes(
+  reg mut ptr u32[64] h,
+  reg mut ptr u8[512] buf,
+  reg u64 total,
+  reg const ptr u64[8] in,
+  reg u64 inlen,
+  reg u64 ms
+) -> reg ptr u32[64], reg ptr u8[512], reg u64, reg u64
+{
+  reg u64 fill n off p;
+  reg bool more full;
+  inline int k;
+
+  fill = total;
+  fill &= 63;
+  total += inlen;
+
+  /*
+   * Complete the partly filled blocks; skipped when nothing is pending, so
+   * that whole blocks compress straight from lane memory below.
+   */
+
+  n = 64;
+  n -= fill;
+  n = inlen < n ? inlen : n;
+  n = fill == 0 ? fill : n;
+  for k = 0 to 8 {
+    p = in[k];
+    p = #protect(p, ms);
+    buf[64 * k : 64], ms = __fill64_mem(buf[64 * k : 64], fill, p, n, ms);
+  }
+  fill += n;
+  off = n;
+
+  full = fill == 64;
+  if (full) {
+    ms = #update_msf(full, ms);
+    /*
+     * The loop state crosses the compression through the stack and is
+     * protected on reload.
+     */
+    () = #spill(total, in, inlen, off, buf);
+    h, ms = _sha256_x8_compress(h, buf, ms);
+    () = #unspill(total, in, inlen, off, buf);
+    total = #protect(total, ms);
+    in = #protect_ptr(in, ms);
+    inlen = #protect(inlen, ms);
+    off = #protect(off, ms);
+    buf = #protect_ptr(buf, ms);
+    fill = 0;
+  } else {
+    ms = #update_msf(!full, ms);
+  }
+
+  /*
+   * Whole blocks of every lane, in one kernel call made only when there is
+   * at least one. fill is 0 whenever a block is compressed here.
+   */
+
+  n = inlen;
+  n -= off;
+  n >>= 6;
+  more = n != 0;
+  if (more) {
+    ms = #update_msf(more, ms);
+    () = #spill(total, in, inlen, off, buf);
+    h, ms = _sha256_x8_compress_lanes(h, in, off, n, ms);
+    () = #unspill(total, in, inlen, off, buf);
+    total = #protect(total, ms);
+    in = #protect_ptr(in, ms);
+    inlen = #protect(inlen, ms);
+    off = #protect(off, ms);
+    buf = #protect_ptr(buf, ms);
+    n = inlen;
+    n -= off;
+    n >>= 6;
+    n <<= 6;
+    off += n;
+    fill = 0;
+  } else {
+    ms = #update_msf(!more, ms);
+  }
+
+  /* The remainder, inlen - off < 64 bytes, behind the fill pending bytes. */
+
+  n = inlen;
+  n -= off;
+  for k = 0 to 8 {
+    p = in[k];
+    p = #protect(p, ms);
+    p += off;
+    buf[64 * k : 64], ms = __fill64_mem(buf[64 * k : 64], fill, p, n, ms);
+  }
+
+  return h, buf, total, ms;
+}
+
+/*
+ * Padding and output, per lane as _sha256_finalize (FIPS 180-4 sections
+ * 5.1.1 and 6.2): pending bytes, 0x80, zeros, and the
  * big-endian bit length 8 * total; an extra block when the pending bytes
  * and 0x80 leave no room for the length. The positions depend only on
- * total, so they are the same in every instance.
+ * total, so they are the same in every lane.
  *
- * out receives instance k's H_0 .. H_7 big-endian at bytes 32k .. 32k + 31.
+ * out receives lane k's H_0 .. H_7 big-endian at bytes 32 k .. 32 k + 31.
  */
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } ×
          { ptr: public, val: secret } × public × msf →
@@ -134,7 +274,7 @@ fn _sha256_x8_finalize(
   reg u64 ms
 ) -> reg ptr u8[256], reg ptr u32[64], reg ptr u8[512], reg u64
 {
-  reg u64 fill at t end;
+  reg u64 fill at hi t;
   reg u32 x;
   reg bool two_blocks;
   inline int j k;
@@ -153,8 +293,10 @@ fn _sha256_x8_finalize(
   two_blocks = fill > 56;
   if (two_blocks) {
     ms = #update_msf(two_blocks, ms);
-    end = 64;
-    buf, ms = __sha256_x8_zero(buf, fill, end, ms);
+    hi = 64;
+    for k = 0 to 8 {
+      buf[64 * k : 64], ms = __zero64(buf[64 * k : 64], fill, hi, ms);
+    }
 
     () = #spill(out, buf, total);
     h, ms = _sha256_x8_compress(h, buf, ms);
@@ -167,8 +309,10 @@ fn _sha256_x8_finalize(
     ms = #update_msf(!two_blocks, ms);
   }
 
-  end = 56;
-  buf, ms = __sha256_x8_zero(buf, fill, end, ms);
+  hi = 56;
+  for k = 0 to 8 {
+    buf[64 * k : 64], ms = __zero64(buf[64 * k : 64], fill, hi, ms);
+  }
 
   t = total;
   t <<= 3;
@@ -192,4 +336,51 @@ fn _sha256_x8_finalize(
   }
 
   return out, h, buf, ms;
+}
+
+/*
+ * One-shot SHA-256 of 8 messages of len bytes each, lane k's at in[k]:
+ * out receives digest k at bytes 32 k .. 32 k + 31 (FIPS 180-4 section
+ * 6.2 on each message separately). len < 2^61, so that each bit length
+ * fits the length field. out must not overlap any lane.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: transient } × public × msf →
+         { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = len < (64u) 2305843009213693952 && is_arr_init(in, 0, 64)
+       && is_mem_init((64u) in[0], (64u) len)
+       && is_mem_init((64u) in[1], (64u) len)
+       && is_mem_init((64u) in[2], (64u) len)
+       && is_mem_init((64u) in[3], (64u) len)
+       && is_mem_init((64u) in[4], (64u) len)
+       && is_mem_init((64u) in[5], (64u) len)
+       && is_mem_init((64u) in[6], (64u) len)
+       && is_mem_init((64u) in[7], (64u) len)
+   , res = { out_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 256)
+   }
+ ]
+fn _sha256_x8_lanes(
+  reg mut ptr u8[256] out,
+  reg const ptr u64[8] in,
+  reg u64 len,
+  reg u64 ms
+) -> reg ptr u8[256], reg u64
+{
+  stack u32[64] h;
+  stack u8[512] buf_s;
+  reg ptr u8[512] buf;
+  reg u64 total;
+
+  h = __sha256_x8_init(h);
+  buf = buf_s;
+  total = 0;
+
+  () = #spill(out);
+  h, buf, total, ms = _sha256_x8_absorb_lanes(h, buf, total, in, len, ms);
+  () = #unspill(out);
+  out = #protect_ptr(out, ms);
+  out, h, buf, ms = _sha256_x8_finalize(out, h, buf, total, ms);
+
+  return out, ms;
 }

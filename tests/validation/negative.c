@@ -539,6 +539,8 @@ static void misuse_multiway(validation_suite *s, int x4, int kernel)
     guard_fill(out, sizeof out);
     check_code(s, kernel, multiway_oneshot(x4, kernel, NULL, buf, 1), NIRAPOD_SHA2_ENULL,
                "%s: NULL output", name);
+    check_code(s, kernel, multiway_lanes(x4, kernel, out, NULL, 1), NIRAPOD_SHA2_ENULL,
+               "%s: NULL lane table", name);
     check_code(s, kernel, multiway_oneshot(x4, kernel, out, NULL, 1), NIRAPOD_SHA2_ENULL,
                "%s: NULL input with length 1", name);
     check_code(s, kernel, multiway_oneshot(x4, kernel, out, NULL, 0), NIRAPOD_SHA2_OK,
@@ -583,6 +585,162 @@ static void misuse_multiway(validation_suite *s, int x4, int kernel)
             }
         }
     }
+}
+
+/*
+ * Misuse of the multi-way contexts: NULL arguments, the length limit,
+ * overlap of every writable argument, init_from with a context of every
+ * other function and with a finalised one, update and final after final,
+ * the total limit checked in Jasmin. On every failure nothing is written.
+ */
+static void misuse_multiway_ctx(validation_suite *s, int x4, int kernel)
+{
+    const char *name = x4 ? "sha512_x4" : "sha256_x8";
+    size_t ways = x4 ? 4 : 8;
+    size_t ctx_len = x4 ? NIRAPOD_SHA2_SHA512_X4_CTX_BYTES : NIRAPOD_SHA2_SHA256_X8_CTX_BYTES;
+    const hash_alg *same = &HASH_ALGS[x4 ? 3 : 1];
+    static uint8_t msg[512];
+    const uint8_t *t[8];
+    uint8_t out[256 + 16], snap[256 + 16];
+    validation_ctx c, before, src;
+    size_t i, m;
+
+    fill_pattern(msg, sizeof msg, 41);
+    for (m = 0; m < 8; m++) {
+        t[m] = msg + 8 * m;
+    }
+    memset(&src, 0, sizeof src);
+
+    check_code(s, kernel, multiway_init(x4, kernel, NULL), NIRAPOD_SHA2_ENULL, "%s: init NULL",
+               name);
+    multiway_init(x4, kernel, &c);
+    before = c;
+    check_code(s, kernel, multiway_update(x4, kernel, NULL, t, 8), NIRAPOD_SHA2_ENULL,
+               "%s: update NULL context", name);
+    check_code(s, kernel, multiway_update(x4, kernel, &c, NULL, 8), NIRAPOD_SHA2_ENULL,
+               "%s: update NULL table", name);
+    t[ways - 1] = NULL;
+    check_code(s, kernel, multiway_update(x4, kernel, &c, t, 8), NIRAPOD_SHA2_ENULL,
+               "%s: update NULL lane", name);
+    check_code(s, kernel, multiway_update(x4, kernel, &c, t, 0), NIRAPOD_SHA2_OK,
+               "%s: update NULL lane at length 0", name);
+    t[ways - 1] = msg;
+    check_code(s, kernel, multiway_update(x4, kernel, &c, t, (size_t)NIRAPOD_SHA2_MAX_BYTES),
+               NIRAPOD_SHA2_ELENGTH, "%s: update length 2^61", name);
+    check(s, kernel, memcmp(&c, &before, ctx_len) == 0, "%s: failed updates changed the context",
+          name);
+    check_code(s, kernel, multiway_final(x4, kernel, &c, NULL), NIRAPOD_SHA2_ENULL,
+               "%s: final NULL out", name);
+    check_code(s, kernel, multiway_init_from(x4, kernel, &c, NULL), NIRAPOD_SHA2_ENULL,
+               "%s: init_from NULL source", name);
+    check_code(s, kernel, multiway_init_from(x4, kernel, NULL, &src), NIRAPOD_SHA2_ENULL,
+               "%s: init_from NULL context", name);
+
+    /* Overlap: every lane with the context, out with the context, src with ctx. */
+    for (m = 0; m < ways; m++) {
+        const uint8_t *keep = t[m];
+
+        t[m] = c.raw + ctx_len - 4;
+        check_code(s, kernel, multiway_update(x4, kernel, &c, t, 8), NIRAPOD_SHA2_EOVERLAP,
+                   "%s: lane %zu overlaps the context", name, m);
+        t[m] = keep;
+    }
+    check(s, kernel, memcmp(&c, &before, ctx_len) == 0, "%s: overlap failures changed the context",
+          name);
+    check_code(s, kernel, multiway_final(x4, kernel, &c, c.raw + ctx_len - 1),
+               NIRAPOD_SHA2_EOVERLAP, "%s: final out overlaps the context", name);
+    check(s, kernel, memcmp(&c, &before, ctx_len) == 0, "%s: final overlap changed the context",
+          name);
+    check_code(s, kernel, multiway_init_from(x4, kernel, &c, &c), NIRAPOD_SHA2_EOVERLAP,
+               "%s: init_from source is the context", name);
+    check_code(s, kernel, multiway_init_from(x4, kernel, &c, c.raw + 100), NIRAPOD_SHA2_EOVERLAP,
+               "%s: init_from source inside the context", name);
+    check(s, kernel, memcmp(&c, &before, ctx_len) == 0,
+          "%s: init_from overlap changed the context", name);
+
+    /* init_from with a context of every other function, and a finalised one. */
+    for (i = 0; i < sizeof HASH_ALGS / sizeof HASH_ALGS[0]; i++) {
+        if (&HASH_ALGS[i] == same || !validation_usable(s, kernel, HASH_ALGS[i].family)) {
+            continue;
+        }
+        memset(&src, 0, sizeof src);
+        hash_init(&HASH_ALGS[i], kernel, &src);
+        check_code(s, kernel, multiway_init_from(x4, kernel, &c, &src), NIRAPOD_SHA2_ESTATE,
+                   "%s: init_from a %s context", name, HASH_ALGS[i].name);
+    }
+    for (i = 0; i < sizeof HMAC_ALGS / sizeof HMAC_ALGS[0]; i++) {
+        if (!validation_usable(s, kernel, HMAC_ALGS[i].family)) {
+            continue;
+        }
+        memset(&src, 0, sizeof src);
+        hmac_init(&HMAC_ALGS[i], kernel, &src, msg, 20);
+        check_code(s, kernel, multiway_init_from(x4, kernel, &c, &src), NIRAPOD_SHA2_ESTATE,
+                   "%s: init_from a %s context", name, HMAC_ALGS[i].name);
+    }
+    memset(&src, 0, sizeof src);
+    hash_init(same, kernel, &src);
+    hash_final(same, kernel, &src, out);
+    check_code(s, kernel, multiway_init_from(x4, kernel, &c, &src), NIRAPOD_SHA2_ESTATE,
+               "%s: init_from a finalised context", name);
+    memset(&src, 0, sizeof src);
+    check_code(s, kernel, multiway_init_from(x4, kernel, &c, &src), NIRAPOD_SHA2_ESTATE,
+               "%s: init_from an all-zero context", name);
+    check(s, kernel, memcmp(&c, &before, ctx_len) == 0,
+          "%s: failed init_from changed the context", name);
+
+    /* A single-way or other multi-way context given to update and final. */
+    memset(&src, 0, sizeof src);
+    hash_init(same, kernel, &src);
+    before = src;
+    check_code(s, kernel, multiway_update(x4, kernel, &src, t, 8), NIRAPOD_SHA2_ESTATE,
+               "%s: update on a single-way context", name);
+    guard_fill(out, sizeof out);
+    check_code(s, kernel, multiway_final(x4, kernel, &src, out), NIRAPOD_SHA2_ESTATE,
+               "%s: final on a single-way context", name);
+    check(s, kernel, memcmp(&src, &before, sizeof src) == 0 && guard_intact(out, sizeof out),
+          "%s: failures on a single-way context wrote memory", name);
+    if (validation_usable(s, kernel, x4 ? NIRAPOD_SHA2_TESTING_FAMILY_X8
+                                        : NIRAPOD_SHA2_TESTING_FAMILY_X4)) {
+        memset(&src, 0, sizeof src);
+        multiway_init(!x4, kernel, &src);
+        before = src;
+        check_code(s, kernel, multiway_update(x4, kernel, &src, t, 8), NIRAPOD_SHA2_ESTATE,
+                   "%s: update on the other multi-way context", name);
+        check_code(s, kernel, multiway_final(x4, kernel, &src, out), NIRAPOD_SHA2_ESTATE,
+                   "%s: final on the other multi-way context", name);
+        check(s, kernel, memcmp(&src, &before, sizeof src) == 0 && guard_intact(out, sizeof out),
+              "%s: failures on the other multi-way context wrote memory", name);
+    }
+
+    /* Update and final after final. */
+    multiway_init(x4, kernel, &c);
+    multiway_update(x4, kernel, &c, t, 8);
+    check_code(s, kernel, multiway_final(x4, kernel, &c, out), NIRAPOD_SHA2_OK, "%s: final", name);
+    for (i = 0; i < ctx_len; i++) {
+        if (c.raw[i] != 0) {
+            break;
+        }
+    }
+    check(s, kernel, i == ctx_len, "%s: final did not zero the context", name);
+    before = c;
+    memcpy(snap, out, sizeof out);
+    check_code(s, kernel, multiway_update(x4, kernel, &c, t, 8), NIRAPOD_SHA2_ESTATE,
+               "%s: update after final", name);
+    check_code(s, kernel, multiway_final(x4, kernel, &c, out), NIRAPOD_SHA2_ESTATE,
+               "%s: final after final", name);
+    check(s, kernel, memcmp(&c, &before, ctx_len) == 0 && memcmp(out, snap, sizeof out) == 0,
+          "%s: failures after final wrote memory", name);
+
+    /* The total limit checked in Jasmin: total set to 2^61 - 8. */
+    multiway_init(x4, kernel, &c);
+    c.words[1] = (uint64_t)NIRAPOD_SHA2_MAX_BYTES - 8;
+    before = c;
+    check_code(s, kernel, multiway_update(x4, kernel, &c, t, 8), NIRAPOD_SHA2_ELENGTH,
+               "%s: update reaching 2^61", name);
+    check(s, kernel, memcmp(&c, &before, ctx_len) == 0,
+          "%s: the total limit failure changed the context", name);
+    check_code(s, kernel, multiway_update(x4, kernel, &c, t, 7), NIRAPOD_SHA2_OK,
+               "%s: update to 2^61 - 1", name);
 }
 
 /*
@@ -705,9 +863,11 @@ int suite_negative(void)
         }
         if (validation_usable(&s, target, NIRAPOD_SHA2_TESTING_FAMILY_X8)) {
             misuse_multiway(&s, 0, target);
+            misuse_multiway_ctx(&s, 0, target);
         }
         if (validation_usable(&s, target, NIRAPOD_SHA2_TESTING_FAMILY_X4)) {
             misuse_multiway(&s, 1, target);
+            misuse_multiway_ctx(&s, 1, target);
         }
         cross_contexts(&s, target);
     }

@@ -6,7 +6,7 @@
  * =======================
  *
  * Four independent SHA-512 compressions, portable scalar kernel behind the
- * Sha2KernelX include root:
+ * Sha512KernelX include root:
  *
  *     _sha512_x4_compress(h4, blocks, ms)
  *
@@ -20,7 +20,7 @@
  * local chaining value holds instance 3's result on return.
  */
 
-from Sha2Kernel require "sha512_compress.jinc"
+from Sha512Kernel require "sha512_compress.jinc"
 
 #[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
          { ptr: public, val: secret } × msf"]
@@ -51,6 +51,66 @@ fn _sha512_x4_compress(
     () = #unspill(h4, blocks);
     h4 = #protect_ptr(h4, ms);
     blocks = #protect_ptr(blocks, ms);
+
+    for j = 0 to 8 {
+      x = h[j];
+      h4[4 * j + k] = x;
+    }
+  }
+
+  return h4, ms;
+}
+
+/*
+ * n whole blocks of every lane, read straight from lane memory: lane k's
+ * blocks are the 128 n bytes at in[k] + off. Each lane is compressed by
+ * the single-way _sha512_compress_blocks, so no block is copied.
+ *
+ * The lane pointers are loaded from the table and protected before use;
+ * the table and the loop state cross each kernel call through the stack
+ * and are protected on reload.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: transient } × public ×
+         public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h4, 0, 256) && is_arr_init(in, 0, 32)
+       && n < (64u) 144115188075855872 && off < (64u) 2305843009213693952
+       && is_mem_init((64u) in[0] + (64u) off, 128 * (64u) n)
+       && is_mem_init((64u) in[1] + (64u) off, 128 * (64u) n)
+       && is_mem_init((64u) in[2] + (64u) off, 128 * (64u) n)
+       && is_mem_init((64u) in[3] + (64u) off, 128 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+   }
+ ]
+fn _sha512_x4_compress_lanes(
+  reg mut ptr u64[32] h4,
+  reg const ptr u64[4] in,
+  reg u64 off n,
+  reg u64 ms
+) -> reg ptr u64[32], reg u64
+{
+  stack u64[8] h;
+  reg u64 x;
+  reg u64 p;
+  inline int j k;
+
+  for k = 0 to 4 {
+    for j = 0 to 8 {
+      x = h4[4 * j + k];
+      h[j] = x;
+    }
+
+    p = in[k];
+    p = #protect(p, ms);
+    p += off;
+    () = #spill(h4, in, off, n);
+    h, ms = _sha512_compress_blocks(h, p, n, ms);
+    () = #unspill(h4, in, off, n);
+    h4 = #protect_ptr(h4, ms);
+    in = #protect_ptr(in, ms);
+    off = #protect(off, ms);
+    n = #protect(n, ms);
 
     for j = 0 to 8 {
       x = h[j];

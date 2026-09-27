@@ -1,0 +1,158 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * controls.jazz
+ * =============
+ *
+ * Controls of the safety job (ci/jobs/safety.sh). Each export below goes
+ * through the same steps as an export of the library: one checker run
+ * sliced to the export, the verdict, and the comparison of every inferred
+ * memory range with the bound of the export's #[safety] contract
+ * (tests/safety/ranges.py). The job requires each control to end as the
+ * table says, for the stated reason; a control that ends otherwise fails
+ * the job.
+ *
+ *     export   reads                              must end
+ *     exact    in[0 .. inlen - 1]                 PASS
+ *     wider    in[0 .. inlen], one byte too many  FAIL, range wider than inlen
+ *     offset   whole blocks, in + off while
+ *              off + 64 <= inlen                  FAIL, range not bounded by inlen
+ *     oob      out[0 .. 8] of a u8[8]             FAIL, checker violation
+ *     unnamed  one byte at a pointer the
+ *              contract does not name             FAIL, range wider than 0
+ *
+ * exact is the positive control: without it a comparison that rejects
+ * everything would pass the negative ones. offset is a loop whose
+ * length relation the checker cannot keep: its verdict is "no violation"
+ * under a memory range that no caller can meet, which is exactly what the
+ * comparison exists to reject.
+ *
+ * The unit is arch-neutral and is checked for both targets.
+ */
+
+/* XOR of the inlen bytes at in, the reference shape: a byte loop bounded
+   by the length. */
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 8)
+   }
+ ]
+export fn exact(reg mut ptr u8[8] out, reg u64 in inlen) -> reg ptr u8[8]
+{
+  reg u64 i;
+  reg u8 b t;
+  inline int k;
+
+  for k = 0 to 8 { out[k] = 0; }
+  t = 0;
+  i = 0;
+  while (i < inlen) {
+    b = [:u8 in + i];
+    t ^= b;
+    i += 1;
+  }
+  out[0] = t;
+  return out;
+}
+
+/* As exact, then one more byte at in + inlen: the read is valid only if
+   the caller provides inlen + 1 bytes, which the contract does not ask. */
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 8)
+   }
+ ]
+export fn wider(reg mut ptr u8[8] out, reg u64 in inlen) -> reg ptr u8[8]
+{
+  reg u64 i;
+  reg u8 b t;
+  inline int k;
+
+  for k = 0 to 8 { out[k] = 0; }
+  t = 0;
+  i = 0;
+  while (i < inlen) {
+    b = [:u8 in + i];
+    t ^= b;
+    i += 1;
+  }
+  b = [:u8 in + inlen];
+  t ^= b;
+  out[0] = t;
+  return out;
+}
+
+/* Whole 64-byte blocks at base plus offset, while offset + 64 <= inlen.
+   Every read is within the inlen bytes, but the sum may wrap around in
+   64 bits, so the analysis keeps no relation between the offset and
+   inlen. */
+#[safety =
+   { requires = is_mem_init((64u) in, (64u) inlen)
+   , res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 8)
+   }
+ ]
+export fn offset(reg mut ptr u8[8] out, reg u64 in inlen) -> reg ptr u8[8]
+{
+  reg u64 off lim a w y;
+  reg bool more;
+  inline int k;
+
+  for k = 0 to 8 { out[k] = 0; }
+  y = 0;
+  off = 0;
+  while { lim = off; lim += 64; more = lim <= inlen; } (more) {
+    a = off;
+    a += 56;
+    w = [:u64 in + a];
+    y ^= w;
+    off += 64;
+  }
+  out[:u64 0] = y;
+  return out;
+}
+
+/* Reads nine bytes of an eight-byte array: the last index is out of
+   bounds. */
+#[safety =
+   { res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 8)
+   }
+ ]
+export fn oob(reg mut ptr u8[8] out) -> reg ptr u8[8]
+{
+  reg u64 i;
+  reg u8 b t;
+  inline int k;
+
+  for k = 0 to 8 { out[k] = 0; }
+  t = 0;
+  i = 0;
+  while (i <= 8) {
+    b = out[i];
+    t ^= b;
+    i += 1;
+  }
+  out[0] = t;
+  return out;
+}
+
+/* Reads one byte at p, which the contract lists as no memory region. */
+#[safety =
+   { res = { out_out }
+   , ensures = is_arr_init(out_out, 0, 8)
+   }
+ ]
+export fn unnamed(reg mut ptr u8[8] out, reg u64 p) -> reg ptr u8[8]
+{
+  reg u8 b;
+  inline int k;
+
+  for k = 0 to 8 { out[k] = 0; }
+  b = [:u8 p];
+  out[0] = b;
+  return out;
+}

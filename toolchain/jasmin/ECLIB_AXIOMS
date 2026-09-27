@@ -19,7 +19,7 @@
 #   allocated8_setE), the AES helpers (AES: InvSboxK, InvMixColumnsK,
 #   InvMixColumnsD) and the horizontal addition of the x86-64 model
 #   (JModel_x86: hadd_nil, hadd_cons2). EasyCrypt proofs about code that
-#   uses them rest on them; docs/TOOLCHAIN.md lists them in the trusted base.
+#   uses them rest on them, so they are part of those proofs' trusted base.
 
 eclib/AES.ec: axiom InvMixColumnsD
 eclib/AES.ec: axiom InvMixColumnsK

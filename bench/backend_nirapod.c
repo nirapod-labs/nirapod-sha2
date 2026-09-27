@@ -221,16 +221,22 @@ static int nz_hmac_init(int k, bench_fn fn, void *ctx, const uint8_t *key, size_
                                                         key, key_len);
 }
 
+/* The multi-way one-shot on packed messages: lane m reads in + m len. */
 static int nz_multi(int k, bench_fn fn, uint8_t *out, const uint8_t *in, size_t len)
 {
     int x4 = fn == BENCH_SHA512_X4;
+    const uint8_t *t[8];
+    size_t m;
 
-    if (k < 0) {
-        return x4 ? nirapod_sha2_sha512_x4(out, in, len)
-                  : nirapod_sha2_sha256_x8(out, in, len);
+    for (m = 0; m < 8; m++) {
+        t[m] = in + m * len;
     }
-    return x4 ? nirapod_sha2_testing_sha512_x4(NZ_K(k), out, in, len)
-              : nirapod_sha2_testing_sha256_x8(NZ_K(k), out, in, len);
+    if (k < 0) {
+        return x4 ? nirapod_sha2_sha512_x4(out, t, len)
+                  : nirapod_sha2_sha256_x8(out, t, len);
+    }
+    return x4 ? nirapod_sha2_testing_sha512_x4(NZ_K(k), out, t, len)
+              : nirapod_sha2_testing_sha256_x8(NZ_K(k), out, t, len);
 }
 
 static int nz_run(const bench_variant *v, const bench_workload *w, uint8_t *out)

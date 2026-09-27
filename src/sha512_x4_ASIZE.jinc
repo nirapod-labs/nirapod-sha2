@@ -1,0 +1,120 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * sha512_x4_ASIZE.jinc
+ * ====================
+ *
+ * 4-way SHA-512 input from a byte array: _sha512_x4_absorb_array, the
+ * array form of _sha512_x4_absorb_lanes in sha512_x4.jinc. Instance file,
+ * included as sha512_ASIZE.jinc is, with sha512_x4.jinc required at top level.
+ *
+ * The lanes are slices of one array a of _ASIZE bytes: lane k takes the
+ * len bytes at off + k stride. With stride the size of one message the
+ * lanes are messages stored one after another; with stride 0 every lane
+ * hashes the same bytes; stride may be smaller than len, so lanes may
+ * overlap. One array and a stride keep the arguments in registers, where
+ * 4 separate arrays besides the state would not fit those of x86-64.
+ * Lane k's result is that of _sha512_absorb_array on its slice.
+ *
+ *     _sha512_x4_absorb_array(h, buf, total, a, off, stride, len, ms)
+ *
+ * appends them to the state of sha512_x4.jinc, which _sha512_x4_finalize
+ * then finishes.
+ *
+ * Security: as sha512_ASIZE.jinc; stride is public as well.
+ */
+
+from Hash require "fill_ASIZE.jinc"
+
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public ×
+         { ptr: public, val: secret } × public × public × public × msf →
+         { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 256)
+       && is_arr_init(buf, 0, (64u) total % 128)
+       && is_arr_init(buf, 128, (64u) total % 128)
+       && is_arr_init(buf, 256, (64u) total % 128)
+       && is_arr_init(buf, 384, (64u) total % 128)
+       && (64u) off + 3 * (64u) stride + (64u) len <= _ASIZE
+       && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
+       && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
+       && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
+       && is_arr_init(a, (64u) off + 3 * (64u) stride, (64u) len)
+   , res = { h_out, buf_out, total_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 256)
+       && is_arr_init(buf_out, 0, (64u) total_out % 128)
+       && is_arr_init(buf_out, 128, (64u) total_out % 128)
+       && is_arr_init(buf_out, 256, (64u) total_out % 128)
+       && is_arr_init(buf_out, 384, (64u) total_out % 128)
+       && total_out == total + len
+   }
+ ]
+fn _sha512_x4_absorb_array(
+  reg mut ptr u64[32] h,
+  reg mut ptr u8[512] buf,
+  reg u64 total,
+  reg const ptr u8[_ASIZE] a,
+  reg u64 off stride len,
+  reg u64 ms
+) -> reg ptr u64[32], reg ptr u8[512], reg u64, reg u64
+{
+  reg u64 fill n src;
+  reg bool more full;
+  inline int k;
+
+  fill = total;
+  fill &= 127;
+  total += len;
+
+  /*
+   * h and total wait on the stack while the lanes are filled, which keeps
+   * the fill within the registers of x86-64. Reloaded values are protected
+   * before they are used again.
+   */
+  () = #spill(h, total);
+
+  /* Invariant: every lane holds fill < 128 pending bytes at each top. */
+
+  while { more = len != 0; } (more) {
+    ms = #update_msf(more, ms);
+
+    n = 128;
+    n -= fill;
+    n = len < n ? len : n;
+    src = off;
+    for k = 0 to 4 {
+      buf[128 * k : 128], ms = __fill128_array(buf[128 * k : 128], fill, a, src, n, ms);
+      src += stride;
+    }
+    fill += n;
+    off += n;
+    len -= n;
+
+    full = fill == 128;
+    if (full) {
+      ms = #update_msf(full, ms);
+      () = #unspill(h);
+      h = #protect_ptr(h, ms);
+      () = #spill(a, off, stride, len, buf);
+      h, ms = _sha512_x4_compress(h, buf, ms);
+      () = #unspill(a, off, stride, len, buf);
+      () = #spill(h);
+      a = #protect_ptr(a, ms);
+      off = #protect(off, ms);
+      stride = #protect(stride, ms);
+      len = #protect(len, ms);
+      buf = #protect_ptr(buf, ms);
+      fill = 0;
+    } else {
+      ms = #update_msf(!full, ms);
+    }
+  }
+  ms = #update_msf(!more, ms);
+
+  () = #unspill(h, total);
+  h = #protect_ptr(h, ms);
+  total = #protect(total, ms);
+
+  return h, buf, total, ms;
+}
