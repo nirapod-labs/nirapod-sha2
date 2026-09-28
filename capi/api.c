@@ -442,11 +442,11 @@ int nirapod_sha2_hmac_sha512_final(nirapod_sha2_hmac_sha512_ctx *ctx, uint8_t *o
                                   out, NIRAPOD_SHA2_HMAC_SHA512_BYTES);
 }
 
-#define LANES_FUNCTIONS(h, FAMILY, WAYS, CTX, SRC_CTX, SRC_BYTES)                  \
+#define LANES_FUNCTIONS(h, FAMILY, WAYS, OUT, CTX, SRC_CTX, SRC_BYTES)                  \
     int nirapod_sha2_##h(uint8_t *out, const uint8_t *const in[WAYS], size_t len)  \
     {                                                                              \
         const nirapod_sha2_unit *u = nirapod_sha2_select(FAMILY);                  \
-        return nirapod_sha2_run_lanes(u, FAMILY, u->h, WAYS, out, 256, in, len);   \
+        return nirapod_sha2_run_lanes(u, FAMILY, u->h, WAYS, out, OUT, in, len);   \
     }                                                                              \
     int nirapod_sha2_##h##_init(CTX *ctx)                                          \
     {                                                                              \
@@ -469,10 +469,12 @@ int nirapod_sha2_hmac_sha512_final(nirapod_sha2_hmac_sha512_ctx *ctx, uint8_t *o
     {                                                                              \
         const nirapod_sha2_unit *u = nirapod_sha2_select(FAMILY);                  \
         return nirapod_sha2_run_final(u, FAMILY, u->h##_final, ctx, sizeof(CTX),   \
-                                      out, 256);                                   \
+                                      out, OUT);                                   \
     }
 
-LANES_FUNCTIONS(sha256_x8, NIRAPOD_SHA2_FAMILY_X8, 8, nirapod_sha2_sha256_x8_ctx,
+LANES_FUNCTIONS(sha256_x8, NIRAPOD_SHA2_FAMILY_X8, 8, NIRAPOD_SHA2_SHA256_X8_BYTES,
+                nirapod_sha2_sha256_x8_ctx,
                 nirapod_sha2_sha256_ctx, NIRAPOD_SHA2_SHA256_CTX_BYTES)
-LANES_FUNCTIONS(sha512_x4, NIRAPOD_SHA2_FAMILY_X4, 4, nirapod_sha2_sha512_x4_ctx,
+LANES_FUNCTIONS(sha512_x4, NIRAPOD_SHA2_FAMILY_X4, 4, NIRAPOD_SHA2_SHA512_X4_BYTES,
+                nirapod_sha2_sha512_x4_ctx,
                 nirapod_sha2_sha512_ctx, NIRAPOD_SHA2_SHA512_CTX_BYTES)
