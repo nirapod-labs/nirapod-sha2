@@ -204,6 +204,10 @@ fn _sha256_absorb_mem(
  * out receives H_0 .. H_7 big-endian, all 32 bytes; SHA-224 uses out[0:28]
  * and the last 4 bytes are the rest of the final chaining value. h and buf
  * keep final-state data afterwards and need re-initialisation before reuse.
+ *
+ * out may be transient on entry. It is not used as an address until it
+ * has crossed the last compression through the stack and been protected,
+ * so a caller that reloaded it need not protect it first.
  */
 /* Safety: h is initialised and buf holds total mod 64 pending bytes. */
 #[safety =
@@ -213,7 +217,7 @@ fn _sha256_absorb_mem(
        && is_arr_init(buf_out, 0, 64)
    }
  ]
-#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } ×
+#[sct = "{ ptr: transient, val: secret } × { ptr: public, val: secret } ×
          { ptr: public, val: secret } × public × msf →
          { ptr: public, val: secret } × { ptr: public, val: secret } ×
          { ptr: public, val: secret } × msf"]
@@ -297,14 +301,14 @@ inline fn __sha256_mem_from(
   buf = buf_s;
   total = 0;
   /*
-   * out is live across the absorb call and crosses it through the stack;
-   * it comes back transient, so it is protected before use as an output
-   * address.
+   * out is live across the absorb call and crosses it through the stack.
+   * It comes back transient and goes to finalize as it is: finalize
+   * moves it through the stack again before its last compression and
+   * protects it there, before any use as an address.
    */
   () = #spill(out);
   h, buf, total, ms = _sha256_absorb_mem(h, buf, total, in, inlen, ms);
   () = #unspill(out);
-  out = #protect_ptr(out, ms);
   out, h, buf, ms = _sha256_finalize(out, h, buf, total, ms);
 
   return out, ms;

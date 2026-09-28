@@ -73,10 +73,15 @@
  * Speculation
  *
  *     An export can be entered under misspeculation with any register
- *     values, so each one starts with #init_msf, a fence that gives an
- *     exact misspeculation flag, and protects every pointer and length
- *     argument with it before first use. The SCT annotations type those
- *     arguments transient for the same reason.
+ *     values, so the SCT annotations type its pointer and length
+ *     arguments transient, and each export starts with #init_msf before
+ *     it uses any of them. #init_msf is a fence (LFENCE on x86-64, DSB SY
+ *     and ISB on AArch64): no later instruction runs until every earlier
+ *     one, branches included, has resolved, so the arguments it leaves in
+ *     registers are their architectural values. The type checker models
+ *     this by making every transient value public at the fence, which is
+ *     why no argument is protected again after it. Protects come only
+ *     where a value is reloaded from memory, after a call.
  *
  * Stack
  *
@@ -118,9 +123,6 @@ export fn sha224(reg mut ptr u8[28] out, reg u64 in inlen) -> reg ptr u8[28]
   reg u64 ms;
 
   ms = #init_msf();
-  out = #protect_ptr(out, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   () = #spill(out);
   d, ms = _sha224_mem(d, in, inlen, ms);
@@ -145,9 +147,6 @@ export fn sha256(reg mut ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32]
   reg u64 ms;
 
   ms = #init_msf();
-  out = #protect_ptr(out, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   out, ms = _sha256_mem(out, in, inlen, ms);
 
@@ -169,9 +168,6 @@ export fn sha384(reg mut ptr u8[48] out, reg u64 in inlen) -> reg ptr u8[48]
   reg u64 ms;
 
   ms = #init_msf();
-  out = #protect_ptr(out, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   () = #spill(out);
   d, ms = _sha384_mem(d, in, inlen, ms);
@@ -196,9 +192,6 @@ export fn sha512(reg mut ptr u8[64] out, reg u64 in inlen) -> reg ptr u8[64]
   reg u64 ms;
 
   ms = #init_msf();
-  out = #protect_ptr(out, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   out, ms = _sha512_mem(out, in, inlen, ms);
 
@@ -220,9 +213,6 @@ export fn sha512_224(reg mut ptr u8[28] out, reg u64 in inlen) -> reg ptr u8[28]
   reg u64 ms;
 
   ms = #init_msf();
-  out = #protect_ptr(out, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   () = #spill(out);
   d, ms = _sha512_224_mem(d, in, inlen, ms);
@@ -248,9 +238,6 @@ export fn sha512_256(reg mut ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32]
   reg u64 ms;
 
   ms = #init_msf();
-  out = #protect_ptr(out, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   () = #spill(out);
   d, ms = _sha512_256_mem(d, in, inlen, ms);
@@ -285,7 +272,6 @@ export fn sha224_init(reg mut ptr u8[SHA256_CTX_BYTES] ctx) -> reg ptr u8[SHA256
   reg u64 ms tag total;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
 
   h = __sha224_init(h);
   tag = __sha2_tag(SHA2_FN_SHA224);
@@ -309,9 +295,6 @@ export fn sha224_update(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg u64 in inlen) 
   reg u64 ms expect status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   expect = __sha2_tag(SHA2_FN_SHA224);
   ctx, status, ms = _sha256_ctx_update(ctx, in, inlen, expect, ms);
@@ -337,8 +320,6 @@ export fn sha224_final(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg mut ptr u8[28] 
   reg bool ok;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  out = #protect_ptr(out, ms);
 
   expect = __sha2_tag(SHA2_FN_SHA224);
   () = #spill(out);
@@ -370,7 +351,6 @@ export fn sha256_init(reg mut ptr u8[SHA256_CTX_BYTES] ctx) -> reg ptr u8[SHA256
   reg u64 ms tag total;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
 
   h = __sha256_init(h);
   tag = __sha2_tag(SHA2_FN_SHA256);
@@ -394,9 +374,6 @@ export fn sha256_update(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg u64 in inlen) 
   reg u64 ms expect status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   expect = __sha2_tag(SHA2_FN_SHA256);
   ctx, status, ms = _sha256_ctx_update(ctx, in, inlen, expect, ms);
@@ -420,8 +397,6 @@ export fn sha256_final(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg mut ptr u8[32] 
   reg u64 ms expect status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  out = #protect_ptr(out, ms);
 
   expect = __sha2_tag(SHA2_FN_SHA256);
   ctx, out, status, ms = _sha256_ctx_final(ctx, out, expect, ms);
@@ -442,7 +417,6 @@ export fn sha384_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SHA512
   reg u64 ms tag total;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
 
   h = __sha384_init(h);
   tag = __sha2_tag(SHA2_FN_SHA384);
@@ -466,9 +440,6 @@ export fn sha384_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inlen) 
   reg u64 ms expect status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   expect = __sha2_tag(SHA2_FN_SHA384);
   ctx, status, ms = _sha512_ctx_update(ctx, in, inlen, expect, ms);
@@ -494,8 +465,6 @@ export fn sha384_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[48] 
   reg bool ok;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  out = #protect_ptr(out, ms);
 
   expect = __sha2_tag(SHA2_FN_SHA384);
   () = #spill(out);
@@ -527,7 +496,6 @@ export fn sha512_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SHA512
   reg u64 ms tag total;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
 
   h = __sha512_init(h);
   tag = __sha2_tag(SHA2_FN_SHA512);
@@ -551,9 +519,6 @@ export fn sha512_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inlen) 
   reg u64 ms expect status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   expect = __sha2_tag(SHA2_FN_SHA512);
   ctx, status, ms = _sha512_ctx_update(ctx, in, inlen, expect, ms);
@@ -577,8 +542,6 @@ export fn sha512_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[64] 
   reg u64 ms expect status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  out = #protect_ptr(out, ms);
 
   expect = __sha2_tag(SHA2_FN_SHA512);
   ctx, out, status, ms = _sha512_ctx_final(ctx, out, expect, ms);
@@ -599,7 +562,6 @@ export fn sha512_224_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SH
   reg u64 ms tag total;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
 
   h = __sha512_224_init(h);
   tag = __sha2_tag(SHA2_FN_SHA512_224);
@@ -623,9 +585,6 @@ export fn sha512_224_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inl
   reg u64 ms expect status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   expect = __sha2_tag(SHA2_FN_SHA512_224);
   ctx, status, ms = _sha512_ctx_update(ctx, in, inlen, expect, ms);
@@ -651,8 +610,6 @@ export fn sha512_224_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[
   reg bool ok;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  out = #protect_ptr(out, ms);
 
   expect = __sha2_tag(SHA2_FN_SHA512_224);
   () = #spill(out);
@@ -684,7 +641,6 @@ export fn sha512_256_init(reg mut ptr u8[SHA512_CTX_BYTES] ctx) -> reg ptr u8[SH
   reg u64 ms tag total;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
 
   h = __sha512_256_init(h);
   tag = __sha2_tag(SHA2_FN_SHA512_256);
@@ -708,9 +664,6 @@ export fn sha512_256_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inl
   reg u64 ms expect status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   expect = __sha2_tag(SHA2_FN_SHA512_256);
   ctx, status, ms = _sha512_ctx_update(ctx, in, inlen, expect, ms);
@@ -736,8 +689,6 @@ export fn sha512_256_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[
   reg bool ok;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  out = #protect_ptr(out, ms);
 
   expect = __sha2_tag(SHA2_FN_SHA512_256);
   () = #spill(out);
@@ -780,11 +731,6 @@ export fn hmac_sha256(reg mut ptr u8[32] out, reg u64 key keylen msg msglen) -> 
   reg u64 ms;
 
   ms = #init_msf();
-  out = #protect_ptr(out, ms);
-  key = #protect(key, ms);
-  keylen = #protect(keylen, ms);
-  msg = #protect(msg, ms);
-  msglen = #protect(msglen, ms);
 
   out, ms = _hmac_sha256_mem(out, key, keylen, msg, msglen, ms);
 
@@ -805,11 +751,6 @@ export fn hmac_sha512(reg mut ptr u8[64] out, reg u64 key keylen msg msglen) -> 
   reg u64 ms;
 
   ms = #init_msf();
-  out = #protect_ptr(out, ms);
-  key = #protect(key, ms);
-  keylen = #protect(keylen, ms);
-  msg = #protect(msg, ms);
-  msglen = #protect(msglen, ms);
 
   out, ms = _hmac_sha512_mem(out, key, keylen, msg, msglen, ms);
 
@@ -831,9 +772,6 @@ export fn hmac_sha256_init(reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx, reg u64 ke
   reg u64 ms;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  key = #protect(key, ms);
-  keylen = #protect(keylen, ms);
 
   ctx, ms = __hmac_sha256_ctx_init(ctx, key, keylen, ms);
 
@@ -855,9 +793,6 @@ export fn hmac_sha256_update(reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx, reg u64 
   reg u64 ms expect status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   expect = __sha2_tag(SHA2_FN_HMAC_SHA256);
   ctx[0:SHA256_CTX_BYTES], status, ms =
@@ -882,8 +817,6 @@ export fn hmac_sha256_final(reg mut ptr u8[HMAC_SHA256_CTX_BYTES] ctx, reg mut p
   reg u64 ms status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  out = #protect_ptr(out, ms);
 
   ctx, out, status, ms = __hmac_sha256_ctx_final(ctx, out, ms);
 
@@ -905,9 +838,6 @@ export fn hmac_sha512_init(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg u64 ke
   reg u64 ms;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  key = #protect(key, ms);
-  keylen = #protect(keylen, ms);
 
   ctx, ms = __hmac_sha512_ctx_init(ctx, key, keylen, ms);
 
@@ -929,9 +859,6 @@ export fn hmac_sha512_update(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg u64 
   reg u64 ms expect status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  in = #protect(in, ms);
-  inlen = #protect(inlen, ms);
 
   expect = __sha2_tag(SHA2_FN_HMAC_SHA512);
   ctx[0:SHA512_CTX_BYTES], status, ms =
@@ -956,8 +883,6 @@ export fn hmac_sha512_final(reg mut ptr u8[HMAC_SHA512_CTX_BYTES] ctx, reg mut p
   reg u64 ms status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  out = #protect_ptr(out, ms);
 
   ctx, out, status, ms = __hmac_sha512_ctx_final(ctx, out, ms);
 
@@ -1005,9 +930,6 @@ export fn sha256_x8(reg mut ptr u8[256] out, reg const ptr u64[8] in, reg u64 le
   reg u64 ms;
 
   ms = #init_msf();
-  out = #protect_ptr(out, ms);
-  in = #protect_ptr(in, ms);
-  len = #protect(len, ms);
 
   out, ms = _sha256_x8_lanes(out, in, len, ms);
 
@@ -1026,7 +948,6 @@ export fn sha256_x8_init(reg mut ptr u8[SHA256_X8_CTX_BYTES] ctx) -> reg ptr u8[
   reg u64 ms;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
 
   ctx = __sha256_x8_ctx_init(ctx);
 
@@ -1048,8 +969,6 @@ export fn sha256_x8_init_from(reg mut ptr u8[SHA256_X8_CTX_BYTES] ctx, reg const
   reg u64 ms status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  src = #protect_ptr(src, ms);
 
   ctx, status, ms = _sha256_x8_ctx_from(ctx, src, ms);
 
@@ -1079,9 +998,6 @@ export fn sha256_x8_update(reg mut ptr u8[SHA256_X8_CTX_BYTES] ctx, reg const pt
   reg u64 ms status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  in = #protect_ptr(in, ms);
-  inlen = #protect(inlen, ms);
 
   ctx, status, ms = _sha256_x8_ctx_update(ctx, in, inlen, ms);
 
@@ -1104,8 +1020,6 @@ export fn sha256_x8_final(reg mut ptr u8[SHA256_X8_CTX_BYTES] ctx, reg mut ptr u
   reg u64 ms status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  out = #protect_ptr(out, ms);
 
   ctx, out, status, ms = _sha256_x8_ctx_final(ctx, out, ms);
 
@@ -1131,9 +1045,6 @@ export fn sha512_x4(reg mut ptr u8[256] out, reg const ptr u64[4] in, reg u64 le
   reg u64 ms;
 
   ms = #init_msf();
-  out = #protect_ptr(out, ms);
-  in = #protect_ptr(in, ms);
-  len = #protect(len, ms);
 
   out, ms = _sha512_x4_lanes(out, in, len, ms);
 
@@ -1152,7 +1063,6 @@ export fn sha512_x4_init(reg mut ptr u8[SHA512_X4_CTX_BYTES] ctx) -> reg ptr u8[
   reg u64 ms;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
 
   ctx = __sha512_x4_ctx_init(ctx);
 
@@ -1174,8 +1084,6 @@ export fn sha512_x4_init_from(reg mut ptr u8[SHA512_X4_CTX_BYTES] ctx, reg const
   reg u64 ms status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  src = #protect_ptr(src, ms);
 
   ctx, status, ms = _sha512_x4_ctx_from(ctx, src, ms);
 
@@ -1201,9 +1109,6 @@ export fn sha512_x4_update(reg mut ptr u8[SHA512_X4_CTX_BYTES] ctx, reg const pt
   reg u64 ms status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  in = #protect_ptr(in, ms);
-  inlen = #protect(inlen, ms);
 
   ctx, status, ms = _sha512_x4_ctx_update(ctx, in, inlen, ms);
 
@@ -1226,8 +1131,6 @@ export fn sha512_x4_final(reg mut ptr u8[SHA512_X4_CTX_BYTES] ctx, reg mut ptr u
   reg u64 ms status;
 
   ms = #init_msf();
-  ctx = #protect_ptr(ctx, ms);
-  out = #protect_ptr(out, ms);
 
   ctx, out, status, ms = _sha512_x4_ctx_final(ctx, out, ms);
 
