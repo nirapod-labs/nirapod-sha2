@@ -239,8 +239,12 @@ fn _sha512_absorb_mem(
  * chaining value and must not be published as part of the digest. h and
  * buf keep final-state data afterwards and need re-initialisation before
  * reuse.
+ *
+ * out may be transient on entry. It is not used as an address until it
+ * has crossed the last compression through the stack and been protected,
+ * so a caller that reloaded it need not protect it first.
  */
-#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } ×
+#[sct = "{ ptr: transient, val: secret } × { ptr: public, val: secret } ×
          { ptr: public, val: secret } × public × msf →
          { ptr: public, val: secret } × { ptr: public, val: secret } ×
          { ptr: public, val: secret } × msf"]
@@ -335,14 +339,14 @@ inline fn __sha512_mem_from(
   buf = buf_s;
   total = 0;
   /*
-   * out is live across the absorb call and crosses it through the stack;
-   * it comes back transient, so it is protected before use as an output
-   * address.
+   * out is live across the absorb call and crosses it through the stack.
+   * It comes back transient and goes to finalize as it is: finalize
+   * moves it through the stack again before its last compression and
+   * protects it there, before any use as an address.
    */
   () = #spill(out);
   h, buf, total, ms = _sha512_absorb_mem(h, buf, total, in, inlen, ms);
   () = #unspill(out);
-  out = #protect_ptr(out, ms);
   out, h, buf, ms = _sha512_finalize(out, h, buf, total, ms);
 
   return out, ms;
