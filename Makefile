@@ -179,7 +179,7 @@ $(BUILD)/asm/%.s: $(UNIT_FILES) $(JASMIN_DEPS)
 	$(JASMINC) $(call unit_flags,$(notdir $*),$(patsubst %/,%,$(dir $*))) \
 	  $(call unit_roots,$(notdir $*)) -o $@ $(BUILD)/units/$(notdir $*).jazz
 
-.PHONY: all asm asm-all asm-policy ct check clean array-test print-units
+.PHONY: all asm asm-all asm-policy ct check clean array-test print-units dit-check
 
 # Generated units and assembly are kept, not removed as intermediates.
 .SECONDARY:
@@ -315,6 +315,10 @@ check: $(LIB) $(EXPORTS_CONTROL) $(SMOKE) $(SMOKE_PUBLIC) $(DIT_TEST) asm-policy
 	else echo "check-exports negative control: rejected, as required"; fi
 	$(SMOKE)
 	$(SMOKE_PUBLIC)
+	$(DIT_TEST)
+
+# The DIT test alone, for the tests job (tests/timing/run.sh).
+dit-check: $(DIT_TEST)
 	$(DIT_TEST)
 
 # The AArch64 units must leave x18 alone: macOS reserves it, and clear.c
