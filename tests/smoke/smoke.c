@@ -751,6 +751,29 @@ static void test_dispatch(void)
           NIRAPOD_SHA2_TESTING_X86_64_AVX2, "target: x8 on AVX2", kn);
     check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_X4, 0x02u, 0) ==
           NIRAPOD_SHA2_TESTING_PORTABLE, "target: x4 without AVX2", kn);
+
+    /*
+     * The single-way AVX2 kernels (and the shani unit's SHA-512 code, which
+     * is the AVX2 SHA-512 kernel) need AVX2 and BMI1/BMI2 (0x101): the
+     * testing interface offers them exactly when this CPU reports both.
+     */
+    {
+        unsigned cpu = nirapod_sha2_testing_cpu_features();
+        int bmi = (cpu & 0x101u) == 0x101u;
+
+        check(nirapod_sha2_testing_available(NIRAPOD_SHA2_TESTING_X86_64_AVX2,
+                                             NIRAPOD_SHA2_TESTING_FAMILY_SHA256) == bmi,
+              "avx2 SHA-256 needs AVX2 and BMI2", kn);
+        check(nirapod_sha2_testing_available(NIRAPOD_SHA2_TESTING_X86_64_AVX2,
+                                             NIRAPOD_SHA2_TESTING_FAMILY_SHA512) == bmi,
+              "avx2 SHA-512 needs AVX2 and BMI2", kn);
+        check(nirapod_sha2_testing_available(NIRAPOD_SHA2_TESTING_X86_64_SHANI,
+                                             NIRAPOD_SHA2_TESTING_FAMILY_SHA512) == bmi,
+              "shani SHA-512 needs AVX2 and BMI2", kn);
+        check(nirapod_sha2_testing_available(NIRAPOD_SHA2_TESTING_X86_64_SHANI,
+                                             NIRAPOD_SHA2_TESTING_FAMILY_X4) == bmi,
+              "shani x4 needs AVX2 and BMI2", kn);
+    }
 #endif
 }
 #endif

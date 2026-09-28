@@ -1,0 +1,404 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * sha256_compress.jinc (x86-64, avx2)
+ * ===================================
+ *
+ * The SHA-256 compression function (FIPS 180-4 section 6.2.2) with the
+ * message schedule in AVX2 and the rounds in scalar code with BMI1 and
+ * BMI2, for x86-64 CPUs without the SHA extensions, with the entry points
+ * and contracts of the scalar kernel (src/sha256_compress.jinc):
+ *
+ *     _sha256_compress(h, block, ms)       one block from a byte array
+ *     _sha256_compress_blocks(h, p, n, ms) n blocks from caller memory
+ *
+ * Required CPU features: AVX2, BMI1 (ANDN) and BMI2 (RORX). The caller's
+ * dispatch must select this variant only where all three are present.
+ *
+ * The structure of sha512_compress.jinc in this directory with 32-bit
+ * words: x[j] holds W_4j .. W_4j+3 of one block in its low 128 bits and of
+ * the next block in its high 128 bits, and each schedule step makes four
+ * words of both blocks from x[j] (W_t-16 .. W_t-13) and its neighbours:
+ *
+ *     W_t-15 .. W_t-12   VPALIGNR(x[j+1], x[j], 4)
+ *     W_t-7  .. W_t-4    VPALIGNR(x[j+3], x[j+2], 4)
+ *     W_t-2, W_t-1       dwords 2 and 3 of x[j+3]
+ *
+ * (indices mod 4). Each step is woven into three of the four rounds of the
+ * first block that follow it; the rounds of the second block then run
+ * from the stored W_t + K_t alone. The rounds, the register use and the
+ * single-block case are those of the SHA-512 kernel.
+ *
+ * Security: h and the blocks are secret. The rounds and the schedule are
+ * straight-line code; the only branches are on the public block count of
+ * _sha256_compress_blocks, and every address is fixed at compile time or
+ * is the public block pointer plus a constant.
+ *
+ * Residue: the local array holds W_t + K_t of every round of the last two
+ * blocks (of the last block, twice, after a single block) on return,
+ * uncleared here; clearing is an obligation of the export.
+ */
+
+from Hash require "sha256_k.jinc"
+
+/* VPSHUFB mask reversing the bytes of each dword, in both 128-bit halves. */
+u32[8] SHA256_AVX2_BSWAP = {
+  0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f,
+  0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f
+};
+
+/* VPSHUFB masks: dwords 0 and 2 to dwords 0 and 1 (LO) or 2 and 3 (HI), zeros elsewhere. */
+u32[8] SHA256_AVX2_LO = {
+  0x03020100, 0x0b0a0908, 0xffffffff, 0xffffffff,
+  0x03020100, 0x0b0a0908, 0xffffffff, 0xffffffff
+};
+u32[8] SHA256_AVX2_HI = {
+  0xffffffff, 0xffffffff, 0x03020100, 0x0b0a0908,
+  0xffffffff, 0xffffffff, 0x03020100, 0x0b0a0908
+};
+
+/*
+ * Round t of section 6.2.2 step 3 on the working variables v, after the
+ * caller has added W_t + K_t to h, with a third of schedule step j woven
+ * between its instructions (sha512_compress.jinc in this directory says
+ * why): the σ0 part for ph = 0, σ1 of W_t-2, W_t-1 for ph = 1, σ1 of
+ * W_t, W_t+1 for ph = 2, none for ph = 3. Variable k (a = 0 .. h = 7) is
+ * v[(k - t) mod 8]; m and s carry b XOR c and the pending Σ0 as in the
+ * SHA-512 round.
+ *
+ * Schedule step j (0 .. 11): x[j mod 4] holds W_t-16 .. W_t-13 of both
+ * blocks for t = 16 + 4j and receives W_t .. W_t+3 (section 6.2.2 step 1).
+ * σ0(x) = ROTR 7 ^ ROTR 18 ^ SHR 3, each rotation two shifts. σ1 is
+ * needed for two words at a time, the second pair depending on the first:
+ * VPSHUFD copies each of the two words into both halves of a qword, so a
+ * 64-bit right shift of that qword leaves the 32-bit rotation in its low
+ * half (ROTR 17 ^ ROTR 19 ^ SHR 10 in dwords 0 and 2), and VPSHUFB with
+ * lo or hi gathers the two results into place with zeros beside them.
+ */
+inline fn __sha256_avx2_round(
+  reg u32[8] v,
+  reg u32[2] m,
+  reg u32 s,
+  inline int t,
+  reg u256[4] x,
+  reg u256 lo hi,
+  inline int j,
+  inline int ph
+) -> reg u32[8], reg u32[2], reg u32, reg u256[4]
+{
+  reg u256 vs vt vu vw;
+  reg u32 y z w;
+
+  #[inline] if (ph == 0) {
+    vs = #VPALIGNR_256(x[(j + 1) % 4], x[j % 4], 4);
+    vw = #VPALIGNR_256(x[(j + 3) % 4], x[(j + 2) % 4], 4);
+  }
+  #[inline] if (ph == 1) {
+    vs = #VPSHUFD_256(x[(j + 3) % 4], 0xfa);
+  }
+  #[inline] if (ph == 2) {
+    vs = #VPSHUFD_256(x[j % 4], 0x50);
+  }
+
+  v[(0 + 64 - t) % 8] += s;
+  y = v[(5 + 64 - t) % 8];
+  y &= v[(4 + 64 - t) % 8];
+
+  #[inline] if (ph == 0) {
+    x[j % 4] = x[j % 4] +8u32 vw;
+    vt = vs >>8u32 7;
+  }
+  #[inline] if (ph == 1 || ph == 2) {
+    vu = vs >>8u32 10;
+    vs = vs >>4u64 17;
+  }
+
+  z = #RORX_32(v[(4 + 64 - t) % 8], 25);
+  w = #RORX_32(v[(4 + 64 - t) % 8], 11);
+  v[(7 + 64 - t) % 8] += y;
+
+  #[inline] if (ph == 0) {
+    vu = vs >>8u32 3;
+    vw = vs <<8u32 14;
+  }
+  #[inline] if (ph == 1 || ph == 2) {
+    vu ^= vs;
+    vs = vs >>4u64 2;
+  }
+
+  _, _, _, _, _, y = #ANDN_32(v[(4 + 64 - t) % 8], v[(6 + 64 - t) % 8]);
+  z ^= w;
+  w = #RORX_32(v[(4 + 64 - t) % 8], 6);
+
+  #[inline] if (ph == 0) {
+    vu ^= vt;
+    vt = vt >>8u32 11;
+  }
+  #[inline] if (ph == 1 || ph == 2) {
+    vu ^= vs;
+  }
+
+  v[(7 + 64 - t) % 8] += y;
+  z ^= w;
+
+  /* h = T1 = h + W_t + K_t + Ch(e, f, g) + Σ1(e); e' = d + T1 */
+
+  m[(t + 1) % 2] = v[(0 + 64 - t) % 8];
+  y = #RORX_32(v[(0 + 64 - t) % 8], 22);
+
+  #[inline] if (ph == 0) {
+    vu ^= vw;
+    vw = vw <<8u32 11;
+  }
+  #[inline] if (ph == 1) {
+    vu = #VPSHUFB_256(vu, lo);
+  }
+  #[inline] if (ph == 2) {
+    vu = #VPSHUFB_256(vu, hi);
+  }
+
+  v[(7 + 64 - t) % 8] += z;
+  m[(t + 1) % 2] ^= v[(1 + 64 - t) % 8];
+  s = #RORX_32(v[(0 + 64 - t) % 8], 13);
+
+  #[inline] if (ph == 0) {
+    vu ^= vt;
+    vu ^= vw;
+  }
+  #[inline] if (ph == 1 || ph == 2) {
+    x[j % 4] = x[j % 4] +8u32 vu;
+  }
+
+  z = #RORX_32(v[(0 + 64 - t) % 8], 2);
+  v[(3 + 64 - t) % 8] += v[(7 + 64 - t) % 8];
+
+  /* h = T1 + Maj(a, b, c); s = Σ0(a) */
+
+  m[t % 2] &= m[(t + 1) % 2];
+  s ^= y;
+
+  #[inline] if (ph == 0) {
+    x[j % 4] = x[j % 4] +8u32 vu;
+  }
+
+  m[t % 2] ^= v[(1 + 64 - t) % 8];
+  s ^= z;
+  v[(7 + 64 - t) % 8] += m[t % 2];
+
+  return v, m, s, x;
+}
+
+/*
+ * nb (1 or 2) blocks of x, words big-endian already reversed: block 0 in
+ * the low halves, block 1 in the high halves. h <- compress(h, block 0),
+ * then, for nb = 2, h <- compress(h, block 1).
+ *
+ * wk[i] holds W_4i + K_4i .. W_4i+3 + K_4i+3 of block 0 in its low 128
+ * bits and of block 1 in its high 128 bits. Schedule step j (making
+ * W_16+4j .. W_19+4j) runs within rounds 4j to 4j + 2 of block 0, at
+ * least 13 rounds ahead of the first round that reads its words.
+ */
+#[safety =
+   { requires = is_arr_init(h, 0, 32)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
+inline fn __sha256_avx2(reg mut ptr u32[8] h, reg u256[4] x, inline int nb, reg u64 ms)
+  -> reg ptr u32[8], reg u64
+{
+  stack u256[16] wk;
+  reg ptr u32[8] lo_p hi_p;
+  reg u256 k lo hi;
+  reg u32[8] v;
+  reg u32[2] m;
+  reg u32 s;
+  inline int i l t;
+
+  for i = 0 to 4 {
+    k = #VPBROADCAST_2u128(SHA256_K[:u128 i]);
+    k = k +8u32 x[i];
+    wk[i] = k;
+  }
+  lo_p = SHA256_AVX2_LO;
+  lo = lo_p[:u256 0];
+  hi_p = SHA256_AVX2_HI;
+  hi = hi_p[:u256 0];
+
+  for i = 0 to 8 {
+    v[i] = h[i];
+  }
+
+  for l = 0 to nb {
+    () = #spill(h);
+    m[0] = v[1];
+    m[0] ^= v[2];
+    s = 0;
+
+    for t = 0 to 64 {
+      v[(7 + 64 - t) % 8] += wk[:u32 8 * (t / 4) + 4 * l + t % 4];
+      #[inline]
+      if (l == 0 && t < 48) {
+        v, m, s, x = __sha256_avx2_round(v, m, s, t, x, lo, hi, t / 4, t % 4);
+      } else {
+        v, m, s, x = __sha256_avx2_round(v, m, s, t, x, lo, hi, 0, 3);
+      }
+
+      #[inline]
+      if (l == 0 && t < 48 && t % 4 == 2) {
+        k = #VPBROADCAST_2u128(SHA256_K[:u128 4 + t / 4]);
+        k = k +8u32 x[(t / 4) % 4];
+        wk[4 + t / 4] = k;
+      }
+    }
+    v[0] += s;
+
+    /*
+     * Step 4; the sum is also the state the next block starts from. h
+     * crosses the rounds through the stack, which leaves the rounds a
+     * register for a caller's value, and is protected on reload.
+     */
+
+    () = #unspill(h);
+    h = #protect_ptr(h, ms);
+    for i = 0 to 8 {
+      v[i] += h[i];
+      h[i] = v[i];
+    }
+  }
+
+  return h, ms;
+}
+
+
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
+         { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_arr_init(block, 0, 64)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
+fn _sha256_compress(
+  reg mut ptr u32[8] h,
+  reg const ptr u8[64] block,
+  reg u64 ms
+) -> reg ptr u32[8], reg u64
+{
+  reg ptr u32[8] mask_p;
+  reg u256[4] x;
+  reg u256 mask;
+  inline int i;
+
+  mask_p = SHA256_AVX2_BSWAP;
+  mask = mask_p[:u256 0];
+  for i = 0 to 4 {
+    x[i] = #VPBROADCAST_2u128(block[:u128 i]);
+    x[i] = #VPSHUFB_256(x[i], mask);
+  }
+
+  h, ms = __sha256_avx2(h, x, 1, ms);
+
+  return h, ms;
+}
+
+/* One block from caller memory at p. */
+#[sct = "{ ptr: public, val: secret } × public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_mem_init((64u) p, 64)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
+fn _sha256_compress_one(reg mut ptr u32[8] h, reg u64 p, reg u64 ms) -> reg ptr u32[8], reg u64
+{
+  reg ptr u32[8] mask_p;
+  reg u256[4] x;
+  reg u256 mask;
+  inline int i;
+
+  mask_p = SHA256_AVX2_BSWAP;
+  mask = mask_p[:u256 0];
+  for i = 0 to 4 {
+    x[i] = #VPBROADCAST_2u128([:u128 p + 16 * i]);
+    x[i] = #VPSHUFB_256(x[i], mask);
+  }
+
+  h, ms = __sha256_avx2(h, x, 1, ms);
+
+  return h, ms;
+}
+
+/* Two consecutive blocks from caller memory at p. */
+#[sct = "{ ptr: public, val: secret } × public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && is_mem_init((64u) p, 128)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
+fn _sha256_compress_two(reg mut ptr u32[8] h, reg u64 p, reg u64 ms) -> reg ptr u32[8], reg u64
+{
+  reg ptr u32[8] mask_p;
+  reg u256[4] x;
+  reg u256 mask;
+  inline int i;
+
+  mask_p = SHA256_AVX2_BSWAP;
+  mask = mask_p[:u256 0];
+  for i = 0 to 4 {
+    x[i] = #VPBROADCAST_2u128([:u128 p + 16 * i]);
+    x[i] = #VINSERTI128(x[i], [:u128 p + 64 + 16 * i], 1);
+    x[i] = #VPSHUFB_256(x[i], mask);
+  }
+
+  h, ms = __sha256_avx2(h, x, 2, ms);
+
+  return h, ms;
+}
+
+/*
+ * n consecutive 64-byte blocks from caller memory at p, with the contract
+ * of the scalar kernel's _sha256_compress_blocks. Pairs of blocks go
+ * through _sha256_compress_two and an odd last block through
+ * _sha256_compress_one. p and n cross each pair through the stack and are
+ * protected on reload.
+ */
+#[sct = "{ ptr: public, val: secret } × public × public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 32) && n < (64u) 288230376151711744 && is_mem_init((64u) p, 64 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 32)
+   }
+ ]
+fn _sha256_compress_blocks(
+  reg mut ptr u32[8] h,
+  reg u64 p n,
+  reg u64 ms
+) -> reg ptr u32[8], reg u64
+{
+  reg bool more;
+
+  while { more = n >= 2; } (more) {
+    ms = #update_msf(more, ms);
+    () = #spill(p, n);
+    h, ms = _sha256_compress_two(h, p, ms);
+    () = #unspill(p, n);
+    p = #protect(p, ms);
+    n = #protect(n, ms);
+    p += 128;
+    n -= 2;
+  }
+  ms = #update_msf(!more, ms);
+
+  more = n != 0;
+  if (more) {
+    ms = #update_msf(more, ms);
+    h, ms = _sha256_compress_one(h, p, ms);
+  } else {
+    ms = #update_msf(!more, ms);
+  }
+
+  return h, ms;
+}

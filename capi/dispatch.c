@@ -50,7 +50,9 @@
  */
 #define LEAF1_ECX_OSXSAVE  (1u << 27)
 #define LEAF1_ECX_AVX      (1u << 28)
+#define LEAF7_EBX_BMI1     (1u << 3)
 #define LEAF7_EBX_AVX2     (1u << 5)
+#define LEAF7_EBX_BMI2     (1u << 8)
 #define LEAF7_EBX_AVX512F  (1u << 16)
 #define LEAF7_EBX_SHA      (1u << 29)
 #define LEAF7_EBX_AVX512VL (1u << 31)
@@ -79,6 +81,15 @@ unsigned nirapod_sha2_read_cpu_features(void)
     __cpuid_count(7, 0, a, b, c, d);
     if ((b & LEAF7_EBX_AVX2) != 0) {
         features |= NIRAPOD_SHA2_CPU_AVX2;
+    }
+    /*
+     * BMI1 and BMI2 act on general registers only and need no state from
+     * the operating system; they are reported together, as one feature,
+     * and only past the AVX checks above, like everything this function
+     * reports.
+     */
+    if ((b & (LEAF7_EBX_BMI1 | LEAF7_EBX_BMI2)) == (LEAF7_EBX_BMI1 | LEAF7_EBX_BMI2)) {
+        features |= NIRAPOD_SHA2_CPU_BMI2;
     }
     if ((b & LEAF7_EBX_SHA) != 0) {
         features |= NIRAPOD_SHA2_CPU_SHANI;
@@ -228,7 +239,7 @@ static const candidate candidates[NIRAPOD_SHA2_FAMILIES][2] = {
 #elif defined(__x86_64__)
 static const candidate candidates[NIRAPOD_SHA2_FAMILIES][2] = {
     /* SHA256 */ { { &nirapod_sha2_units[1], 0 }, PORTABLE },
-    /* SHA512 */ { PORTABLE, PORTABLE },    /* no x86-64 SHA-512 kernel besides it */
+    /* SHA512 */ { PORTABLE, PORTABLE },    /* the AVX2 SHA-512 kernel is no candidate */
     /* X8     */ { { &nirapod_sha2_units[2], 0 }, PORTABLE },
     /* X4     */ { { &nirapod_sha2_units[2], 0 }, PORTABLE },
 };

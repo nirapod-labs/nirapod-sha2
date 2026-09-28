@@ -1,0 +1,409 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * sha512_compress.jinc (x86-64, avx2)
+ * ===================================
+ *
+ * The SHA-512 compression function (FIPS 180-4 section 6.4.2) with the
+ * message schedule in AVX2 and the rounds in scalar code with BMI1 and
+ * BMI2, with the entry points and contracts of the scalar kernel
+ * (src/sha512_compress.jinc):
+ *
+ *     _sha512_compress(h, block, ms)       one block from a byte array
+ *     _sha512_compress_blocks(h, p, n, ms) n blocks from caller memory
+ *
+ * Required CPU features: AVX2, BMI1 (ANDN) and BMI2 (RORX). The caller's
+ * dispatch must select this variant only where all three are present.
+ *
+ * Two blocks at a time. Register x[j] holds the schedule words
+ * W_2j, W_2j+1 of one block in its low 128 bits and of the next block in
+ * its high 128 bits, so one pass of the vector schedule serves both
+ * blocks. Each step of the schedule makes the next two words of both
+ * blocks from x[j] (W_t-16, W_t-15) and its neighbours:
+ *
+ *     W_t-15, W_t-14   VPALIGNR(x[j+1], x[j], 8)
+ *     W_t-7,  W_t-6    VPALIGNR(x[j+5], x[j+4], 8)
+ *     W_t-2,  W_t-1    x[j+7]
+ *
+ * (indices mod 8), with σ0 and σ1 as 64-bit shifts and XORs. W_t + K_t of
+ * both blocks goes to a local array, where the scalar rounds read it as a
+ * memory operand. Each step is woven into two rounds of the first block,
+ * a few vector instructions between the scalar ones, so the vector and
+ * the scalar units work at the same time; the rounds of the second block
+ * then run from the array alone. A single block (the last one of an odd
+ * count, or a block from an array) loads the same block into both halves
+ * and runs the rounds of the first half only.
+ *
+ * Rounds. Σ0 and Σ1 are three RORX and two XORs, which leave their source
+ * intact; Ch(e, f, g) is (e AND f) + (ANDN e, g), whose two terms have no
+ * common bit; Maj(a, b, c) is ((a XOR b) AND (b XOR c)) XOR b, where
+ * b XOR c is the a XOR b of the round before, kept in the other of two
+ * registers, so no register is copied. Σ0(a) is added to the new a at the
+ * start of the next round rather than at the end of its own, which takes
+ * it off the path from e to the next e. Working variable k (a = 0 ..
+ * h = 7) of round t is v[(k - t) mod 8].
+ *
+ * Registers. The rounds take 13 general registers and the flag ms one
+ * more; the pointer h crosses them through the stack, so that a caller's
+ * value can keep the last register across a call (the compiler allocates
+ * caller and callee together), and is protected on reload.
+ *
+ * Security: h and the blocks are secret. The rounds and the schedule are
+ * straight-line code; the only branches are on the public block count of
+ * _sha512_compress_blocks, and every address is fixed at compile time or
+ * is the public block pointer plus a constant.
+ *
+ * Residue: the local array holds W_t + K_t of every round of the last two
+ * blocks (of the last block, twice, after a single block) on return,
+ * uncleared here; clearing is an obligation of the export.
+ */
+
+from Hash require "sha512_k.jinc"
+
+/* VPSHUFB mask reversing the bytes of each qword, in both 128-bit halves. */
+u64[4] SHA512_AVX2_BSWAP = {
+  0x0001020304050607, 0x08090a0b0c0d0e0f,
+  0x0001020304050607, 0x08090a0b0c0d0e0f
+};
+
+
+/*
+ * Round t of section 6.4.2 step 3 on the working variables v, after the
+ * caller has added W_t + K_t to h, with half of schedule step j woven
+ * between its instructions: the σ0 half for ph = 0, the σ1 half for
+ * ph = 1, none for ph = 2. Weaving the vector instructions among the
+ * scalar ones, rather than issuing a step as one run, keeps both kinds of
+ * execution unit fed from each window of instructions.
+ *
+ * Schedule step j (0 .. 31): x[j mod 8] holds W_t-16, W_t-15 of both
+ * blocks for t = 16 + 2j and receives W_t, W_t+1 (section 6.4.2 step 1).
+ * σ0(x) = ROTR 1 ^ ROTR 8 ^ SHR 7 and σ1(x) = ROTR 19 ^ ROTR 61 ^ SHR 6,
+ * each rotation a right and a left shift.
+ *
+ * Two values cross from round to round in registers: m[t mod 2] holds
+ * b XOR c on entry and m[(t + 1) mod 2] receives a XOR b, the b XOR c of
+ * round t + 1; and s holds Σ0 of the previous round's a, which that round
+ * left out of its new a (h on return) and this round adds first, so that
+ * adding Σ0 is off the path from one round's e to the next (s = 0 before
+ * the first round of a block, and the caller adds the last s after round
+ * 79).
+ */
+inline fn __sha512_avx2_round(
+  reg u64[8] v,
+  reg u64[2] m,
+  reg u64 s,
+  inline int t,
+  reg u256[8] x,
+  inline int j,
+  inline int ph
+) -> reg u64[8], reg u64[2], reg u64, reg u256[8]
+{
+  reg u256 vs vt vu vw;
+  reg u64 y z w;
+
+  #[inline] if (ph == 0) {
+    vs = #VPALIGNR_256(x[(j + 1) % 8], x[j % 8], 8);
+    vw = #VPALIGNR_256(x[(j + 5) % 8], x[(j + 4) % 8], 8);
+  }
+  #[inline] if (ph == 1) {
+    vu = x[(j + 7) % 8] >>4u64 6;
+    vw = x[(j + 7) % 8] <<4u64 3;
+  }
+
+  v[(0 + 80 - t) % 8] += s;
+  y = v[(5 + 80 - t) % 8];
+  y &= v[(4 + 80 - t) % 8];
+
+  #[inline] if (ph == 0) {
+    x[j % 8] = x[j % 8] +4u64 vw;
+    vt = vs >>4u64 1;
+  }
+  #[inline] if (ph == 1) {
+    vt = x[(j + 7) % 8] >>4u64 19;
+    vu ^= vw;
+  }
+
+  z = #RORX_64(v[(4 + 80 - t) % 8], 41);
+  w = #RORX_64(v[(4 + 80 - t) % 8], 18);
+  v[(7 + 80 - t) % 8] += y;
+
+  #[inline] if (ph == 0) {
+    vu = vs >>4u64 7;
+    vw = vs <<4u64 56;
+  }
+  #[inline] if (ph == 1) {
+    vw = vw <<4u64 42;
+    vu ^= vt;
+  }
+
+  _, _, _, _, _, y = #ANDN_64(v[(4 + 80 - t) % 8], v[(6 + 80 - t) % 8]);
+  z ^= w;
+  w = #RORX_64(v[(4 + 80 - t) % 8], 14);
+
+  #[inline] if (ph == 0) {
+    vu ^= vt;
+    vt = vt >>4u64 7;
+  }
+  #[inline] if (ph == 1) {
+    vt = vt >>4u64 42;
+    vu ^= vw;
+  }
+
+  v[(7 + 80 - t) % 8] += y;
+  z ^= w;
+
+  /* h = T1 = h + W_t + K_t + Ch(e, f, g) + Σ1(e); e' = d + T1 */
+
+  m[(t + 1) % 2] = v[(0 + 80 - t) % 8];
+  y = #RORX_64(v[(0 + 80 - t) % 8], 39);
+
+  #[inline] if (ph == 0) {
+    vu ^= vw;
+    vw = vw <<4u64 7;
+  }
+  #[inline] if (ph == 1) {
+    vu ^= vt;
+  }
+
+  v[(7 + 80 - t) % 8] += z;
+  m[(t + 1) % 2] ^= v[(1 + 80 - t) % 8];
+  s = #RORX_64(v[(0 + 80 - t) % 8], 34);
+
+  #[inline] if (ph == 0) {
+    vu ^= vt;
+    vu ^= vw;
+  }
+  #[inline] if (ph == 1) {
+    x[j % 8] = x[j % 8] +4u64 vu;
+  }
+
+  z = #RORX_64(v[(0 + 80 - t) % 8], 28);
+  v[(3 + 80 - t) % 8] += v[(7 + 80 - t) % 8];
+
+  /* h = T1 + Maj(a, b, c); s = Σ0(a) */
+
+  m[t % 2] &= m[(t + 1) % 2];
+  s ^= y;
+
+  #[inline] if (ph == 0) {
+    x[j % 8] = x[j % 8] +4u64 vu;
+  }
+
+  m[t % 2] ^= v[(1 + 80 - t) % 8];
+  s ^= z;
+  v[(7 + 80 - t) % 8] += m[t % 2];
+
+  return v, m, s, x;
+}
+
+/*
+ * nb (1 or 2) blocks of x, words big-endian already reversed: block 0 in
+ * the low halves, block 1 in the high halves. h <- compress(h, block 0),
+ * then, for nb = 2, h <- compress(h, block 1).
+ *
+ * wk[i] holds W_2i + K_2i, W_2i+1 + K_2i+1 of block 0 in its low 128 bits
+ * and of block 1 in its high 128 bits. Schedule step j (making W_16+2j and
+ * W_17+2j) runs within rounds 2j and 2j + 1 of block 0, 16 rounds ahead
+ * of the first round that reads its words.
+ */
+#[safety =
+   { requires = is_arr_init(h, 0, 64)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
+inline fn __sha512_avx2(reg mut ptr u64[8] h, reg u256[8] x, inline int nb, reg u64 ms)
+  -> reg ptr u64[8], reg u64
+{
+  stack u256[40] wk;
+  reg u256 k;
+  reg u64[8] v;
+  reg u64[2] m;
+  reg u64 s;
+  inline int i l t;
+
+  for i = 0 to 8 {
+    k = #VPBROADCAST_2u128(SHA512_K[:u128 i]);
+    k = k +4u64 x[i];
+    wk[i] = k;
+  }
+
+  for i = 0 to 8 {
+    v[i] = h[i];
+  }
+
+  for l = 0 to nb {
+    () = #spill(h);
+    m[0] = v[1];
+    m[0] ^= v[2];
+    s = 0;
+
+    for t = 0 to 80 {
+      v[(7 + 80 - t) % 8] += wk[:u64 4 * (t / 2) + 2 * l + t % 2];
+      #[inline]
+      if (l == 0 && t < 64) {
+        v, m, s, x = __sha512_avx2_round(v, m, s, t, x, t / 2, t % 2);
+      } else {
+        v, m, s, x = __sha512_avx2_round(v, m, s, t, x, 0, 2);
+      }
+
+      #[inline]
+      if (l == 0 && t < 64 && t % 2 == 1) {
+        k = #VPBROADCAST_2u128(SHA512_K[:u128 8 + t / 2]);
+        k = k +4u64 x[(t / 2) % 8];
+        wk[8 + t / 2] = k;
+      }
+    }
+    v[0] += s;
+
+    /*
+     * Step 4. After 80 rounds, a multiple of 8, every role is back in its
+     * original slot; the sum is also the state the next block starts from.
+     * h crosses the rounds through the stack, which leaves the rounds a
+     * register for a caller's value, and is protected on reload.
+     */
+
+    () = #unspill(h);
+    h = #protect_ptr(h, ms);
+    for i = 0 to 8 {
+      v[i] += h[i];
+      h[i] = v[i];
+    }
+  }
+
+  return h, ms;
+}
+
+
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × msf →
+         { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_arr_init(block, 0, 128)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
+fn _sha512_compress(
+  reg mut ptr u64[8] h,
+  reg const ptr u8[128] block,
+  reg u64 ms
+) -> reg ptr u64[8], reg u64
+{
+  reg ptr u64[4] mask_p;
+  reg u256[8] x;
+  reg u256 mask;
+  inline int i;
+
+  mask_p = SHA512_AVX2_BSWAP;
+  mask = mask_p[:u256 0];
+  for i = 0 to 8 {
+    x[i] = #VPBROADCAST_2u128(block[:u128 i]);
+    x[i] = #VPSHUFB_256(x[i], mask);
+  }
+
+  h, ms = __sha512_avx2(h, x, 1, ms);
+
+  return h, ms;
+}
+
+/* One block from caller memory at p. */
+#[sct = "{ ptr: public, val: secret } × public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_mem_init((64u) p, 128)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
+fn _sha512_compress_one(reg mut ptr u64[8] h, reg u64 p, reg u64 ms) -> reg ptr u64[8], reg u64
+{
+  reg ptr u64[4] mask_p;
+  reg u256[8] x;
+  reg u256 mask;
+  inline int i;
+
+  mask_p = SHA512_AVX2_BSWAP;
+  mask = mask_p[:u256 0];
+  for i = 0 to 8 {
+    x[i] = #VPBROADCAST_2u128([:u128 p + 16 * i]);
+    x[i] = #VPSHUFB_256(x[i], mask);
+  }
+
+  h, ms = __sha512_avx2(h, x, 1, ms);
+
+  return h, ms;
+}
+
+/* Two consecutive blocks from caller memory at p. */
+#[sct = "{ ptr: public, val: secret } × public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && is_mem_init((64u) p, 256)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
+fn _sha512_compress_two(reg mut ptr u64[8] h, reg u64 p, reg u64 ms) -> reg ptr u64[8], reg u64
+{
+  reg ptr u64[4] mask_p;
+  reg u256[8] x;
+  reg u256 mask;
+  inline int i;
+
+  mask_p = SHA512_AVX2_BSWAP;
+  mask = mask_p[:u256 0];
+  for i = 0 to 8 {
+    x[i] = #VPBROADCAST_2u128([:u128 p + 16 * i]);
+    x[i] = #VINSERTI128(x[i], [:u128 p + 128 + 16 * i], 1);
+    x[i] = #VPSHUFB_256(x[i], mask);
+  }
+
+  h, ms = __sha512_avx2(h, x, 2, ms);
+
+  return h, ms;
+}
+
+/*
+ * h <- compress(... compress(h, M_0) ..., M_{n-1}): n consecutive 128-byte
+ * blocks of caller memory at p, with the contract of the scalar kernel's
+ * _sha512_compress_blocks. Pairs of blocks go through _sha512_compress_two
+ * and an odd last block through _sha512_compress_one. p and n cross each
+ * pair through the stack (the rounds use every other register) and are
+ * protected on reload.
+ */
+#[sct = "{ ptr: public, val: secret } × public × public × msf → { ptr: public, val: secret } × msf"]
+#[safety =
+   { requires = is_arr_init(h, 0, 64) && n < (64u) 144115188075855872 && is_mem_init((64u) p, 128 * (64u) n)
+   , res = { h_out, ms_out }
+   , ensures = is_arr_init(h_out, 0, 64)
+   }
+ ]
+fn _sha512_compress_blocks(
+  reg mut ptr u64[8] h,
+  reg u64 p n,
+  reg u64 ms
+) -> reg ptr u64[8], reg u64
+{
+  reg bool more;
+
+  while { more = n >= 2; } (more) {
+    ms = #update_msf(more, ms);
+    () = #spill(p, n);
+    h, ms = _sha512_compress_two(h, p, ms);
+    () = #unspill(p, n);
+    p = #protect(p, ms);
+    n = #protect(n, ms);
+    p += 256;
+    n -= 2;
+  }
+  ms = #update_msf(!more, ms);
+
+  more = n != 0;
+  if (more) {
+    ms = #update_msf(more, ms);
+    h, ms = _sha512_compress_one(h, p, ms);
+  } else {
+    ms = #update_msf(!more, ms);
+  }
+
+  return h, ms;
+}

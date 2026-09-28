@@ -100,8 +100,8 @@ OUT  := $(BUILD)/$(HOST_ARCH)-$(HOST_SYSTEM)
 #     aarch64-scalar     src/aarch64/scalar  src/aarch64/scalar  src/aarch64/neon, src
 #     aarch64-sha2       src/aarch64/sha2    src/aarch64/sha2    src/aarch64/sha2
 #     x86_64-portable    src                 src                 src
-#     x86_64-shani       src/x86_64/shani    src                 src/x86_64/shani, src
-#     x86_64-avx2        src                 src                 src/x86_64/avx2
+#     x86_64-shani       src/x86_64/shani    src/x86_64/avx2     src/x86_64/shani, src
+#     x86_64-avx2        src/x86_64/avx2     src/x86_64/avx2     src/x86_64/avx2
 #
 # Hash is src and HashWord src/<arch> for every unit. The assembly of a
 # unit goes to build/asm/<system>/<unit>.s. The system of each
@@ -127,6 +127,9 @@ X256_sha2   := $(SRC)/aarch64/sha2
 X512_sha2   := $(SRC)/aarch64/sha2
 K256_shani  := $(SRC)/x86_64/shani
 X256_shani  := $(SRC)/x86_64/shani
+K512_shani  := $(SRC)/x86_64/avx2
+K256_avx2   := $(SRC)/x86_64/avx2
+K512_avx2   := $(SRC)/x86_64/avx2
 X256_avx2   := $(SRC)/x86_64/avx2
 X512_avx2   := $(SRC)/x86_64/avx2
 
@@ -150,15 +153,16 @@ print-roots-%:
 
 # -stack-zero: each export clears the stack it used before it returns
 # (src/nirapod_sha2.jinc, "Stack"). $(1) is the unit, $(2) the system.
-# The clearing stores are 64-bit words, except in the x86_64-avx2 unit,
-# which clears with 256-bit stores: a 64-bit store loop over the 1.5 KiB
-# frame of a multi-way one-shot export took about a fifth of the call for
-# one-block messages. Every export of that unit therefore runs AVX
-# instructions, and capi/units.c gives each of its families the AVX2
-# requirement.
-SZ_x86_64-avx2 := u256
+# The clearing stores are 64-bit words, except in the units every family
+# of which needs AVX2 (capi/units.c), the x86_64 shani and avx2 units: they
+# clear with 256-bit stores, since the frames of their multi-way exports
+# and of the AVX2 single-way kernels (W + K on the stack) are 1.5 KiB or
+# more and a 64-bit store loop over them is a large share of a short call
+# (src/README.md, "Kernel notes").
+ZERO_shani := u256
+ZERO_avx2  := u256
 unit_flags = -arch $(call unit_jarch,$(1)) -system $(2) \
-             -stack-zero loop -stack-zero-size $(or $(SZ_$(1)),u64)
+             -stack-zero loop -stack-zero-size $(or $(ZERO_$(call unit_variant,$(1))),u64)
 unit_asm   = $(BUILD)/asm/$(SYSTEM_$(call unit_arch,$(1)))/$(1).s
 
 ASM_ROOT := $(BUILD)
