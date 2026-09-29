@@ -35,8 +35,11 @@
  *
  * Lengths
  *
- *     Inputs are limited by the 64-bit bit-length field of SHA-2: every
- *     hash must cover fewer than 2^61 bytes (NIRAPOD_SHA2_MAX_BYTES).
+ *     Every hash must cover fewer than 2^61 bytes (NIRAPOD_SHA2_MAX_BYTES).
+ *     For SHA-224 and SHA-256 that is the FIPS 180-4 limit, set by their
+ *     64-bit bit-length field. SHA-384, SHA-512 and SHA-512/t allow up to
+ *     2^125 bytes; this library restricts them to the same bound, since it
+ *     counts the bytes absorbed in one 64-bit word.
  *
  *         one-shot hash, multi-way    len < 2^61 (per message)
  *         update                      total + len < 2^61, total being the
@@ -108,10 +111,10 @@
  *         x86-64, other CPUs      the caller depends on the CPU
  *
  *     Before returning, each call clears the stack its Jasmin code used
- *     and the caller-saved registers. The stack each call needs is listed
- *     per kernel in tests/stack/stack.txt (README.md, "Stack use"). Contexts hold secret state between
- *     calls; final zeroes them, and a caller that abandons a context
- *     should clear it.
+ *     and the caller-saved registers. The stack each call needs is
+ *     documented per kernel with the library's sources ("Stack use" in
+ *     its README). Contexts hold secret state between calls; final
+ *     zeroes them, and a caller that abandons a context should clear it.
  *
  * Kernels
  *

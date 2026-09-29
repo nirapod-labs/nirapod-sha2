@@ -144,8 +144,8 @@ static inline unsigned nirapod_sha2_cpu_features(void)
 /*
  * The unit that family f runs on a CPU with features cpu. With gated = 1
  * only the units admitted to the default dispatch are candidates
- * (dispatch.c, "Default dispatch"); with gated = 0 every unit is, which
- * is the selection the library will make once all gates have passed.
+ * (dispatch.c, "Default dispatch"); with gated = 0 every unit is, so
+ * the result is the target selection of that section's table.
  * Never NULL for a valid family. dispatch.c.
  */
 const nirapod_sha2_unit *nirapod_sha2_select_for(nirapod_sha2_family f, unsigned cpu, int gated);

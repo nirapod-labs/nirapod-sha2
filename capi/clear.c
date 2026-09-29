@@ -39,8 +39,8 @@
  *     x18 is left alone: macOS reserves it, as do Linux systems that keep
  *     a shadow call stack there, so writing it is not safe everywhere. The
  *     Jasmin code never uses it (make asm-policy rejects it on the
- *     AArch64 units). Flags are not cleared. Registers saved by the operating system on a context switch
- *     are outside this file's reach.
+ *     AArch64 units). Flags are not cleared. Registers saved by the
+ *     operating system on a context switch are outside this file's reach.
  */
 
 #include "internal.h"

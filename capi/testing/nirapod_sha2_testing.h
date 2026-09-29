@@ -63,8 +63,9 @@ unsigned nirapod_sha2_testing_cpu_features(void);
 
 /*
  * The kernel the library chooses for family f on a CPU with features cpu:
- * with gated = 1 the current default dispatch, with gated = 0 the choice
- * once every kernel is admitted (capi/dispatch.c).
+ * with gated = 1 the default dispatch, with gated = 0 the target order of
+ * capi/dispatch.c with every unit a candidate. A family out of range
+ * gives the portable kernel.
  */
 nirapod_sha2_testing_kernel nirapod_sha2_testing_select_for(nirapod_sha2_testing_family f,
                                                             unsigned cpu, int gated);

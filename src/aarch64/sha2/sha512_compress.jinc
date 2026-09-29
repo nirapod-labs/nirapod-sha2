@@ -64,8 +64,8 @@
  * block count, which updates ms; every address is fixed at compile time or
  * is the public block pointer. Residue: nothing secret is stored to the
  * stack; the vector registers that held the state and schedule are not
- * cleared here (the C layer clears them after each export that reads the
- * secret key, capi/clear.c).
+ * cleared here (the C layer clears them after every export,
+ * capi/clear.c).
  */
 
 from Hash require "sha512_k.jinc"
