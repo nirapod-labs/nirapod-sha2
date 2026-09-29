@@ -21,7 +21,7 @@
  *     aarch64 scalar     -             -             ASIMD         -
  *     aarch64 sha2       ASIMD SHA256  ASIMD SHA512  ASIMD SHA256  ASIMD SHA512
  *     x86_64 portable    -             -             -             -
- *     x86_64 shani       SHANI         AVX2 BMI2     SHANI         AVX2 BMI2
+ *     x86_64 shani       SHANI AVX2    AVX2 BMI2     SHANI AVX2    AVX2 BMI2
  *     x86_64 avx2        AVX2 BMI2     AVX2 BMI2     AVX2          AVX2
  *
  * The scalar unit's 8-way kernel is in Advanced SIMD (src/aarch64/neon),
@@ -30,9 +30,11 @@
  * extensions (src/x86_64/shani); its 4-way form runs the unit's
  * single-way SHA-512 kernel, the AVX2 one, once per message, since the
  * portable multi-way kernel calls it. Both x86 units with AVX kernels
- * clear their stack with 256-bit AVX stores (Makefile, unit_flags), which
- * every family's need covers: SHANI is only reported on a CPU with AVX
- * and its register state enabled (dispatch.c). BMI2 stands for BMI1 and
+ * clear their stack with 256-bit stores (Makefile, unit_flags), and
+ * VPXOR on ymm registers is an AVX2 instruction, so every family of both
+ * units needs AVX2: the shani unit's SHA-256 and 8-way families need it
+ * beside the SHA extensions, though their kernels use only AVX encodings.
+ * BMI2 stands for BMI1 and
  * BMI2 together (ANDN, RORX). Index 0 is the portable unit on both
  * architectures.
  */
@@ -77,10 +79,11 @@ const nirapod_sha2_unit nirapod_sha2_units[] = {
 #elif defined(__x86_64__)
 
 #define X86_AVX2_BMI2 (NIRAPOD_SHA2_CPU_AVX2 | NIRAPOD_SHA2_CPU_BMI2)
+#define X86_SHANI_AVX2 (NIRAPOD_SHA2_CPU_SHANI | NIRAPOD_SHA2_CPU_AVX2)
 
 const nirapod_sha2_unit nirapod_sha2_units[] = {
     { "x86_64-portable", { 0, 0, 0, 0 }, UNIT_OPS(x86_64_portable) },
-    { "x86_64-shani", { NIRAPOD_SHA2_CPU_SHANI, X86_AVX2_BMI2, NIRAPOD_SHA2_CPU_SHANI, X86_AVX2_BMI2 }, UNIT_OPS(x86_64_shani) },
+    { "x86_64-shani", { X86_SHANI_AVX2, X86_AVX2_BMI2, X86_SHANI_AVX2, X86_AVX2_BMI2 }, UNIT_OPS(x86_64_shani) },
     { "x86_64-avx2", { X86_AVX2_BMI2, X86_AVX2_BMI2, NIRAPOD_SHA2_CPU_AVX2, NIRAPOD_SHA2_CPU_AVX2 }, UNIT_OPS(x86_64_avx2) },
 };
 

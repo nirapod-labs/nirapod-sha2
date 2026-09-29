@@ -38,7 +38,7 @@ typedef enum nirapod_sha2_testing_kernel {
     NIRAPOD_SHA2_TESTING_PORTABLE = 0,        /* both architectures */
     NIRAPOD_SHA2_TESTING_AARCH64_SCALAR = 1,
     NIRAPOD_SHA2_TESTING_AARCH64_SHA2 = 2,    /* FEAT_SHA256, FEAT_SHA512 */
-    NIRAPOD_SHA2_TESTING_X86_64_SHANI = 3,    /* SHA extensions; SHA-512 forms AVX2, BMI1, BMI2 */
+    NIRAPOD_SHA2_TESTING_X86_64_SHANI = 3,    /* SHA extensions, AVX2; SHA-512 forms AVX2, BMI1, BMI2 */
     NIRAPOD_SHA2_TESTING_X86_64_AVX2 = 4      /* AVX2; single-way forms also BMI1, BMI2 */
 } nirapod_sha2_testing_kernel;
 

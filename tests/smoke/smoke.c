@@ -744,7 +744,11 @@ static void test_dispatch(void)
           NIRAPOD_SHA2_TESTING_AARCH64_SHA2, "target: x4 on FEAT_SHA512", kn);
 #elif defined(__x86_64__)
     check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_SHA256, 0x02u, 0) ==
-          NIRAPOD_SHA2_TESTING_X86_64_SHANI, "target: SHA-256 family on SHA-NI", kn);
+          NIRAPOD_SHA2_TESTING_PORTABLE, "target: SHA-256 family on SHA-NI without AVX2", kn);
+    check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_SHA256, 0x03u, 0) ==
+          NIRAPOD_SHA2_TESTING_X86_64_SHANI, "target: SHA-256 family on SHA-NI and AVX2", kn);
+    check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_X8, 0x02u, 0) ==
+          NIRAPOD_SHA2_TESTING_PORTABLE, "target: x8 on SHA-NI without AVX2", kn);
     check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_SHA256, 0x101u, 0) ==
           NIRAPOD_SHA2_TESTING_X86_64_AVX2, "target: SHA-256 family on AVX2 and BMI2", kn);
     check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_SHA512, 0x03u, 0) ==
@@ -762,8 +766,10 @@ static void test_dispatch(void)
 
     /*
      * The single-way AVX2 kernels (and the shani unit's SHA-512 code, which
-     * is the AVX2 SHA-512 kernel) need AVX2 and BMI1/BMI2 (0x101): the
-     * testing interface offers them exactly when this CPU reports both.
+     * is the AVX2 SHA-512 kernel) need AVX2 and BMI1/BMI2 (0x101), and the
+     * shani unit's SHA-256 and 8-way code SHA-NI and AVX2 (0x03), for its
+     * 256-bit stack clearing: the testing interface offers each exactly
+     * when this CPU reports all it needs.
      */
     {
         unsigned cpu = nirapod_sha2_testing_cpu_features();
@@ -781,6 +787,14 @@ static void test_dispatch(void)
         check(nirapod_sha2_testing_available(NIRAPOD_SHA2_TESTING_X86_64_SHANI,
                                              NIRAPOD_SHA2_TESTING_FAMILY_X4) == bmi,
               "shani x4 needs AVX2 and BMI2", kn);
+        check(nirapod_sha2_testing_available(NIRAPOD_SHA2_TESTING_X86_64_SHANI,
+                                             NIRAPOD_SHA2_TESTING_FAMILY_SHA256) ==
+                  ((cpu & 0x03u) == 0x03u),
+              "shani SHA-256 needs SHA-NI and AVX2", kn);
+        check(nirapod_sha2_testing_available(NIRAPOD_SHA2_TESTING_X86_64_SHANI,
+                                             NIRAPOD_SHA2_TESTING_FAMILY_X8) ==
+                  ((cpu & 0x03u) == 0x03u),
+              "shani x8 needs SHA-NI and AVX2", kn);
     }
 #endif
 }
