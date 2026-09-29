@@ -10,7 +10,6 @@
  *     HMAC(K, text) = H((K0 ^ opad) || H((K0 ^ ipad) || text))
  *
  * with ipad = 0x36 and opad = 0x5c repeated over one block (section 3).
- * FIPS 205 section 11.2 uses it for PRF_msg with K = SK.prf.
  *
  * The computation is split so the message goes through the ordinary
  * absorb functions of sha256.jinc and sha512.jinc:

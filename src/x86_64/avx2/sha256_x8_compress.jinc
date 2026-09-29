@@ -54,7 +54,8 @@
 
 /*
  * SHA-256 constants K_0 .. K_63 (FIPS 180-4 section 4.2.2), each repeated
- * eight times, so that K_t for every lane is the 256-bit word t.
+ * eight times, so that K_t for every lane is the 256-bit word t
+ * (tests/constants/check.py checks the table against the derivation).
  */
 u32[512] SHA256_X8_K = {
   0x428a2f98, 0x428a2f98, 0x428a2f98, 0x428a2f98, 0x428a2f98, 0x428a2f98, 0x428a2f98, 0x428a2f98,

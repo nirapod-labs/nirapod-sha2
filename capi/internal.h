@@ -51,6 +51,7 @@
 #define NIRAPOD_SHA2_CPU_SHA256   0x20u  /* AArch64: FEAT_SHA256 */
 #define NIRAPOD_SHA2_CPU_SHA512   0x40u  /* AArch64: FEAT_SHA512 */
 #define NIRAPOD_SHA2_CPU_DIT      0x80u  /* AArch64: FEAT_DIT */
+#define NIRAPOD_SHA2_CPU_BMI2     0x100u /* x86-64: BMI1 and BMI2 (ANDN, RORX) */
 
 /*
  * Operation families. Within a family every operation runs the same
@@ -75,8 +76,9 @@ typedef enum nirapod_sha2_family {
  * features that the code of family f in this unit executes; it is what
  * dispatch.c and the testing entry points require of the CPU before they
  * run that family, and what clear.c is told after the call. A unit's
- * other families may need nothing: the shani unit's SHA-512 code is the
- * portable kernel. Records are const data.
+ * families may need different features, or none: the shani unit's SHA-512
+ * code is the AVX2 kernel, and the scalar unit's single-way code needs
+ * nothing. Records are const data.
  */
 typedef struct nirapod_sha2_unit {
     const char *name;
@@ -142,8 +144,8 @@ static inline unsigned nirapod_sha2_cpu_features(void)
 /*
  * The unit that family f runs on a CPU with features cpu. With gated = 1
  * only the units admitted to the default dispatch are candidates
- * (dispatch.c, "Default dispatch"); with gated = 0 every unit is, which
- * is the selection the library will make once all gates have passed.
+ * (dispatch.c, "Default dispatch"); with gated = 0 every unit is, so
+ * the result is the target selection of that section's table.
  * Never NULL for a valid family. dispatch.c.
  */
 const nirapod_sha2_unit *nirapod_sha2_select_for(nirapod_sha2_family f, unsigned cpu, int gated);

@@ -38,7 +38,8 @@ from Sha512Kernel require "sha512_compress.jinc"
  *     SHA-512/t    5.3.6    SHA-512 of the string "SHA-512/t" under the
  *                           SHA-512 IV XORed with 0xa5a5a5a5a5a5a5a5
  *
- * tests/hash/tools/check_constants.py regenerates all four.
+ * tests/constants/check.py derives all four and compares them with the
+ * tables below.
  */
 u64[8] SHA512_IV = {
   0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,

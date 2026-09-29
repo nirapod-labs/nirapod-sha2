@@ -65,8 +65,13 @@ unsigned nirapod_sha2_testing_cpu_features(void)
 nirapod_sha2_testing_kernel nirapod_sha2_testing_select_for(nirapod_sha2_testing_family f,
                                                             unsigned cpu, int gated)
 {
-    const nirapod_sha2_unit *u = nirapod_sha2_select_for((nirapod_sha2_family)f, cpu, gated);
+    const nirapod_sha2_unit *u;
     int k;
+
+    if ((unsigned)f >= NIRAPOD_SHA2_FAMILIES) {
+        return NIRAPOD_SHA2_TESTING_PORTABLE;
+    }
+    u = nirapod_sha2_select_for((nirapod_sha2_family)f, cpu, gated);
 
     for (k = 0; k < NIRAPOD_SHA2_TESTING_KERNELS; k++) {
         if (kernel_to_unit((nirapod_sha2_testing_kernel)k) == u) {
@@ -184,12 +189,12 @@ TESTING_HASH(sha512_256)
 TESTING_HMAC_OPS(sha256)
 TESTING_HMAC_OPS(sha512)
 
-#define TESTING_LANES_OPS(h, FAMILY, WAYS, CTX, SRC_CTX, SRC_BYTES)                \
+#define TESTING_LANES_OPS(h, FAMILY, WAYS, OUT, CTX, SRC_CTX, SRC_BYTES)                \
     int nirapod_sha2_testing_##h(nirapod_sha2_testing_kernel k, uint8_t *out,      \
                                  const uint8_t *const in[WAYS], size_t len)        \
     {                                                                              \
         UNIT_OR_FAIL(k, FAMILY)                                                    \
-        return nirapod_sha2_run_lanes(u, FAMILY, u->h, WAYS, out, 256, in, len);   \
+        return nirapod_sha2_run_lanes(u, FAMILY, u->h, WAYS, out, OUT, in, len);   \
     }                                                                              \
     int nirapod_sha2_testing_##h##_init(nirapod_sha2_testing_kernel k, CTX *ctx)   \
     {                                                                              \
@@ -215,10 +220,12 @@ TESTING_HMAC_OPS(sha512)
     {                                                                              \
         UNIT_OR_FAIL(k, FAMILY)                                                    \
         return nirapod_sha2_run_final(u, FAMILY, u->h##_final, ctx, sizeof(CTX),   \
-                                      out, 256);                                   \
+                                      out, OUT);                                   \
     }
 
-TESTING_LANES_OPS(sha256_x8, NIRAPOD_SHA2_FAMILY_X8, 8, nirapod_sha2_sha256_x8_ctx,
+TESTING_LANES_OPS(sha256_x8, NIRAPOD_SHA2_FAMILY_X8, 8, NIRAPOD_SHA2_SHA256_X8_BYTES,
+                  nirapod_sha2_sha256_x8_ctx,
                   nirapod_sha2_sha256_ctx, NIRAPOD_SHA2_SHA256_CTX_BYTES)
-TESTING_LANES_OPS(sha512_x4, NIRAPOD_SHA2_FAMILY_X4, 4, nirapod_sha2_sha512_x4_ctx,
+TESTING_LANES_OPS(sha512_x4, NIRAPOD_SHA2_FAMILY_X4, 4, NIRAPOD_SHA2_SHA512_X4_BYTES,
+                  nirapod_sha2_sha512_x4_ctx,
                   nirapod_sha2_sha512_ctx, NIRAPOD_SHA2_SHA512_CTX_BYTES)

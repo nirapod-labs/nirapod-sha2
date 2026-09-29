@@ -31,8 +31,8 @@
  * The operand roles are those of the SHA512H and SHA512H2 pseudocode in
  * the Arm architecture manual: SHA512H takes the two W + K sums already
  * added to [g; h] in swapped order, then [f; g] and [d; e]; SHA512H2 takes
- * that result, [c; d] and [a; b]. The NIST vectors in tests/hash check
- * this packing end to end.
+ * that result, [c; d] and [a; b]. The CAVP vectors of tests/validation
+ * check this packing end to end.
  *
  * [f; g] and [d; e] straddle two state vectors and are formed with EXT:
  * #VEXT(lo, hi, 8) takes bytes 8 to 23 of the pair hi:lo, which is
@@ -64,8 +64,8 @@
  * block count, which updates ms; every address is fixed at compile time or
  * is the public block pointer. Residue: nothing secret is stored to the
  * stack; the vector registers that held the state and schedule are not
- * cleared here (the C layer clears them after each export that reads the
- * secret key, capi/clear.c).
+ * cleared here (the C layer clears them after every export,
+ * capi/clear.c).
  */
 
 from Hash require "sha512_k.jinc"
