@@ -26,8 +26,8 @@
  *
  * both reading the abcd of before the group, so it is copied once. These
  * are the operand roles of the SHA256H and SHA256H2 pseudocode in the Arm
- * architecture manual; the NIST vectors in tests/hash check them end to
- * end.
+ * architecture manual; the CAVP vectors of tests/validation check them end
+ * to end.
  *
  * Schedule. m[j] holds four consecutive words; group g reads m[g mod 4]
  * and, for g < 12, then replaces it by the words sixteen rounds later

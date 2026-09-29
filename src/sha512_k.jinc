@@ -9,6 +9,7 @@
 /*
  * SHA-512 constants K_0 .. K_79 (FIPS 180-4 section 4.2.3): the first 64
  * bits of the fractional parts of the cube roots of the first 80 primes.
+ * tests/constants/check.py derives the table and compares it with this one.
  */
 u64[80] SHA512_K = {
   0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f, 0xe9b5dba58189dbbc,
