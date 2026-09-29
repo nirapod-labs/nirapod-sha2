@@ -745,12 +745,20 @@ static void test_dispatch(void)
 #elif defined(__x86_64__)
     check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_SHA256, 0x02u, 0) ==
           NIRAPOD_SHA2_TESTING_X86_64_SHANI, "target: SHA-256 family on SHA-NI", kn);
+    check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_SHA256, 0x101u, 0) ==
+          NIRAPOD_SHA2_TESTING_X86_64_AVX2, "target: SHA-256 family on AVX2 and BMI2", kn);
     check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_SHA512, 0x03u, 0) ==
-          NIRAPOD_SHA2_TESTING_PORTABLE, "target: SHA-512 family portable", kn);
+          NIRAPOD_SHA2_TESTING_PORTABLE, "target: SHA-512 family without BMI2", kn);
+    check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_SHA512, 0x103u, 0) ==
+          NIRAPOD_SHA2_TESTING_X86_64_AVX2, "target: SHA-512 family on AVX2 and BMI2", kn);
     check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_X8, 0x03u, 0) ==
-          NIRAPOD_SHA2_TESTING_X86_64_AVX2, "target: x8 on AVX2", kn);
+          NIRAPOD_SHA2_TESTING_X86_64_SHANI, "target: x8 on SHA-NI", kn);
+    check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_X8, 0x01u, 0) ==
+          NIRAPOD_SHA2_TESTING_X86_64_AVX2, "target: x8 on AVX2 without SHA-NI", kn);
     check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_X4, 0x02u, 0) ==
           NIRAPOD_SHA2_TESTING_PORTABLE, "target: x4 without AVX2", kn);
+    check(nirapod_sha2_testing_select_for(NIRAPOD_SHA2_TESTING_FAMILY_X4, 0x01u, 0) ==
+          NIRAPOD_SHA2_TESTING_X86_64_AVX2, "target: x4 on AVX2", kn);
 
     /*
      * The single-way AVX2 kernels (and the shani unit's SHA-512 code, which

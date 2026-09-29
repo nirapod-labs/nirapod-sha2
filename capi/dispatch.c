@@ -198,18 +198,19 @@ unsigned nirapod_sha2_features_cache = 0;
  *
  * Per family, the candidate units in order of preference; the first whose
  * needs the CPU has is chosen, and the portable unit, last in every list,
- * needs nothing. The order is the library's target (accelerated kernel
- * where the CPU has it): on AArch64 the sha2 unit for every family, on
- * x86-64 SHA-NI for single-way SHA-256 and AVX2 for the multi-way forms.
- * The aarch64 scalar unit is in no list: it is built and tested, and
+ * needs nothing. The order is the library's target, fastest kernel the CPU
+ * has first: on AArch64 the sha2 unit for every family; on x86-64 the
+ * shani unit, then the avx2 unit, for single-way SHA-256 and SHA-256 x8,
+ * and the avx2 unit for single-way SHA-512 and SHA-512 x4 (the shani unit
+ * runs the same AVX2 code for those two, so it adds nothing there). The
+ * aarch64 scalar unit is in no list: it is built and tested, and
  * selectable through the testing library only.
  *
  * A unit enters the default dispatch only when all its gates have passed:
  * a correctness proof of its kernel against FIPS 180-4, a safety-checker
  * verdict, the constant-time and speculative constant-time checks, and
  * native tests. admitted marks the candidates that have. The portable unit
- * is admitted on other grounds: it is the fallback every CPU needs, and its
- * kernels are the only ones with a correctness proof so far; its remaining
+ * is admitted on other grounds: it is the fallback every CPU needs; its
  * gates are open like the others'. Today it is the only admitted unit, so
  * the public functions run the portable kernels on every CPU and read no
  * CPU features. Admitting a unit is a change of one admitted flag below,
@@ -229,19 +230,21 @@ typedef struct candidate {
 
 #define PORTABLE UNIT(0)
 
+/* A list shorter than a row ends in the portable unit, repeated to fill it. */
+
 #if defined(__aarch64__)
-static const candidate candidates[NIRAPOD_SHA2_FAMILIES][2] = {
-    /* SHA256 */ { { &nirapod_sha2_units[2], 0 }, PORTABLE },
-    /* SHA512 */ { { &nirapod_sha2_units[2], 0 }, PORTABLE },
-    /* X8     */ { { &nirapod_sha2_units[2], 0 }, PORTABLE },
-    /* X4     */ { { &nirapod_sha2_units[2], 0 }, PORTABLE },
+static const candidate candidates[NIRAPOD_SHA2_FAMILIES][3] = {
+    /* SHA256 */ { { &nirapod_sha2_units[2], 0 }, PORTABLE, PORTABLE },
+    /* SHA512 */ { { &nirapod_sha2_units[2], 0 }, PORTABLE, PORTABLE },
+    /* X8     */ { { &nirapod_sha2_units[2], 0 }, PORTABLE, PORTABLE },
+    /* X4     */ { { &nirapod_sha2_units[2], 0 }, PORTABLE, PORTABLE },
 };
 #elif defined(__x86_64__)
-static const candidate candidates[NIRAPOD_SHA2_FAMILIES][2] = {
-    /* SHA256 */ { { &nirapod_sha2_units[1], 0 }, PORTABLE },
-    /* SHA512 */ { PORTABLE, PORTABLE },    /* the AVX2 SHA-512 kernel is no candidate */
-    /* X8     */ { { &nirapod_sha2_units[2], 0 }, PORTABLE },
-    /* X4     */ { { &nirapod_sha2_units[2], 0 }, PORTABLE },
+static const candidate candidates[NIRAPOD_SHA2_FAMILIES][3] = {
+    /* SHA256 */ { { &nirapod_sha2_units[1], 0 }, { &nirapod_sha2_units[2], 0 }, PORTABLE },
+    /* SHA512 */ { { &nirapod_sha2_units[2], 0 }, PORTABLE, PORTABLE },
+    /* X8     */ { { &nirapod_sha2_units[1], 0 }, { &nirapod_sha2_units[2], 0 }, PORTABLE },
+    /* X4     */ { { &nirapod_sha2_units[2], 0 }, PORTABLE, PORTABLE },
 };
 #endif
 
