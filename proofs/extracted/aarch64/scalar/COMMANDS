@@ -1,0 +1,5 @@
+# The models of unit aarch64-scalar, extracted from the repository root by
+# `make extract`. The entry requires src/nirapod_sha2.jinc
+# through the Hash root, with no namespace.
+jasmin2ec --arch=armv8a -I Hash=src -I HashWord=src/aarch64 -I Sha256Kernel=src/aarch64/scalar -I Sha512Kernel=src/aarch64/scalar -I Sha256KernelX=src/aarch64/neon -I Sha512KernelX=src -o aarch64/scalar/NirapodSha2.ec build/extract/nirapod_sha2.jazz
+jasmin2ec --arch=armv8a -m safety -I Hash=src -I HashWord=src/aarch64 -I Sha256Kernel=src/aarch64/scalar -I Sha512Kernel=src/aarch64/scalar -I Sha256KernelX=src/aarch64/neon -I Sha512KernelX=src -o aarch64/scalar/NirapodSha2Safety.ec build/extract/nirapod_sha2.jazz
