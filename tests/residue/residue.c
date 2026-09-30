@@ -19,9 +19,9 @@
  * HMAC, the padded key block K0 and K0 XOR ipad and K0 XOR opad
  * (FIPS 198-1). A string is found when any 8 consecutive bytes of it, or
  * one of its 4-byte or 8-byte words in either byte order, appear where
- * they are looked for. Windows of one repeated byte are left out (the
- * zero padding of a short key gives runs of 0x36 and 0x5c that say
- * nothing about the key).
+ * they are looked for. Windows mostly made of one byte value are left out
+ * (weak(), below): padding produces them, and they say nothing about the
+ * key.
  *
  * Stack. Before each call a region of RESIDUE_AREA bytes below the
  * caller's frame is filled with PATTERN, the call is made from the same
@@ -144,16 +144,28 @@ static uint32_t swap32(uint32_t v)
     return (v >> 24) | ((v >> 8) & 0xff00u) | ((v << 8) & 0xff0000u) | (v << 24);
 }
 
-static int uniform(const uint8_t *p, size_t n)
+/*
+ * A window says something about a secret only if no byte value fills more
+ * than half of it. Windows that are mostly one value come from padding
+ * (the zeros after a short or hashed key, and runs of 0x36 or 0x5c), and
+ * they also occur in ordinary stack contents: the high byte of a Linux
+ * AArch64 stack address followed by zeros matches the end of a hashed key
+ * followed by its zero padding.
+ */
+static int weak(const uint8_t *p, size_t n)
 {
-    size_t i;
+    size_t i, j, same;
 
-    for (i = 1; i < n; i++) {
-        if (p[i] != p[0]) {
-            return 0;
+    for (i = 0; i < n; i++) {
+        same = 0;
+        for (j = 0; j < n; j++) {
+            same += p[j] == p[i];
+        }
+        if (2 * same > n) {
+            return 1;
         }
     }
-    return 1;
+    return 0;
 }
 
 static void add8(uint64_t v)
@@ -185,7 +197,7 @@ static void add_secret(const uint8_t *s, size_t n)
     size_t i;
 
     for (i = 0; i + 8 <= n; i++) {
-        if (!uniform(s + i, 8)) {
+        if (!weak(s + i, 8)) {
             add8(load64(s + i));
             if (i % 8 == 0) {
                 add8(swap64(load64(s + i)));
@@ -193,7 +205,7 @@ static void add_secret(const uint8_t *s, size_t n)
         }
     }
     for (i = 0; i + 4 <= n; i += 4) {
-        if (!uniform(s + i, 4)) {
+        if (!weak(s + i, 4)) {
             add4(load32(s + i));
             add4(swap32(load32(s + i)));
         }
