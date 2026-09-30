@@ -94,7 +94,6 @@
 from Hash require "sha256.jinc"
 from Hash require "sha512.jinc"
 from Hash require "hmac.jinc"
-from Hash require "digest.jinc"
 from Hash require "context.jinc"
 from Hash require "hmac_mem.jinc"
 from Hash require "context_x.jinc"
@@ -103,9 +102,10 @@ from Hash require "context_x.jinc"
  * One-shot hashes
  * ===============
  *
- * The digest of the inlen bytes at in. SHA-256 and SHA-512 finish straight
- * into out; the truncated functions finish into a local array and copy
- * their prefix (digest.jinc).
+ * The digest of the inlen bytes at in. Every function finishes straight
+ * into out, which receives exactly the digest: a truncated function's
+ * finalize writes only the left-most bytes that FIPS 180-4 keeps
+ * (sha256_DSIZE.jinc, sha512_DSIZE.jinc).
  */
 
 #[ct = "secret × public × public -> secret"]
@@ -119,16 +119,11 @@ from Hash require "context_x.jinc"
  ]
 export fn sha224(reg mut ptr u8[28] out, reg u64 in inlen) -> reg ptr u8[28]
 {
-  stack u8[32] d;
   reg u64 ms;
 
   ms = #init_msf();
 
-  () = #spill(out);
-  d, ms = _sha224_mem(d, in, inlen, ms);
-  () = #unspill(out);
-  out = #protect_ptr(out, ms);
-  out = __digest28_of32(out, d);
+  out, ms = _sha224_mem(out, in, inlen, ms);
 
   return out;
 }
@@ -164,16 +159,11 @@ export fn sha256(reg mut ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32]
  ]
 export fn sha384(reg mut ptr u8[48] out, reg u64 in inlen) -> reg ptr u8[48]
 {
-  stack u8[64] d;
   reg u64 ms;
 
   ms = #init_msf();
 
-  () = #spill(out);
-  d, ms = _sha384_mem(d, in, inlen, ms);
-  () = #unspill(out);
-  out = #protect_ptr(out, ms);
-  out = __digest48_of64(out, d);
+  out, ms = _sha384_mem(out, in, inlen, ms);
 
   return out;
 }
@@ -209,16 +199,11 @@ export fn sha512(reg mut ptr u8[64] out, reg u64 in inlen) -> reg ptr u8[64]
  ]
 export fn sha512_224(reg mut ptr u8[28] out, reg u64 in inlen) -> reg ptr u8[28]
 {
-  stack u8[64] d;
   reg u64 ms;
 
   ms = #init_msf();
 
-  () = #spill(out);
-  d, ms = _sha512_224_mem(d, in, inlen, ms);
-  () = #unspill(out);
-  out = #protect_ptr(out, ms);
-  out = __digest28_of64(out, d);
+  out, ms = _sha512_224_mem(out, in, inlen, ms);
 
   return out;
 }
@@ -234,16 +219,11 @@ export fn sha512_224(reg mut ptr u8[28] out, reg u64 in inlen) -> reg ptr u8[28]
  ]
 export fn sha512_256(reg mut ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32]
 {
-  stack u8[64] d;
   reg u64 ms;
 
   ms = #init_msf();
 
-  () = #spill(out);
-  d, ms = _sha512_256_mem(d, in, inlen, ms);
-  () = #unspill(out);
-  out = #protect_ptr(out, ms);
-  out = __digest32_of64(out, d);
+  out, ms = _sha512_256_mem(out, in, inlen, ms);
 
   return out;
 }
@@ -254,9 +234,10 @@ export fn sha512_256(reg mut ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32]
  *
  * init writes a whole context; update appends inlen bytes at in; final
  * writes the digest and zeroes the context. Contracts in context.jinc
- * (_sha256_ctx_update, _sha256_ctx_final and their SHA-512 forms). A
- * truncated final copies its digest only after the context's checks have
- * passed, so a failing final writes nothing to out.
+ * (_sha256_ctx_update, _sha512_ctx_update) and context_DSIZE.jinc
+ * (_sha2_ctx_final, one instance per function). Final writes out only
+ * after the context's checks have passed, so a failing final writes
+ * nothing to out.
  */
 
 #[ct = "secret -> secret"]
@@ -315,25 +296,12 @@ export fn sha224_update(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg u64 in inlen) 
 export fn sha224_final(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg mut ptr u8[28] out)
   -> reg ptr u8[SHA256_CTX_BYTES], reg ptr u8[28], reg u64
 {
-  stack u8[32] d;
   reg u64 ms expect status;
-  reg bool ok;
 
   ms = #init_msf();
 
   expect = __sha2_tag(SHA2_FN_SHA224);
-  () = #spill(out);
-  ctx, d, status, ms = _sha256_ctx_final(ctx, d, expect, ms);
-  () = #unspill(out);
-  out = #protect_ptr(out, ms);
-
-  ok = status == SHA2_STATUS_OK;
-  if (ok) {
-    ms = #update_msf(ok, ms);
-    out = __digest28_of32(out, d);
-  } else {
-    ms = #update_msf(!ok, ms);
-  }
+  ctx, out, status, ms = _sha224_ctx::_sha2_ctx_final(ctx, out, expect, ms);
 
   return ctx, out, status;
 }
@@ -399,7 +367,7 @@ export fn sha256_final(reg mut ptr u8[SHA256_CTX_BYTES] ctx, reg mut ptr u8[32] 
   ms = #init_msf();
 
   expect = __sha2_tag(SHA2_FN_SHA256);
-  ctx, out, status, ms = _sha256_ctx_final(ctx, out, expect, ms);
+  ctx, out, status, ms = _sha256_ctx::_sha2_ctx_final(ctx, out, expect, ms);
 
   return ctx, out, status;
 }
@@ -460,25 +428,12 @@ export fn sha384_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inlen) 
 export fn sha384_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[48] out)
   -> reg ptr u8[SHA512_CTX_BYTES], reg ptr u8[48], reg u64
 {
-  stack u8[64] d;
   reg u64 ms expect status;
-  reg bool ok;
 
   ms = #init_msf();
 
   expect = __sha2_tag(SHA2_FN_SHA384);
-  () = #spill(out);
-  ctx, d, status, ms = _sha512_ctx_final(ctx, d, expect, ms);
-  () = #unspill(out);
-  out = #protect_ptr(out, ms);
-
-  ok = status == SHA2_STATUS_OK;
-  if (ok) {
-    ms = #update_msf(ok, ms);
-    out = __digest48_of64(out, d);
-  } else {
-    ms = #update_msf(!ok, ms);
-  }
+  ctx, out, status, ms = _sha384_ctx::_sha2_ctx_final(ctx, out, expect, ms);
 
   return ctx, out, status;
 }
@@ -544,7 +499,7 @@ export fn sha512_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[64] 
   ms = #init_msf();
 
   expect = __sha2_tag(SHA2_FN_SHA512);
-  ctx, out, status, ms = _sha512_ctx_final(ctx, out, expect, ms);
+  ctx, out, status, ms = _sha512_ctx::_sha2_ctx_final(ctx, out, expect, ms);
 
   return ctx, out, status;
 }
@@ -605,25 +560,12 @@ export fn sha512_224_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inl
 export fn sha512_224_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[28] out)
   -> reg ptr u8[SHA512_CTX_BYTES], reg ptr u8[28], reg u64
 {
-  stack u8[64] d;
   reg u64 ms expect status;
-  reg bool ok;
 
   ms = #init_msf();
 
   expect = __sha2_tag(SHA2_FN_SHA512_224);
-  () = #spill(out);
-  ctx, d, status, ms = _sha512_ctx_final(ctx, d, expect, ms);
-  () = #unspill(out);
-  out = #protect_ptr(out, ms);
-
-  ok = status == SHA2_STATUS_OK;
-  if (ok) {
-    ms = #update_msf(ok, ms);
-    out = __digest28_of64(out, d);
-  } else {
-    ms = #update_msf(!ok, ms);
-  }
+  ctx, out, status, ms = _sha512_224_ctx::_sha2_ctx_final(ctx, out, expect, ms);
 
   return ctx, out, status;
 }
@@ -684,25 +626,12 @@ export fn sha512_256_update(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg u64 in inl
 export fn sha512_256_final(reg mut ptr u8[SHA512_CTX_BYTES] ctx, reg mut ptr u8[32] out)
   -> reg ptr u8[SHA512_CTX_BYTES], reg ptr u8[32], reg u64
 {
-  stack u8[64] d;
   reg u64 ms expect status;
-  reg bool ok;
 
   ms = #init_msf();
 
   expect = __sha2_tag(SHA2_FN_SHA512_256);
-  () = #spill(out);
-  ctx, d, status, ms = _sha512_ctx_final(ctx, d, expect, ms);
-  () = #unspill(out);
-  out = #protect_ptr(out, ms);
-
-  ok = status == SHA2_STATUS_OK;
-  if (ok) {
-    ms = #update_msf(ok, ms);
-    out = __digest32_of64(out, d);
-  } else {
-    ms = #update_msf(!ok, ms);
-  }
+  ctx, out, status, ms = _sha512_256_ctx::_sha2_ctx_final(ctx, out, expect, ms);
 
   return ctx, out, status;
 }

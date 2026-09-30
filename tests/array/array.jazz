@@ -66,7 +66,7 @@ namespace A1 {
     h, buf, total, ms = _sha256_absorb_array(h, buf, total, a, off, len, ms);
     () = #unspill(out);
     out = #protect_ptr(out, ms);
-    out, h, buf, ms = _sha256_finalize(out, h, buf, total, ms);
+    out, h, buf, ms = _sha256::_sha256_finalize(out, h, buf, total, ms);
     return out;
   }
 
@@ -100,7 +100,7 @@ namespace A1 {
     h, buf, total, ms = _sha512_absorb_array(h, buf, total, a, off, len, ms);
     () = #unspill(out);
     out = #protect_ptr(out, ms);
-    out, h, buf, ms = _sha512_finalize(out, h, buf, total, ms);
+    out, h, buf, ms = _sha512::_sha512_finalize(out, h, buf, total, ms);
     return out;
   }
 
@@ -224,7 +224,7 @@ namespace A64 {
     h, buf, total, ms = _sha256_absorb_array(h, buf, total, a, off, len, ms);
     () = #unspill(out);
     out = #protect_ptr(out, ms);
-    out, h, buf, ms = _sha256_finalize(out, h, buf, total, ms);
+    out, h, buf, ms = _sha256::_sha256_finalize(out, h, buf, total, ms);
     return out;
   }
 
@@ -258,7 +258,7 @@ namespace A64 {
     h, buf, total, ms = _sha512_absorb_array(h, buf, total, a, off, len, ms);
     () = #unspill(out);
     out = #protect_ptr(out, ms);
-    out, h, buf, ms = _sha512_finalize(out, h, buf, total, ms);
+    out, h, buf, ms = _sha512::_sha512_finalize(out, h, buf, total, ms);
     return out;
   }
 
@@ -382,7 +382,7 @@ namespace A128 {
     h, buf, total, ms = _sha256_absorb_array(h, buf, total, a, off, len, ms);
     () = #unspill(out);
     out = #protect_ptr(out, ms);
-    out, h, buf, ms = _sha256_finalize(out, h, buf, total, ms);
+    out, h, buf, ms = _sha256::_sha256_finalize(out, h, buf, total, ms);
     return out;
   }
 
@@ -416,7 +416,7 @@ namespace A128 {
     h, buf, total, ms = _sha512_absorb_array(h, buf, total, a, off, len, ms);
     () = #unspill(out);
     out = #protect_ptr(out, ms);
-    out, h, buf, ms = _sha512_finalize(out, h, buf, total, ms);
+    out, h, buf, ms = _sha512::_sha512_finalize(out, h, buf, total, ms);
     return out;
   }
 
@@ -540,7 +540,7 @@ namespace A333 {
     h, buf, total, ms = _sha256_absorb_array(h, buf, total, a, off, len, ms);
     () = #unspill(out);
     out = #protect_ptr(out, ms);
-    out, h, buf, ms = _sha256_finalize(out, h, buf, total, ms);
+    out, h, buf, ms = _sha256::_sha256_finalize(out, h, buf, total, ms);
     return out;
   }
 
@@ -574,7 +574,7 @@ namespace A333 {
     h, buf, total, ms = _sha512_absorb_array(h, buf, total, a, off, len, ms);
     () = #unspill(out);
     out = #protect_ptr(out, ms);
-    out, h, buf, ms = _sha512_finalize(out, h, buf, total, ms);
+    out, h, buf, ms = _sha512::_sha512_finalize(out, h, buf, total, ms);
     return out;
   }
 
