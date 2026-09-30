@@ -9,8 +9,16 @@
  * "Results", "Lengths" and "Contexts": NULL pointers, every overlapping
  * placement of an output and an input, a context and an input, update and
  * final after final, contexts of another function, uninitialised
- * contexts, the length limits, and the state of every output and context
- * after a failure.
+ * contexts, forged contexts, the length limits, and the state of every
+ * output and context after a failure.
+ *
+ * A forged context starts with the valid tag of its function, copied from
+ * a context init made, and holds random bytes after it: the case
+ * nirapod_sha2.h leaves as a wrong digest, never a write outside the
+ * context or the output. Each one is placed between guard bytes and run
+ * through update and final; the guards must survive, every result must be
+ * one of the documented codes, a failed call must leave the context as it
+ * was, and a final that succeeds must zero it.
  *
  * The context total limit is tested by writing the total field of a
  * context directly, at byte offset 8 as src/context.jinc lays it out.
@@ -744,6 +752,160 @@ static void misuse_multiway_ctx(validation_suite *s, int x4, int kernel)
 }
 
 /*
+ * Forged contexts (see the top of the file). FORGED_CASES per function and
+ * target, from a fixed seed. The forged total is drawn from three ranges:
+ * any 64-bit value, a value below 2^61, and a value just under 2^61, so
+ * that both the length checks and the normal paths run on garbage.
+ */
+#define FORGED_CASES 64
+#define FORGED_GUARD 64
+
+static int documented(int rc)
+{
+    return rc == NIRAPOD_SHA2_OK || rc == NIRAPOD_SHA2_ENULL || rc == NIRAPOD_SHA2_ELENGTH ||
+           rc == NIRAPOD_SHA2_EOVERLAP || rc == NIRAPOD_SHA2_ESTATE;
+}
+
+static void forge(validation_rng *rng, uint8_t *ctx, size_t ctx_len, const uint8_t *tag,
+                  size_t round)
+{
+    uint64_t total;
+
+    rng_bytes(rng, ctx, ctx_len);
+    memcpy(ctx, tag, 8);
+    total = rng_next(rng);
+    if (round % 3 == 1) {
+        total &= (UINT64_C(1) << 61) - 1;
+    } else if (round % 3 == 2) {
+        total = (UINT64_C(1) << 61) - 1 - (total & 0x3ff);
+    }
+    memcpy(ctx + 8, &total, 8);
+}
+
+/*
+ * kind 0: hash index i, 1: HMAC index i, 2: sha256_x8, 3: sha512_x4.
+ */
+static void forged_one(validation_suite *s, int kind, size_t i, int kernel, validation_rng *rng)
+{
+    static uint64_t store[(2 * FORGED_GUARD + sizeof(validation_ctx)) / 8];
+    static uint8_t msg[700];
+    uint8_t *area = (uint8_t *)store;
+    uint8_t *ctx = area + FORGED_GUARD;
+    uint8_t out[FORGED_GUARD + 256 + FORGED_GUARD];
+    uint8_t before[sizeof(validation_ctx)], tag[8];
+    const uint8_t *lanes[8];
+    const char *name;
+    size_t ctx_len, out_len, round, m;
+    int x4 = kind == 3;
+
+    if (kind == 0) {
+        name = HASH_ALGS[i].name;
+        ctx_len = HASH_ALGS[i].ctx_len;
+        out_len = HASH_ALGS[i].digest_len;
+    } else if (kind == 1) {
+        name = HMAC_ALGS[i].name;
+        ctx_len = HMAC_ALGS[i].ctx_len;
+        out_len = HMAC_ALGS[i].digest_len;
+    } else {
+        name = x4 ? "sha512_x4" : "sha256_x8";
+        ctx_len = x4 ? NIRAPOD_SHA2_SHA512_X4_CTX_BYTES : NIRAPOD_SHA2_SHA256_X8_CTX_BYTES;
+        out_len = 256;
+    }
+    fill_pattern(msg, sizeof msg, 59);
+    for (m = 0; m < 8; m++) {
+        lanes[m] = msg + 11 * m;
+    }
+
+    memset(store, 0, sizeof store);
+    if ((kind == 0 && hash_init(&HASH_ALGS[i], kernel, ctx) != NIRAPOD_SHA2_OK) ||
+        (kind == 1 && hmac_init(&HMAC_ALGS[i], kernel, ctx, msg, 100) != NIRAPOD_SHA2_OK) ||
+        (kind >= 2 && multiway_init(x4, kernel, ctx) != NIRAPOD_SHA2_OK)) {
+        fail_case(s, kernel, "%s: forged context: init failed", name);
+        return;
+    }
+    memcpy(tag, ctx, 8);
+
+    for (round = 0; round < FORGED_CASES; round++) {
+        size_t len = rng_below(rng, kind >= 2 ? 600 : sizeof msg);
+        int rc;
+
+        guard_fill(area, FORGED_GUARD);
+        guard_fill(ctx + ctx_len, FORGED_GUARD);
+        forge(rng, ctx, ctx_len, tag, round);
+        memcpy(before, ctx, ctx_len);
+        if (kind == 0) {
+            rc = hash_update(&HASH_ALGS[i], kernel, ctx, msg, len);
+        } else if (kind == 1) {
+            rc = hmac_update(&HMAC_ALGS[i], kernel, ctx, msg, len);
+        } else {
+            rc = multiway_update(x4, kernel, ctx, lanes, len);
+        }
+        check(s, kernel, documented(rc), "%s: forged update returned %d", name, rc);
+        if (rc != NIRAPOD_SHA2_OK) {
+            check(s, kernel, memcmp(ctx, before, ctx_len) == 0,
+                  "%s: a failed update on a forged context changed it", name);
+        }
+        check(s, kernel, guard_intact(area, FORGED_GUARD) &&
+                             guard_intact(ctx + ctx_len, FORGED_GUARD),
+              "%s: forged update wrote outside the context (case %zu)", name, round);
+
+        guard_fill(out, sizeof out);
+        memcpy(before, ctx, ctx_len);
+        if (kind == 0) {
+            rc = hash_final(&HASH_ALGS[i], kernel, ctx, out + FORGED_GUARD);
+        } else if (kind == 1) {
+            rc = hmac_final(&HMAC_ALGS[i], kernel, ctx, out + FORGED_GUARD);
+        } else {
+            rc = multiway_final(x4, kernel, ctx, out + FORGED_GUARD);
+        }
+        check(s, kernel, documented(rc), "%s: forged final returned %d", name, rc);
+        if (rc == NIRAPOD_SHA2_OK) {
+            size_t z;
+            int zeroed = 1;
+
+            for (z = 0; z < ctx_len; z++) {
+                zeroed = zeroed && ctx[z] == 0;
+            }
+            check(s, kernel, zeroed, "%s: final on a forged context did not zero it", name);
+        } else {
+            check(s, kernel, memcmp(ctx, before, ctx_len) == 0 &&
+                                 guard_intact(out + FORGED_GUARD, out_len),
+                  "%s: a failed final on a forged context changed it or wrote output", name);
+        }
+        check(s, kernel, guard_intact(out, FORGED_GUARD) &&
+                             guard_intact(out + FORGED_GUARD + out_len, FORGED_GUARD) &&
+                             guard_intact(area, FORGED_GUARD) &&
+                             guard_intact(ctx + ctx_len, FORGED_GUARD),
+              "%s: forged final wrote outside the context or the output (case %zu)", name,
+              round);
+    }
+}
+
+static void forged_contexts(validation_suite *s, int kernel)
+{
+    validation_rng rng;
+    size_t i;
+
+    rng_seed(&rng, UINT64_C(0xf0f9ed00) + (uint64_t)(kernel + 1));
+    for (i = 0; i < sizeof HASH_ALGS / sizeof HASH_ALGS[0]; i++) {
+        if (validation_usable(s, kernel, HASH_ALGS[i].family)) {
+            forged_one(s, 0, i, kernel, &rng);
+        }
+    }
+    for (i = 0; i < sizeof HMAC_ALGS / sizeof HMAC_ALGS[0]; i++) {
+        if (validation_usable(s, kernel, HMAC_ALGS[i].family)) {
+            forged_one(s, 1, i, kernel, &rng);
+        }
+    }
+    if (validation_usable(s, kernel, NIRAPOD_SHA2_TESTING_FAMILY_X8)) {
+        forged_one(s, 2, 0, kernel, &rng);
+    }
+    if (validation_usable(s, kernel, NIRAPOD_SHA2_TESTING_FAMILY_X4)) {
+        forged_one(s, 3, 0, kernel, &rng);
+    }
+}
+
+/*
  * A context of one function used with every other function. nirapod_sha2.h
  * says this fails with ESTATE and changes nothing; after all the failures
  * the original context must still finish normally.
@@ -870,6 +1032,7 @@ int suite_negative(void)
             misuse_multiway_ctx(&s, 1, target);
         }
         cross_contexts(&s, target);
+        forged_contexts(&s, target);
     }
     return suite_end(&s);
 }
