@@ -100,8 +100,13 @@
  *     time independent of their operands:
  *
  *         AArch64 with FEAT_DIT   the library sets PSTATE.DIT for the
- *                                 duration of each call and restores the
- *                                 caller's value before returning
+ *                                 duration of each call that reads a
+ *                                 message, key or context, and restores
+ *                                 the caller's value before returning;
+ *                                 an _init that takes only a context
+ *                                 (no key, no source context) writes
+ *                                 constants, reads none of them, and
+ *                                 leaves PSTATE.DIT alone
  *         AArch64 without it      nothing is set; the caller depends on
  *                                 the CPU
  *         x86-64, Intel           DOITM is controlled by a model-specific
