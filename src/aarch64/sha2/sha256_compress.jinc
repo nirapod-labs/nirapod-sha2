@@ -59,7 +59,9 @@ from Hash require "sha256_k.jinc"
  * the block's sixteen message words, already in native order.
  */
 #[safety =
-   { requires = is_arr_init(k, 0, 256)
+   { requires = is_arr_init(m, 0, 64) && is_arr_init(k, 0, 256)
+   , res = { abcd_out, efgh_out, m_out }
+   , ensures = is_arr_init(m_out, 0, 64)
    }
  ]
 inline fn __sha256_block_a64(
