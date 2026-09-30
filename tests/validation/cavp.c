@@ -16,6 +16,12 @@
  * files define it. The HMAC file's Mac field may be truncated to Tlen
  * bytes; the comparison is over those Tlen bytes, the prefix of the
  * computed tag.
+ *
+ * Every record of a file must be run: the number of cases each parser ran
+ * is compared with a plain count of the lines that end a record (MD, or
+ * Mac in HMAC.rsp), made separately from the parser, so a record the
+ * parser skips fails the suite. The files themselves are checked against
+ * their pinned SHA-256 (check-vectors.sh) before the runner starts.
  */
 
 #define _POSIX_C_SOURCE 200809L
@@ -41,6 +47,38 @@ static void rsp_open(struct rsp *r, const char *dir, const char *name)
     if (r->f == NULL) {
         die("cannot open %s", r->path);
     }
+}
+
+/* The lines of path whose first word, before any spaces and '=', is key. */
+static unsigned long count_lines(const char *path, const char *key)
+{
+    size_t len, n = strlen(key), i = 0;
+    char *text = read_file(path, &len);
+    unsigned long count = 0;
+
+    while (i < len) {
+        size_t j = i;
+
+        while (j < len && (text[j] == ' ' || text[j] == '\t')) {
+            j++;
+        }
+        if (len - j > n && memcmp(text + j, key, n) == 0) {
+            size_t k = j + n;
+
+            while (k < len && (text[k] == ' ' || text[k] == '\t')) {
+                k++;
+            }
+            if (k < len && text[k] == '=') {
+                count++;
+            }
+        }
+        while (i < len && text[i] != '\n') {
+            i++;
+        }
+        i++;
+    }
+    free(text);
+    return count;
 }
 
 static void rsp_close(struct rsp *r)
@@ -236,6 +274,16 @@ static void cavp_msg(validation_suite *s, int kernel, const hash_alg *alg, const
     if (cases == 0) {
         die("%s/%s: no test cases", dir, name);
     }
+    {
+        char path[2200];
+        unsigned long lines;
+
+        snprintf(path, sizeof path, "%s/%s", dir, name);
+        lines = count_lines(path, "MD");
+        if (lines != cases) {
+            die("%s: %lu cases run, %lu MD lines in the file", path, cases, lines);
+        }
+    }
 }
 
 static void cavp_monte(validation_suite *s, int kernel, const hash_alg *alg, const char *dir)
@@ -411,6 +459,17 @@ static void cavp_hmac(validation_suite *s, int kernel, const hmac_alg *alg, cons
     free(msgbuf);
     if (cases == 0) {
         die("%s/HMAC.rsp: no HMAC cases for %s", dir, alg->name);
+    }
+    {
+        char path[2200];
+        unsigned long lines;
+
+        snprintf(path, sizeof path, "%s/HMAC.rsp", dir);
+        lines = count_lines(path, "Mac");
+        if (lines != cases + skipped) {
+            die("%s: %lu records read (%lu run, %lu other hashes), %lu Mac lines in the file",
+                path, cases + skipped, cases, skipped, lines);
+        }
     }
     if (skipped != 0 && kernel == 0) {
         printf("  %s: HMAC.rsp %lu cases run, %lu records of other hashes not applicable\n",

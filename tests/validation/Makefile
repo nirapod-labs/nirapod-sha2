@@ -142,6 +142,7 @@ $(RUNNER): $(OBJS) $(LIB)
 SUITE_ARGS := $(foreach s,$(SUITES),--suite $(s))
 
 check: $(RUNNER) $(ORACLES)
+	sh $(HERE)/check-vectors.sh $(VECTORS)
 	$(RUNNER) --vectors $(VECTORS) --iterations $(ITERATIONS) --large $(LARGE) \
 	  $(if $(strip $(ORACLES)),--require-oracle,) $(ORACLE_ARGS) $(SUITE_ARGS)
 
