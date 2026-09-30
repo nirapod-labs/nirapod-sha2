@@ -412,12 +412,21 @@ fn _sha512_ctx_update(
  * namespace sets the context size and digest length of its function, and
  * __ctx_finalize runs that function's finalize in place on h and buf at
  * the offsets of the layout above. The final of SHA-224 is then
- * _sha224_ctx::_sha2_ctx_final, and so on.
+ * _sha224_ctx::_sha2_ctx_final, and so on. __ctx_finalize writes the
+ * digest without reading it, and its contract says so: without one, the
+ * default contract would require the digest initialised on entry, which
+ * the caller's output buffer is not.
  */
 namespace _sha224_ctx {
   param int _CTX = SHA256_CTX_BYTES;
   param int _DSIZE = 28;
 
+  #[safety =
+     { requires = is_arr_init(ctx, 0, _CTX)
+     , res = { ctx_out, digest_out, ms_out }
+     , ensures = is_arr_init(ctx_out, 0, _CTX) && is_arr_init(digest_out, 0, _DSIZE)
+     }
+   ]
   inline fn __ctx_finalize(
     reg mut ptr u8[_CTX] ctx,
     reg mut ptr u8[_DSIZE] digest,
@@ -436,6 +445,12 @@ namespace _sha256_ctx {
   param int _CTX = SHA256_CTX_BYTES;
   param int _DSIZE = 32;
 
+  #[safety =
+     { requires = is_arr_init(ctx, 0, _CTX)
+     , res = { ctx_out, digest_out, ms_out }
+     , ensures = is_arr_init(ctx_out, 0, _CTX) && is_arr_init(digest_out, 0, _DSIZE)
+     }
+   ]
   inline fn __ctx_finalize(
     reg mut ptr u8[_CTX] ctx,
     reg mut ptr u8[_DSIZE] digest,
@@ -454,6 +469,12 @@ namespace _sha384_ctx {
   param int _CTX = SHA512_CTX_BYTES;
   param int _DSIZE = 48;
 
+  #[safety =
+     { requires = is_arr_init(ctx, 0, _CTX)
+     , res = { ctx_out, digest_out, ms_out }
+     , ensures = is_arr_init(ctx_out, 0, _CTX) && is_arr_init(digest_out, 0, _DSIZE)
+     }
+   ]
   inline fn __ctx_finalize(
     reg mut ptr u8[_CTX] ctx,
     reg mut ptr u8[_DSIZE] digest,
@@ -472,6 +493,12 @@ namespace _sha512_ctx {
   param int _CTX = SHA512_CTX_BYTES;
   param int _DSIZE = 64;
 
+  #[safety =
+     { requires = is_arr_init(ctx, 0, _CTX)
+     , res = { ctx_out, digest_out, ms_out }
+     , ensures = is_arr_init(ctx_out, 0, _CTX) && is_arr_init(digest_out, 0, _DSIZE)
+     }
+   ]
   inline fn __ctx_finalize(
     reg mut ptr u8[_CTX] ctx,
     reg mut ptr u8[_DSIZE] digest,
@@ -490,6 +517,12 @@ namespace _sha512_224_ctx {
   param int _CTX = SHA512_CTX_BYTES;
   param int _DSIZE = 28;
 
+  #[safety =
+     { requires = is_arr_init(ctx, 0, _CTX)
+     , res = { ctx_out, digest_out, ms_out }
+     , ensures = is_arr_init(ctx_out, 0, _CTX) && is_arr_init(digest_out, 0, _DSIZE)
+     }
+   ]
   inline fn __ctx_finalize(
     reg mut ptr u8[_CTX] ctx,
     reg mut ptr u8[_DSIZE] digest,
@@ -508,6 +541,12 @@ namespace _sha512_256_ctx {
   param int _CTX = SHA512_CTX_BYTES;
   param int _DSIZE = 32;
 
+  #[safety =
+     { requires = is_arr_init(ctx, 0, _CTX)
+     , res = { ctx_out, digest_out, ms_out }
+     , ensures = is_arr_init(ctx_out, 0, _CTX) && is_arr_init(digest_out, 0, _DSIZE)
+     }
+   ]
   inline fn __ctx_finalize(
     reg mut ptr u8[_CTX] ctx,
     reg mut ptr u8[_DSIZE] digest,

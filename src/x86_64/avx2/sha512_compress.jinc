@@ -88,7 +88,19 @@ u64[4] SHA512_AVX2_BSWAP = {
  * adding Σ0 is off the path from one round's e to the next (s = 0 before
  * the first round of a block, and the caller adds the last s after round
  * 79).
+ *
+ * Safety: m[(t + 1) mod 2] is written before it is read, so only
+ * m[t mod 2] has to be initialised on entry; on a block's first round
+ * that is m[0], the only one the caller has set.
  */
+#[safety =
+   { requires = 0 <= t && t < 80 && is_arr_init(v, 0, 64)
+       && is_arr_init(m, 8 * (t % 2), 8) && is_arr_init(x, 0, 256)
+   , res = { v_out, m_out, s_out, x_out }
+   , ensures = is_arr_init(v_out, 0, 64) && is_arr_init(m_out, 0, 16)
+       && is_arr_init(x_out, 0, 256)
+   }
+ ]
 inline fn __sha512_avx2_round(
   reg u64[8] v,
   reg u64[2] m,
@@ -208,7 +220,7 @@ inline fn __sha512_avx2_round(
  * of the first round that reads its words.
  */
 #[safety =
-   { requires = is_arr_init(h, 0, 64)
+   { requires = 0 <= nb && nb <= 2 && is_arr_init(h, 0, 64) && is_arr_init(x, 0, 256)
    , res = { h_out, ms_out }
    , ensures = is_arr_init(h_out, 0, 64)
    }

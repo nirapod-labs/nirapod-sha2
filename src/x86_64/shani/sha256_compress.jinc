@@ -100,7 +100,9 @@ inline fn __shani_store_state(reg mut ptr u32[8] h, reg u128 abef cdgh) -> reg p
  * that the caller's array is updated in place rather than copied.
  */
 #[safety =
-   { requires = is_arr_init(k, 0, 256)
+   { requires = is_arr_init(w, 0, 64) && is_arr_init(k, 0, 256)
+   , res = { abef_out, cdgh_out, w_out }
+   , ensures = is_arr_init(w_out, 0, 64)
    }
  ]
 inline fn __shani_block(
@@ -140,7 +142,7 @@ inline fn __shani_block(
 
 /* One block on h in memory: __shani_block between a load and a store of h. */
 #[safety =
-   { requires = is_arr_init(h, 0, 32)
+   { requires = is_arr_init(h, 0, 32) && is_arr_init(w, 0, 64)
    , res = { h_out }
    , ensures = is_arr_init(h_out, 0, 32)
    }
