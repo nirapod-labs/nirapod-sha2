@@ -332,9 +332,16 @@ dit-check: $(DIT_TEST)
 # records the registers. Linked with the testing library to force kernels.
 RESIDUE_TEST := $(OUT)/tests/residue
 
+# The residue test paints a large local array and reads it back after a
+# call. Stack clash protection (the default of some Linux compilers)
+# probes each page of such an array when its frame is made, which
+# overwrites the paint, so the test is built without it where the
+# compiler has the option.
+NO_STACK_PROBES := $(shell $(CC) -Werror -fno-stack-clash-protection -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-clash-protection)
+
 $(RESIDUE_TEST): $(TESTS)/residue/residue.c $(TESTS)/residue/regs.S $(TESTING_LIB)
 	@mkdir -p $(@D)
-	$(CC) $(CPPFLAGS) $(CWARN) $(CFLAGS) -o $@ $(TESTS)/residue/residue.c \
+	$(CC) $(CPPFLAGS) $(CWARN) $(CFLAGS) $(NO_STACK_PROBES) -o $@ $(TESTS)/residue/residue.c \
 	  $(TESTS)/residue/regs.S $(TESTING_LIB)
 
 residue-check: $(RESIDUE_TEST)
