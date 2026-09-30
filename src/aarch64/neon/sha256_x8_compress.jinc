@@ -30,19 +30,22 @@
  * step has two independent instructions. Run one half after the other,
  * each round is a single dependency chain and the kernel is much slower.
  * Advanced SIMD has no rotate, so ROTR by r is SHL by 32 - r followed by
- * SRI by r, which inserts x >> r below the shifted bits. Ch is
- * (e & f) ^ (g & ~e) (AND, BIC, EOR); Maj is ((a ^ b) & (b ^ c)) ^ b,
- * where b ^ c is the a ^ b of the round before. K_t is DUP of one element
- * of four constants loaded from the shared table.
+ * SRI by r, which inserts x >> r below the shifted bits. Ch and Maj are one
+ * bitwise select each, BIT and BSL, and each overwrites one of its
+ * sources: BIT overwrites g, which the state rotating through nine
+ * registers per half has made dead, and BSL overwrites b ^ c, carried from
+ * the round before (see _sha256_x8_block). K_t is DUP of one element of
+ * four constants loaded from the shared table, added to g as it becomes
+ * the next round's h.
  *
- * Register use: 16 state vectors, the two a ^ b of each half, the
+ * Register use: 18 state vectors, the two a ^ b of each half, the
  * constants and the temporaries of one step of both halves stay within the
  * 32 vector registers. The 16-word schedule window of the two halves (32
  * vectors) is stack memory.
  *
  * Required CPU feature: Advanced SIMD, which every ARMv8-A processor the
  * library supports implements. No SHA-2, SHA-3 or other optional
- * instruction is used.
+ * instruction is used: BSL and BIT are base Advanced SIMD instructions.
  *
  * Security: h8 and the messages are secret. The rounds are straight-line
  * code; every address is fixed at compile time, or is a lane pointer, which
@@ -175,36 +178,49 @@ fn _sha256_x8_block(
 ) -> reg ptr u32[64], reg ptr u128[32], reg u64
 {
   reg ptr u32[64] k;
-  reg u128[16] v;
+  reg u128[18] v;
   reg u128[4] ab;
   reg u128[2] wt s c d;
   reg u128 kq kd y;
   inline int t x j;
 
-  /* v[8x + j]: word j of half x */
-  for j = 0 to 8 {
-    for x = 0 to 2 {
-      v[8 * x + j] = h8[:u128 2 * j + x];
-    }
-  }
-  k = SHA256_K;
-
   /*
-   * Rounds of section 6.2.2 step 3; variable i (a = 0 .. h = 7) of half x
-   * in round t is v[8x + (i - t) mod 8]. ab[2x + t mod 2] is a ^ b of
-   * half x in round t; before round 0, ab[2x + 1] is b ^ c.
+   * Rounds of section 6.2.2 step 3. Nine state slots per half rotate
+   * through the positions
+   *
+   *     a  b  c  d  e  f  g  n  h
+   *     0  1  2  3  4  5  6  7  8
+   *
+   * one position a round (a slot at position q in round t is at q + 1 in
+   * round t + 1, and h's slot comes back as a), so position q of half x in
+   * round t is v[9x + (q - t) mod 9]. The ninth position, n, receives
+   * g + K_t+1, which is the h of the next round with its constant already
+   * added. Once n is formed g is dead, and BIT computes Ch in g's register
+   * without a copy:
+   *
+   *     Ch(e, f, g)  = BIT(g, f, e)        bits of f where e is set
+   *     Maj(a, b, c) = BSL(b ^ c, a, b)    bits of a where b, c differ
+   *
+   * ab[2x + t mod 2] is a ^ b of half x in round t, and b ^ c is the a ^ b
+   * of the round before, ab[2x + (t + 1) mod 2] (before round 0,
+   * ab[2x + 1] is b ^ c). No later round reads b ^ c, so BSL overwrites
+   * it. h of round 0 gets K_0 here.
    */
   for x = 0 to 2 {
-    ab[2 * x + 1] = v[8 * x + 1] ^ v[8 * x + 2];
+    for j = 0 to 7 {
+      v[9 * x + j] = h8[:u128 2 * j + x];
+    }
+    v[9 * x + 8] = h8[:u128 14 + x];
+  }
+  k = SHA256_K;
+  kq = k[:u128 0];
+  kd = #VDUPE_4u32(kq, 0);
+  for x = 0 to 2 {
+    v[9 * x + 8] = v[9 * x + 8] +4u32 kd;
+    ab[2 * x + 1] = v[9 * x + 1] ^ v[9 * x + 2];
   }
 
   for t = 0 to 64 {
-    #[inline]
-    if (t % 4 == 0) {
-      kq = k[:u128 t / 4];
-    }
-    kd = #VDUPE_4u32(kq, t % 4);
-
     /* W_t = σ1(W_t-2) + W_t-7 + σ0(W_t-15) + W_t-16 (step 1) */
 
     #[inline]
@@ -245,65 +261,101 @@ fn _sha256_x8_block(
       }
     }
 
-    /* T1 = h + W_t + K_t + Σ1(e) + Ch(e, f, g), built in h's register */
+    /*
+     * T1 = h + K_t + W_t + Ch(e, f, g) + Σ1(e), built in h's register,
+     * which already holds h + K_t. Ch, one instruction from e, is added
+     * before Σ1, four deep, so that e' = d + T1 waits on Σ1 and one
+     * addition. The last round has no next h: g stays, it is the h of the
+     * feed-forward, and Ch takes AND, BIC, EOR.
+     */
 
     for x = 0 to 2 {
-      v[8 * x + (7 + 64 - t) % 8] = v[8 * x + (7 + 64 - t) % 8] +4u32 wt[x];
+      v[9 * x + (8 + 576 - t) % 9] = v[9 * x + (8 + 576 - t) % 9] +4u32 wt[x];
     }
-    for x = 0 to 2 {
-      v[8 * x + (7 + 64 - t) % 8] = v[8 * x + (7 + 64 - t) % 8] +4u32 kd;
+    #[inline]
+    if (t < 63) {
+      #[inline]
+      if ((t + 1) % 4 == 0) {
+        kq = k[:u128 (t + 1) / 4];
+      }
+      kd = #VDUPE_4u32(kq, (t + 1) % 4);
+      for x = 0 to 2 {
+        v[9 * x + (7 + 576 - t) % 9] = v[9 * x + (6 + 576 - t) % 9] +4u32 kd;
+      }
     }
-    s[0], s[1] = __Sigma1_x2(v[(4 + 64 - t) % 8], v[8 + (4 + 64 - t) % 8]);
-    for x = 0 to 2 {
-      c[x] = v[8 * x + (4 + 64 - t) % 8] & v[8 * x + (5 + 64 - t) % 8];
-    }
-    for x = 0 to 2 {
-      d[x] = v[8 * x + (6 + 64 - t) % 8] & !v[8 * x + (4 + 64 - t) % 8];
-    }
-    for x = 0 to 2 {
-      v[8 * x + (7 + 64 - t) % 8] = v[8 * x + (7 + 64 - t) % 8] +4u32 s[x];
-    }
-    for x = 0 to 2 {
-      c[x] ^= d[x];
-    }
-    for x = 0 to 2 {
-      v[8 * x + (7 + 64 - t) % 8] = v[8 * x + (7 + 64 - t) % 8] +4u32 c[x];
+    s[0], s[1] = __Sigma1_x2(v[(4 + 576 - t) % 9], v[9 + (4 + 576 - t) % 9]);
+    #[inline]
+    if (t < 63) {
+      for x = 0 to 2 {
+        v[9 * x + (6 + 576 - t) % 9] =
+          #VBIT(v[9 * x + (6 + 576 - t) % 9], v[9 * x + (5 + 576 - t) % 9], v[9 * x + (4 + 576 - t) % 9]);
+      }
+      for x = 0 to 2 {
+        v[9 * x + (8 + 576 - t) % 9] = v[9 * x + (8 + 576 - t) % 9] +4u32 v[9 * x + (6 + 576 - t) % 9];
+      }
+      for x = 0 to 2 {
+        v[9 * x + (8 + 576 - t) % 9] = v[9 * x + (8 + 576 - t) % 9] +4u32 s[x];
+      }
+    } else {
+      for x = 0 to 2 {
+        c[x] = v[9 * x + (4 + 576 - t) % 9] & v[9 * x + (5 + 576 - t) % 9];
+      }
+      for x = 0 to 2 {
+        d[x] = v[9 * x + (6 + 576 - t) % 9] & !v[9 * x + (4 + 576 - t) % 9];
+      }
+      for x = 0 to 2 {
+        c[x] ^= d[x];
+      }
+      for x = 0 to 2 {
+        v[9 * x + (8 + 576 - t) % 9] = v[9 * x + (8 + 576 - t) % 9] +4u32 c[x];
+      }
+      for x = 0 to 2 {
+        v[9 * x + (8 + 576 - t) % 9] = v[9 * x + (8 + 576 - t) % 9] +4u32 s[x];
+      }
     }
 
     /* e' = d + T1 */
 
     for x = 0 to 2 {
-      v[8 * x + (3 + 64 - t) % 8] = v[8 * x + (3 + 64 - t) % 8] +4u32 v[8 * x + (7 + 64 - t) % 8];
+      v[9 * x + (3 + 576 - t) % 9] = v[9 * x + (3 + 576 - t) % 9] +4u32 v[9 * x + (8 + 576 - t) % 9];
     }
 
-    /* a' = T1 + Σ0(a) + Maj(a, b, c), in h's register */
+    /*
+     * a' = T1 + (Σ0(a) + Maj(a, b, c)), in h's register; the inner sum
+     * does not wait for T1.
+     */
 
-    s[0], s[1] = __Sigma0_x2(v[(0 + 64 - t) % 8], v[8 + (0 + 64 - t) % 8]);
+    s[0], s[1] = __Sigma0_x2(v[(0 + 576 - t) % 9], v[9 + (0 + 576 - t) % 9]);
     for x = 0 to 2 {
-      ab[2 * x + t % 2] = v[8 * x + (0 + 64 - t) % 8] ^ v[8 * x + (1 + 64 - t) % 8];
+      ab[2 * x + t % 2] = v[9 * x + (0 + 576 - t) % 9] ^ v[9 * x + (1 + 576 - t) % 9];
     }
     for x = 0 to 2 {
-      c[x] = ab[2 * x + t % 2] & ab[2 * x + (t + 1) % 2];
+      ab[2 * x + (t + 1) % 2] =
+        #VBSL(ab[2 * x + (t + 1) % 2], v[9 * x + (0 + 576 - t) % 9], v[9 * x + (1 + 576 - t) % 9]);
     }
     for x = 0 to 2 {
-      v[8 * x + (7 + 64 - t) % 8] = v[8 * x + (7 + 64 - t) % 8] +4u32 s[x];
+      s[x] = s[x] +4u32 ab[2 * x + (t + 1) % 2];
     }
     for x = 0 to 2 {
-      c[x] ^= v[8 * x + (1 + 64 - t) % 8];
-    }
-    for x = 0 to 2 {
-      v[8 * x + (7 + 64 - t) % 8] = v[8 * x + (7 + 64 - t) % 8] +4u32 c[x];
+      v[9 * x + (8 + 576 - t) % 9] = v[9 * x + (8 + 576 - t) % 9] +4u32 s[x];
     }
   }
 
-  /* Step 4; after 64 rounds variable j of half x is back in v[8x + j] */
+  /*
+   * Step 4. After round 63, variable j < 7 of half x is at position j of
+   * round 64, v[9x + (j - 64) mod 9]; h is the g of round 63, which kept
+   * its slot, v[9x + (6 - 63) mod 9].
+   */
 
-  for j = 0 to 8 {
-    for x = 0 to 2 {
+  for x = 0 to 2 {
+    for j = 0 to 7 {
       y = h8[:u128 2 * j + x];
-      y = y +4u32 v[8 * x + j];
+      y = y +4u32 v[9 * x + (j + 576 - 64) % 9];
       h8[:u128 2 * j + x] = y;
     }
+    y = h8[:u128 14 + x];
+    y = y +4u32 v[9 * x + (6 + 576 - 63) % 9];
+    h8[:u128 14 + x] = y;
   }
 
   return h8, w, ms;
