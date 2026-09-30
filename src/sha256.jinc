@@ -12,7 +12,9 @@
  *
  *     __sha256_init         initial hash values of SHA-256 and SHA-224
  *     _sha256_absorb_mem    incremental input from memory
- *     _sha256_finalize      padding, last compressions, big-endian digest
+ *     _sha256_finalize      padding, last compressions, big-endian digest,
+ *                           one instance per digest length
+ *                           (sha256_DSIZE.jinc)
  *     _sha256_mem           one-shot SHA-256 and SHA-224 from memory
  *
  * Representation:
@@ -195,124 +197,18 @@ fn _sha256_absorb_mem(
 }
 
 /*
- * Padding and output (FIPS 180-4 sections 5.1.1 and 6.2.2).
- *
- * The padded tail is the pending bytes, 0x80, zeros, and the 64-bit
- * big-endian bit length 8 * total. When the pending bytes and 0x80 leave
- * fewer than 8 bytes in the block (fill > 56), the length goes into an
- * extra block of zeros.
- *
- * out receives H_0 .. H_7 big-endian, all 32 bytes; SHA-224 uses out[0:28]
- * and the last 4 bytes are the rest of the final chaining value. h and buf
- * keep final-state data afterwards and need re-initialisation before reuse.
- *
- * out may be transient on entry. It is not used as an address until it
- * has crossed the last compression through the stack and been protected,
- * so a caller that reloaded it need not protect it first.
+ * Padding and output, once per digest length (sha256_DSIZE.jinc). The
+ * namespace names the function whose digest it writes; its finalize is
+ * _sha256::_sha256_finalize or _sha224::_sha256_finalize.
  */
-/* Safety: h is initialised and buf holds total mod 64 pending bytes. */
-#[safety =
-   { requires = is_arr_init(h, 0, 32) && is_arr_init(buf, 0, (64u) total % 64)
-   , res = { out_out, h_out, buf_out, ms_out }
-   , ensures = is_arr_init(out_out, 0, 32) && is_arr_init(h_out, 0, 32)
-       && is_arr_init(buf_out, 0, 64)
-   }
- ]
-#[sct = "{ ptr: transient, val: secret } × { ptr: public, val: secret } ×
-         { ptr: public, val: secret } × public × msf →
-         { ptr: public, val: secret } × { ptr: public, val: secret } ×
-         { ptr: public, val: secret } × msf"]
-fn _sha256_finalize(
-  reg mut ptr u8[32] out,
-  reg mut ptr u32[8] h,
-  reg mut ptr u8[64] buf,
-  reg u64 total,
-  reg u64 ms
-) -> reg ptr u8[32], reg ptr u32[8], reg ptr u8[64], reg u64
-{
-  reg u64 fill hi t;
-  reg u32 x;
-  reg bool two_blocks;
-  inline int i;
-
-  fill = total;
-  fill &= 63;
-
-  t = 0x80;
-  buf[fill] = (8u)t;
-  fill += 1;
-
-  two_blocks = fill > 56;
-  if (two_blocks) {
-    ms = #update_msf(two_blocks, ms);
-    hi = 64;
-    buf, ms = __zero64(buf, fill, hi, ms);
-
-    () = #spill(out, buf, total);
-    h, ms = _sha256_compress(h, buf, ms);
-    () = #unspill(out, buf, total);
-    out = #protect_ptr(out, ms);
-    buf = #protect_ptr(buf, ms);
-    total = #protect(total, ms);
-    fill = 0;
-  } else {
-    ms = #update_msf(!two_blocks, ms);
-  }
-
-  hi = 56;
-  buf, ms = __zero64(buf, fill, hi, ms);
-
-  t = total;
-  t <<= 3;
-  t = __bswap64(t);
-  buf.[:u64 56] = t;
-
-  () = #spill(out, buf);
-  h, ms = _sha256_compress(h, buf, ms);
-  () = #unspill(out, buf);
-  out = #protect_ptr(out, ms);
-  buf = #protect_ptr(buf, ms);
-
-  for i = 0 to 8 {
-    x = h[i];
-    x = __bswap32(x);
-    out[:u32 i] = x;
-  }
-
-  return out, h, buf, ms;
+namespace _sha256 {
+  param int _DSIZE = 32;
+  from Hash require "sha256_DSIZE.jinc"
 }
 
-#[safety =
-   { requires = is_arr_init(h, 0, 32) && is_mem_init((64u) in, (64u) inlen)
-   , res = { out_out, ms_out }
-   , ensures = is_arr_init(out_out, 0, 32)
-   }
- ]
-inline fn __sha256_mem_from(
-  reg mut ptr u8[32] out,
-  reg mut ptr u32[8] h,
-  reg u64 in inlen,
-  reg u64 ms
-) -> reg ptr u8[32], reg u64
-{
-  stack u8[64] buf_s;
-  reg ptr u8[64] buf;
-  reg u64 total;
-
-  buf = buf_s;
-  total = 0;
-  /*
-   * out is live across the absorb call and crosses it through the stack.
-   * It comes back transient and goes to finalize as it is: finalize
-   * moves it through the stack again before its last compression and
-   * protects it there, before any use as an address.
-   */
-  () = #spill(out);
-  h, buf, total, ms = _sha256_absorb_mem(h, buf, total, in, inlen, ms);
-  () = #unspill(out);
-  out, h, buf, ms = _sha256_finalize(out, h, buf, total, ms);
-
-  return out, ms;
+namespace _sha224 {
+  param int _DSIZE = 28;
+  from Hash require "sha256_DSIZE.jinc"
 }
 
 #[safety =
@@ -328,7 +224,7 @@ fn _sha256_mem(reg mut ptr u8[32] out, reg u64 in inlen, reg u64 ms) -> reg ptr 
   stack u32[8] h;
 
   h = __sha256_init(h);
-  out, ms = __sha256_mem_from(out, h, in, inlen, ms);
+  out, ms = _sha256::__sha256_mem_from(out, h, in, inlen, ms);
 
   return out, ms;
 }
@@ -336,17 +232,17 @@ fn _sha256_mem(reg mut ptr u8[32] out, reg u64 in inlen, reg u64 ms) -> reg ptr 
 #[safety =
    { requires = is_mem_init((64u) in, (64u) inlen)
    , res = { out_out, ms_out }
-   , ensures = is_arr_init(out_out, 0, 32)
+   , ensures = is_arr_init(out_out, 0, 28)
    }
  ]
 #[sct = "{ ptr: public, val: secret } × public × public × msf →
          { ptr: public, val: secret } × msf"]
-fn _sha224_mem(reg mut ptr u8[32] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[32], reg u64
+fn _sha224_mem(reg mut ptr u8[28] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[28], reg u64
 {
   stack u32[8] h;
 
   h = __sha224_init(h);
-  out, ms = __sha256_mem_from(out, h, in, inlen, ms);
+  out, ms = _sha224::__sha256_mem_from(out, h, in, inlen, ms);
 
   return out, ms;
 }

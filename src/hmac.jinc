@@ -270,7 +270,7 @@ inline fn __hmac_sha256_outer(
   reg u32 x;
   inline int i;
 
-  digest, inner, buf, ms = _sha256_finalize(digest, inner, buf, total, ms);
+  digest, inner, buf, ms = _sha256::_sha256_finalize(digest, inner, buf, total, ms);
 
   for i = 0 to 8 {
     x = outer[i];
@@ -310,7 +310,7 @@ inline fn __hmac_sha256_finalize(
 ) -> stack u8[32], reg ptr u32[8], reg ptr u8[64], reg u64
 {
   inner, buf, total, ms = __hmac_sha256_outer(inner, buf, total, outer, ms);
-  out, inner, buf, ms = _sha256_finalize(out, inner, buf, total, ms);
+  out, inner, buf, ms = _sha256::_sha256_finalize(out, inner, buf, total, ms);
 
   return out, inner, buf, ms;
 }
@@ -351,7 +351,7 @@ inline fn __hmac_sha512_outer(
   reg u64 t;
   inline int i;
 
-  digest, inner, buf, ms = _sha512_finalize(digest, inner, buf, total, ms);
+  digest, inner, buf, ms = _sha512::_sha512_finalize(digest, inner, buf, total, ms);
 
   for i = 0 to 8 {
     t = outer[i];
@@ -384,7 +384,7 @@ inline fn __hmac_sha512_finalize(
 ) -> stack u8[64], reg ptr u64[8], reg ptr u8[128], reg u64
 {
   inner, buf, total, ms = __hmac_sha512_outer(inner, buf, total, outer, ms);
-  out, inner, buf, ms = _sha512_finalize(out, inner, buf, total, ms);
+  out, inner, buf, ms = _sha512::_sha512_finalize(out, inner, buf, total, ms);
 
   return out, inner, buf, ms;
 }

@@ -17,8 +17,9 @@
  *
  * The layout and the absorb and finalize logic are those of sha256.jinc
  * with 128-byte blocks; the differences are the 128-bit length field and
- * the big-endian u64 output words. The compression function comes from
- * the Sha512Kernel root (sha512_compress.jinc).
+ * the big-endian u64 output words. Padding and output are in
+ * sha512_DSIZE.jinc, one instance per digest length. The compression
+ * function comes from the Sha512Kernel root (sha512_compress.jinc).
  *
  * Security: message, chaining value and digest are secret. Every branch,
  * loop bound and address depends only on total, lengths, pointers and
@@ -227,130 +228,28 @@ fn _sha512_absorb_mem(
 }
 
 /*
- * Padding and output (FIPS 180-4 sections 5.1.2 and 6.4.2).
- *
- * The padded tail is the pending bytes, 0x80, zeros, and the 128-bit
- * big-endian bit length 8 * total, whose high half is total >> 61 and low
- * half total << 3. When the pending bytes and 0x80 leave fewer than 16
- * bytes in the block (fill > 112), the length goes into an extra block.
- *
- * out receives H_0 .. H_7 big-endian, all 64 bytes, for every variant.
- * Truncated variants use a prefix: SHA-384 48 bytes, SHA-512/256 32,
- * SHA-512/224 28; the remaining bytes of out are the rest of the final
- * chaining value and must not be published as part of the digest. h and
- * buf keep final-state data afterwards and need re-initialisation before
- * reuse.
- *
- * out may be transient on entry. It is not used as an address until it
- * has crossed the last compression through the stack and been protected,
- * so a caller that reloaded it need not protect it first.
+ * Padding and output, once per digest length (sha512_DSIZE.jinc). The
+ * namespace names the function whose digest it writes; its finalize is
+ * _sha512::_sha512_finalize, _sha384::_sha512_finalize and so on.
  */
-#[sct = "{ ptr: transient, val: secret } × { ptr: public, val: secret } ×
-         { ptr: public, val: secret } × public × msf →
-         { ptr: public, val: secret } × { ptr: public, val: secret } ×
-         { ptr: public, val: secret } × msf"]
-#[safety =
-   { requires = is_arr_init(h, 0, 64) && is_arr_init(buf, 0, (64u) total % 128)
-   , res = { out_out, h_out, buf_out, ms_out }
-   , ensures = is_arr_init(out_out, 0, 64) && is_arr_init(h_out, 0, 64)
-       && is_arr_init(buf_out, 0, 128)
-   }
- ]
-fn _sha512_finalize(
-  reg mut ptr u8[64] out,
-  reg mut ptr u64[8] h,
-  reg mut ptr u8[128] buf,
-  reg u64 total,
-  reg u64 ms
-) -> reg ptr u8[64], reg ptr u64[8], reg ptr u8[128], reg u64
-{
-  reg u64 fill hi t;
-  reg u64 x;
-  reg bool two_blocks;
-  inline int i;
-
-  fill = total;
-  fill &= 127;
-
-  t = 0x80;
-  buf[fill] = (8u)t;
-  fill += 1;
-
-  two_blocks = fill > 112;
-  if (two_blocks) {
-    ms = #update_msf(two_blocks, ms);
-    hi = 128;
-    buf, ms = __zero128(buf, fill, hi, ms);
-
-    () = #spill(out, buf, total);
-    h, ms = _sha512_compress(h, buf, ms);
-    () = #unspill(out, buf, total);
-    out = #protect_ptr(out, ms);
-    buf = #protect_ptr(buf, ms);
-    total = #protect(total, ms);
-    fill = 0;
-  } else {
-    ms = #update_msf(!two_blocks, ms);
-  }
-
-  hi = 112;
-  buf, ms = __zero128(buf, fill, hi, ms);
-
-  t = total;
-  t >>= 61;
-  t = __bswap64(t);
-  buf.[:u64 112] = t;
-  t = total;
-  t <<= 3;
-  t = __bswap64(t);
-  buf.[:u64 120] = t;
-
-  () = #spill(out, buf);
-  h, ms = _sha512_compress(h, buf, ms);
-  () = #unspill(out, buf);
-  out = #protect_ptr(out, ms);
-  buf = #protect_ptr(buf, ms);
-
-  for i = 0 to 8 {
-    x = h[i];
-    x = __bswap64(x);
-    out[:u64 i] = x;
-  }
-
-  return out, h, buf, ms;
+namespace _sha512 {
+  param int _DSIZE = 64;
+  from Hash require "sha512_DSIZE.jinc"
 }
 
-#[safety =
-   { requires = is_arr_init(h, 0, 64) && is_mem_init((64u) in, (64u) inlen)
-   , res = { out_out, ms_out }
-   , ensures = is_arr_init(out_out, 0, 64)
-   }
- ]
-inline fn __sha512_mem_from(
-  reg mut ptr u8[64] out,
-  reg mut ptr u64[8] h,
-  reg u64 in inlen,
-  reg u64 ms
-) -> reg ptr u8[64], reg u64
-{
-  stack u8[128] buf_s;
-  reg ptr u8[128] buf;
-  reg u64 total;
+namespace _sha384 {
+  param int _DSIZE = 48;
+  from Hash require "sha512_DSIZE.jinc"
+}
 
-  buf = buf_s;
-  total = 0;
-  /*
-   * out is live across the absorb call and crosses it through the stack.
-   * It comes back transient and goes to finalize as it is: finalize
-   * moves it through the stack again before its last compression and
-   * protects it there, before any use as an address.
-   */
-  () = #spill(out);
-  h, buf, total, ms = _sha512_absorb_mem(h, buf, total, in, inlen, ms);
-  () = #unspill(out);
-  out, h, buf, ms = _sha512_finalize(out, h, buf, total, ms);
+namespace _sha512_224 {
+  param int _DSIZE = 28;
+  from Hash require "sha512_DSIZE.jinc"
+}
 
-  return out, ms;
+namespace _sha512_256 {
+  param int _DSIZE = 32;
+  from Hash require "sha512_DSIZE.jinc"
 }
 
 #[sct = "{ ptr: public, val: secret } × public × public × msf →
@@ -366,7 +265,7 @@ fn _sha512_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg ptr 
   stack u64[8] h;
 
   h = __sha512_init(h);
-  out, ms = __sha512_mem_from(out, h, in, inlen, ms);
+  out, ms = _sha512::__sha512_mem_from(out, h, in, inlen, ms);
 
   return out, ms;
 }
@@ -376,15 +275,15 @@ fn _sha512_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg ptr 
 #[safety =
    { requires = is_mem_init((64u) in, (64u) inlen)
    , res = { out_out, ms_out }
-   , ensures = is_arr_init(out_out, 0, 64)
+   , ensures = is_arr_init(out_out, 0, 48)
    }
  ]
-fn _sha384_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[64], reg u64
+fn _sha384_mem(reg mut ptr u8[48] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[48], reg u64
 {
   stack u64[8] h;
 
   h = __sha384_init(h);
-  out, ms = __sha512_mem_from(out, h, in, inlen, ms);
+  out, ms = _sha384::__sha512_mem_from(out, h, in, inlen, ms);
 
   return out, ms;
 }
@@ -394,15 +293,15 @@ fn _sha384_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg ptr 
 #[safety =
    { requires = is_mem_init((64u) in, (64u) inlen)
    , res = { out_out, ms_out }
-   , ensures = is_arr_init(out_out, 0, 64)
+   , ensures = is_arr_init(out_out, 0, 28)
    }
  ]
-fn _sha512_224_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[64], reg u64
+fn _sha512_224_mem(reg mut ptr u8[28] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[28], reg u64
 {
   stack u64[8] h;
 
   h = __sha512_224_init(h);
-  out, ms = __sha512_mem_from(out, h, in, inlen, ms);
+  out, ms = _sha512_224::__sha512_mem_from(out, h, in, inlen, ms);
 
   return out, ms;
 }
@@ -412,15 +311,15 @@ fn _sha512_224_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg 
 #[safety =
    { requires = is_mem_init((64u) in, (64u) inlen)
    , res = { out_out, ms_out }
-   , ensures = is_arr_init(out_out, 0, 64)
+   , ensures = is_arr_init(out_out, 0, 32)
    }
  ]
-fn _sha512_256_mem(reg mut ptr u8[64] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[64], reg u64
+fn _sha512_256_mem(reg mut ptr u8[32] out, reg u64 in inlen, reg u64 ms) -> reg ptr u8[32], reg u64
 {
   stack u64[8] h;
 
   h = __sha512_256_init(h);
-  out, ms = __sha512_mem_from(out, h, in, inlen, ms);
+  out, ms = _sha512_256::__sha512_mem_from(out, h, in, inlen, ms);
 
   return out, ms;
 }
