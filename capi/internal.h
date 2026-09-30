@@ -154,9 +154,10 @@ const nirapod_sha2_unit *nirapod_sha2_select_for(nirapod_sha2_family f, unsigned
 const nirapod_sha2_unit *nirapod_sha2_select(nirapod_sha2_family f);
 
 /*
- * Data-independent timing around each Jasmin call. enter returns a token
- * holding the previous mode; leave restores it. On targets without such a
- * mode both do nothing. timing.c.
+ * Data-independent timing around each Jasmin call that reads a secret
+ * (all but the plain init, api.c). enter returns a token saying what it
+ * changed; leave undoes exactly that. On targets without such a mode both
+ * do nothing. timing.c.
  */
 uint64_t nirapod_sha2_timing_enter(void);
 void nirapod_sha2_timing_leave(uint64_t token);
@@ -172,9 +173,10 @@ void nirapod_sha2_clear_registers(unsigned used_features);
 /*
  * The operations of api.c on an explicit unit and family. They check the
  * arguments as nirapod_sha2.h says, in its order, then run the export
- * with the timing mode set and clear the registers after it. The public
- * functions pass nirapod_sha2_select(f); capi/testing passes the unit it
- * was asked for. u must be non-NULL. api.c.
+ * with the timing mode set (except run_init, which reads no secret) and
+ * clear the registers after it. The public functions pass
+ * nirapod_sha2_select(f); capi/testing passes the unit it was asked for.
+ * u must be non-NULL. api.c.
  *
  *     out_len, ctx_len  the digest and context sizes of the function
  *     limit             the largest message length plus one: 2^61, or

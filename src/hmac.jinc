@@ -17,6 +17,7 @@
  *     _hmac_sha<x>_keyblock_mem   K -> K0                       steps 1-3
  *     __hmac_sha<x>_init          K0 -> inner, outer states     steps 4-5, 7-8
  *     (caller absorbs text into inner with total = block size)  step 6
+ *     __hmac_sha<x>_outer         inner digest, outer block     step 9
  *     __hmac_sha<x>_finalize      tag                           step 9
  *
  * inner and outer are chaining values after one compression each; they
@@ -231,32 +232,38 @@ inline fn __hmac_sha512_init(
 }
 
 /*
- * Step 9: tag = H((K0 ^ opad) || inner_digest).
+ * Step 9, up to the outer hash's last block.
  *
  * The inner digest is finished first, then the outer hash continues from a
  * copy of outer in the inner state's storage, so outer itself is only read.
- * The outer message is one block of key plus the digest: total starts at
- * the block size and grows by the digest length.
+ * The outer message is one block of key plus the digest: on return buf
+ * holds the digest as its pending bytes and total is 64 + 32, so that
+ * _sha256_finalize of inner, buf and total gives the tag.
  *
- * out and outer are the caller's stack arrays, passed by name, for the
- * reason given at __hmac_sha256_init: both stay live across the inner
- * digest's finalize call.
+ * outer is the caller's stack array, passed by name, for the reason given
+ * at __hmac_sha256_init: it stays live across the inner digest's finalize
+ * call. The speculative signature is written out because the flag must
+ * stay exact through the copies after that call; an inferred signature
+ * would drop it there, as nothing in this function uses it again.
  */
 #[safety =
    { requires = is_arr_init(inner, 0, 32) && is_arr_init(buf, 0, (64u) total % 64)
        && is_arr_init(outer, 0, 32)
-   , res = { out_out, inner_out, buf_out, ms_out }
-   , ensures = is_arr_init(out_out, 0, 32)
+   , res = { inner_out, buf_out, total_out, ms_out }
+   , ensures = is_arr_init(inner_out, 0, 32) && is_arr_init(buf_out, 0, 32)
+       && total_out == 96
    }
  ]
-inline fn __hmac_sha256_finalize(
-  stack u8[32] out,
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public ×
+         secret × msf →
+         { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+inline fn __hmac_sha256_outer(
   reg mut ptr u32[8] inner,
   reg mut ptr u8[64] buf,
   reg u64 total,
   stack u32[8] outer,
   reg u64 ms
-) -> stack u8[32], reg ptr u32[8], reg ptr u8[64], reg u64
+) -> reg ptr u32[8], reg ptr u8[64], reg u64, reg u64
 {
   stack u8[32] digest;
   reg u64 t;
@@ -274,9 +281,89 @@ inline fn __hmac_sha256_finalize(
     buf[:u64 i] = t;
   }
   total = 64 + 32;
+
+  return inner, buf, total, ms;
+}
+
+/*
+ * Step 9: tag = H((K0 ^ opad) || inner_digest), into out.
+ *
+ * out and outer are the caller's stack arrays, passed by name, for the
+ * reason given at __hmac_sha256_init: both stay live across the inner
+ * digest's finalize call. A caller whose output is in memory can instead
+ * run __hmac_sha256_outer and give its own pointer to _sha256_finalize.
+ */
+#[safety =
+   { requires = is_arr_init(inner, 0, 32) && is_arr_init(buf, 0, (64u) total % 64)
+       && is_arr_init(outer, 0, 32)
+   , res = { out_out, inner_out, buf_out, ms_out }
+   , ensures = is_arr_init(out_out, 0, 32)
+   }
+ ]
+inline fn __hmac_sha256_finalize(
+  stack u8[32] out,
+  reg mut ptr u32[8] inner,
+  reg mut ptr u8[64] buf,
+  reg u64 total,
+  stack u32[8] outer,
+  reg u64 ms
+) -> stack u8[32], reg ptr u32[8], reg ptr u8[64], reg u64
+{
+  inner, buf, total, ms = __hmac_sha256_outer(inner, buf, total, outer, ms);
   out, inner, buf, ms = _sha256_finalize(out, inner, buf, total, ms);
 
   return out, inner, buf, ms;
+}
+
+/*
+ * Step 9, up to the outer hash's last block.
+ *
+ * The inner digest is finished first, then the outer hash continues from a
+ * copy of outer in the inner state's storage, so outer itself is only read.
+ * The outer message is one block of key plus the digest: on return buf
+ * holds the digest as its pending bytes and total is 128 + 64, so that
+ * _sha512_finalize of inner, buf and total gives the tag.
+ *
+ * outer is the caller's stack array, passed by name, for the reason given
+ * at __hmac_sha512_init: it stays live across the inner digest's finalize
+ * call.
+ */
+#[safety =
+   { requires = is_arr_init(inner, 0, 64) && is_arr_init(buf, 0, (64u) total % 128)
+       && is_arr_init(outer, 0, 64)
+   , res = { inner_out, buf_out, total_out, ms_out }
+   , ensures = is_arr_init(inner_out, 0, 64) && is_arr_init(buf_out, 0, 64)
+       && total_out == 192
+   }
+ ]
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public ×
+         secret × msf →
+         { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+inline fn __hmac_sha512_outer(
+  reg mut ptr u64[8] inner,
+  reg mut ptr u8[128] buf,
+  reg u64 total,
+  stack u64[8] outer,
+  reg u64 ms
+) -> reg ptr u64[8], reg ptr u8[128], reg u64, reg u64
+{
+  stack u8[64] digest;
+  reg u64 t;
+  inline int i;
+
+  digest, inner, buf, ms = _sha512_finalize(digest, inner, buf, total, ms);
+
+  for i = 0 to 8 {
+    t = outer[i];
+    inner[i] = t;
+  }
+  for i = 0 to 8 {
+    t = digest[:u64 i];
+    buf[:u64 i] = t;
+  }
+  total = 128 + 64;
+
+  return inner, buf, total, ms;
 }
 
 /* The SHA-512 form of __hmac_sha256_finalize. */
@@ -296,21 +383,7 @@ inline fn __hmac_sha512_finalize(
   reg u64 ms
 ) -> stack u8[64], reg ptr u64[8], reg ptr u8[128], reg u64
 {
-  stack u8[64] digest;
-  reg u64 t;
-  inline int i;
-
-  digest, inner, buf, ms = _sha512_finalize(digest, inner, buf, total, ms);
-
-  for i = 0 to 8 {
-    t = outer[i];
-    inner[i] = t;
-  }
-  for i = 0 to 8 {
-    t = digest[:u64 i];
-    buf[:u64 i] = t;
-  }
-  total = 128 + 64;
+  inner, buf, total, ms = __hmac_sha512_outer(inner, buf, total, outer, ms);
   out, inner, buf, ms = _sha512_finalize(out, inner, buf, total, ms);
 
   return out, inner, buf, ms;

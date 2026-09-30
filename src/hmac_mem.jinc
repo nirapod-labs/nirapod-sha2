@@ -12,7 +12,8 @@
  *     K0             _hmac_sha<x>_keyblock_mem      steps 1-3
  *     inner, outer   __hmac_sha<x>_init             steps 4-5, 7-8
  *     text           _sha<x>_absorb_mem on inner    step 6, total = B
- *     tag            __hmac_sha<x>_finalize         step 9
+ *     tag            __hmac_sha<x>_outer, then      step 9
+ *                    _sha<x>_finalize into out
  *
  * B is the block size, 64 or 128 bytes. The key may have any length below
  * 2^61; a key longer than B is hashed first (step 2). The message must
@@ -49,9 +50,7 @@ fn _hmac_sha256_mem(
 {
   stack u8[64] k0 buf;
   stack u32[8] inner outer;
-  stack u8[32] mac;
-  reg u64 total t;
-  inline int i;
+  reg u64 total;
 
   () = #spill(out, msg, msglen);
   k0, ms = _hmac_sha256_keyblock_mem(k0, key, keylen, ms);
@@ -62,14 +61,15 @@ fn _hmac_sha256_mem(
 
   total = 64;
   inner, buf, total, ms = _sha256_absorb_mem(inner, buf, total, msg, msglen, ms);
-  mac, inner, buf, ms = __hmac_sha256_finalize(mac, inner, buf, total, outer, ms);
+  inner, buf, total, ms = __hmac_sha256_outer(inner, buf, total, outer, ms);
 
+  /*
+   * out has crossed every call so far through the stack and comes back
+   * transient. _sha256_finalize accepts it so, and protects it after its
+   * own last compression, so the tag is written to out directly.
+   */
   () = #unspill(out);
-  out = #protect_ptr(out, ms);
-  for i = 0 to 4 {
-    t = mac[:u64 i];
-    out[:u64 i] = t;
-  }
+  out, inner, buf, ms = _sha256_finalize(out, inner, buf, total, ms);
 
   return out, ms;
 }
@@ -91,9 +91,7 @@ fn _hmac_sha512_mem(
 {
   stack u8[128] k0 buf;
   stack u64[8] inner outer;
-  stack u8[64] mac;
-  reg u64 total t;
-  inline int i;
+  reg u64 total;
 
   () = #spill(out, msg, msglen);
   k0, ms = _hmac_sha512_keyblock_mem(k0, key, keylen, ms);
@@ -104,14 +102,10 @@ fn _hmac_sha512_mem(
 
   total = 128;
   inner, buf, total, ms = _sha512_absorb_mem(inner, buf, total, msg, msglen, ms);
-  mac, inner, buf, ms = __hmac_sha512_finalize(mac, inner, buf, total, outer, ms);
+  inner, buf, total, ms = __hmac_sha512_outer(inner, buf, total, outer, ms);
 
   () = #unspill(out);
-  out = #protect_ptr(out, ms);
-  for i = 0 to 8 {
-    t = mac[:u64 i];
-    out[:u64 i] = t;
-  }
+  out, inner, buf, ms = _sha512_finalize(out, inner, buf, total, ms);
 
   return out, ms;
 }
