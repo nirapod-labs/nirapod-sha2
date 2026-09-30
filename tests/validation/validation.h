@@ -137,6 +137,7 @@ void count_skip(validation_suite *s, int kernel);
 void fail_case(validation_suite *s, int kernel, const char *fmt, ...)
     __attribute__((format(printf, 3, 4)));
 const char *kernel_label(int kernel);
+const char *kernel_base_label(int kernel);
 int kernel_built(int kernel);
 int validation_usable(validation_suite *s, int kernel, nirapod_sha2_testing_family family);
 

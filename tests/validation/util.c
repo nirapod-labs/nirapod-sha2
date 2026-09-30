@@ -190,6 +190,13 @@ int suite_end(validation_suite *s)
         if (c->pass == 0 && c->fail == 0 && c->skip == 0) {
             continue;
         }
+        /* A kernel that ran no check has no result: say why, without a
+         * PASS column that would read as one. */
+        if (c->pass == 0 && c->fail == 0) {
+            printf("  %-22s SKIP (%s)\n", kernel_base_label(k),
+                   kernel_built(k) ? "this CPU cannot run it" : "not built");
+            continue;
+        }
         printf("  %-22s %s PASS %lu FAIL %lu SKIP %lu\n", kernel_label(k),
                c->fail == 0 ? "PASS" : "FAIL", c->pass, c->fail, c->skip);
     }
@@ -216,11 +223,26 @@ void fail_case(validation_suite *s, int kernel, const char *fmt, ...)
     fputc('\n', stderr);
 }
 
+static const char *const kernel_names[VALIDATION_KERNELS] = {
+    "portable", "aarch64-scalar", "aarch64-sha2", "x86_64-shani", "x86_64-avx2"
+};
+
+const char *kernel_base_label(int kernel)
+{
+    const char *name;
+
+    if (kernel == VALIDATION_PUBLIC) {
+        return "public API";
+    }
+    if (kernel < 0 || kernel >= VALIDATION_KERNELS) {
+        return "kernel-?";
+    }
+    name = nirapod_sha2_testing_kernel_name((nirapod_sha2_testing_kernel)kernel);
+    return name != NULL ? name : kernel_names[kernel];
+}
+
 const char *kernel_label(int kernel)
 {
-    static const char *const names[VALIDATION_KERNELS] = {
-        "portable", "aarch64-scalar", "aarch64-sha2", "x86_64-shani", "x86_64-avx2"
-    };
     static char not_built[VALIDATION_KERNELS][48];
     const char *name;
 
@@ -234,7 +256,8 @@ const char *kernel_label(int kernel)
     if (name != NULL) {
         return name;
     }
-    snprintf(not_built[kernel], sizeof not_built[kernel], "%s (not built)", names[kernel]);
+    snprintf(not_built[kernel], sizeof not_built[kernel], "%s (not built)",
+             kernel_names[kernel]);
     return not_built[kernel];
 }
 
