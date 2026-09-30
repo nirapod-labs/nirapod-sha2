@@ -183,7 +183,7 @@ $(BUILD)/asm/%.s: $(UNIT_FILES) $(JASMIN_DEPS)
 	$(JASMINC) $(call unit_flags,$(notdir $*),$(patsubst %/,%,$(dir $*))) \
 	  $(call unit_roots,$(notdir $*)) -o $@ $(BUILD)/units/$(notdir $*).jazz
 
-.PHONY: all asm asm-all asm-policy ct check clean array-test print-units dit-check
+.PHONY: all asm asm-all asm-policy ct check clean array-test print-units dit-check residue-check
 
 # Generated units and assembly are kept, not removed as intermediates.
 .SECONDARY:
@@ -324,6 +324,21 @@ check: $(LIB) $(EXPORTS_CONTROL) $(SMOKE) $(SMOKE_PUBLIC) $(DIT_TEST) asm-policy
 # The DIT test alone, for the tests job (tests/timing/run.sh).
 dit-check: $(DIT_TEST)
 	$(DIT_TEST)
+
+# Stack and register residue (tests/residue/residue.c): after every public
+# operation, through the public functions and with each kernel built here,
+# no secret is left on the stack or in a register the call may change, and
+# the stack below the C frames is cleared. regs.S makes the calls and
+# records the registers. Linked with the testing library to force kernels.
+RESIDUE_TEST := $(OUT)/tests/residue
+
+$(RESIDUE_TEST): $(TESTS)/residue/residue.c $(TESTS)/residue/regs.S $(TESTING_LIB)
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(CWARN) $(CFLAGS) -o $@ $(TESTS)/residue/residue.c \
+	  $(TESTS)/residue/regs.S $(TESTING_LIB)
+
+residue-check: $(RESIDUE_TEST)
+	$(RESIDUE_TEST)
 
 # The AArch64 units must leave x18 alone: macOS reserves it, and clear.c
 # does not clear it. A use of x18 or w18 anywhere in their assembly fails.
