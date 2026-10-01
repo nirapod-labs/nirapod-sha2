@@ -177,3 +177,135 @@ rewrite !W64.uleE /= e1 e2 e3 e4 -hs.
 split; 1: by do !split; try (move=> i h1 h2; apply hv); smt(W64.to_uint_cmp).
 by move=> _ _ _ _ _ _ r h _.
 qed.
+
+(* ------------------------------------------------------------------ *)
+(* Padding and output                                                 *)
+
+(* src/sha256_DSIZE.jinc is compiled twice, for 28 and 32 output bytes.
+   The two safety proofs differ only in the output loop bound and the
+   output mask theory, so the short script is repeated per instance. *)
+
+lemma _sha256___sha256_finalize_proof _out _h _buf _total _ms _out_init _h_init _buf_init :
+  _sha256___sha256_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init.
+proof.
+rewrite /_sha256___sha256_finalize_spec; proc; sp.
+seq 1 : (valid trace__sha256___sha256_finalize /\ total_init /\ fill_init /\ ms_init
+         /\ BArray32.is_init h_init 0 32 /\ to_uint fill <= 56
+         /\ BArray64.is_init buf_init 0 (to_uint fill)).
++ if.
+  + wp; ecall (_sha256_compress_proof h buf ms h_init buf_init); wp.
+    ecall (__zero64_proof buf fill hi ms buf_init); auto => /> &m hh hb _.
+    have hf := and63 total{m}.
+    have e : to_uint (total{m} `&` W64.of_int 63 + W64.one) = to_uint total{m} %% 64 + 1.
+    + by rewrite addone_small hf //; smt(modz_cmp).
+    move: hb; rewrite umodc // => hb.
+    have hs := mask64_set8 _buf_init (to_uint total{m} %% 64) hb _; 1: smt(modz_cmp).
+    rewrite W64.uleE e hf /=; split; 1: by split; [smt(modz_cmp) | exact hs].
+    by move=> _ _ r _ _ r0 _ _; split; [smt(modz_cmp) | exact (full64_init 0 0)].
+  auto => /> &m hh hb.
+  have hf := and63 total{m}.
+  have e : to_uint (total{m} `&` W64.of_int 63 + W64.one) = to_uint total{m} %% 64 + 1.
+  + by rewrite addone_small hf //; smt(modz_cmp).
+  move: hb; rewrite umodc // => hb.
+  have hs := mask64_set8 _buf_init (to_uint total{m} %% 64) hb _; 1: smt(modz_cmp).
+  rewrite W64.ultE e hf /= => h56.
+  by do !split => //; smt(modz_cmp).
+wp; while (valid trace__sha256___sha256_finalize /\ i_init /\ ms_init /\ 0 <= i <= 8
+           /\ inc = 8 /\ h_init = full32 /\ buf_init = full64
+           /\ BArray32.is_init out_init 0 (4 * i)).
++ wp; ecall (__bswap32_proof x); auto => /> &m _ _ _ hi0 hi8 ho hlt.
+  have hm := mask32_set32 out_init{m} i{m} ho _ _; 1,2: smt().
+  by rewrite full32_init hm /=; smt().
+wp; ecall (_sha256_compress_proof h buf ms h_init buf_init); wp.
+ecall (__bswap64_proof t); wp.
+ecall (__zero64_proof buf fill hi ms buf_init); auto => /> &m _ _ _ _ hh hf hb.
+rewrite W64.uleE /= hf /= => r hr _ _ _.
+have hp := mask64_put64 r.`3 56 hr _ _ => //=; rewrite hp /= => r1 h1 _.
+split; 1: by split; [exact full32E | exact (full32_init 0 0)].
+move=> i0 o0 _ hi _ hi0 hi8 _ ho; split; 2: exact (full64_init 0 64).
+by have <- : 4 * i0 = 32 by smt().
+qed.
+
+lemma _sha224___sha256_finalize_proof _out _h _buf _total _ms _out_init _h_init _buf_init :
+  _sha224___sha256_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init.
+proof.
+rewrite /_sha224___sha256_finalize_spec; proc; sp.
+seq 1 : (valid trace__sha224___sha256_finalize /\ total_init /\ fill_init /\ ms_init
+         /\ BArray32.is_init h_init 0 32 /\ to_uint fill <= 56
+         /\ BArray64.is_init buf_init 0 (to_uint fill)).
++ if.
+  + wp; ecall (_sha256_compress_proof h buf ms h_init buf_init); wp.
+    ecall (__zero64_proof buf fill hi ms buf_init); auto => /> &m hh hb _.
+    have hf := and63 total{m}.
+    have e : to_uint (total{m} `&` W64.of_int 63 + W64.one) = to_uint total{m} %% 64 + 1.
+    + by rewrite addone_small hf //; smt(modz_cmp).
+    move: hb; rewrite umodc // => hb.
+    have hs := mask64_set8 _buf_init (to_uint total{m} %% 64) hb _; 1: smt(modz_cmp).
+    rewrite W64.uleE e hf /=; split; 1: by split; [smt(modz_cmp) | exact hs].
+    by move=> _ _ r _ _ r0 _ _; split; [smt(modz_cmp) | exact (full64_init 0 0)].
+  auto => /> &m hh hb.
+  have hf := and63 total{m}.
+  have e : to_uint (total{m} `&` W64.of_int 63 + W64.one) = to_uint total{m} %% 64 + 1.
+  + by rewrite addone_small hf //; smt(modz_cmp).
+  move: hb; rewrite umodc // => hb.
+  have hs := mask64_set8 _buf_init (to_uint total{m} %% 64) hb _; 1: smt(modz_cmp).
+  rewrite W64.ultE e hf /= => h56.
+  by do !split => //; smt(modz_cmp).
+wp; while (valid trace__sha224___sha256_finalize /\ i_init /\ ms_init /\ 0 <= i <= 7
+           /\ inc = 7 /\ h_init = full32 /\ buf_init = full64
+           /\ BArray28.is_init out_init 0 (4 * i)).
++ wp; ecall (__bswap32_proof x); auto => /> &m _ _ _ hi0 hi8 ho hlt.
+  have hm := mask28_set32 out_init{m} i{m} ho _ _; 1,2: smt().
+  by rewrite full32_init hm /=; smt().
+wp; ecall (_sha256_compress_proof h buf ms h_init buf_init); wp.
+ecall (__bswap64_proof t); wp.
+ecall (__zero64_proof buf fill hi ms buf_init); auto => /> &m _ _ _ _ hh hf hb.
+rewrite W64.uleE /= hf /= => r hr _ _ _.
+have hp := mask64_put64 r.`3 56 hr _ _ => //=; rewrite hp /= => r1 h1 _.
+split; 1: by split; [exact full32E | exact (full28_init 0 0)].
+move=> i0 o0 _ hi _ hi0 hi8 _ ho; split; 2: exact (full64_init 0 64).
+by have <- : 4 * i0 = 28 by smt().
+qed.
+
+(* ------------------------------------------------------------------ *)
+(* One-shot hashing                                                   *)
+
+lemma _sha256____sha256_mem_from_proof _out _h _in _inlen _ms _out_init _h_init :
+  _sha256____sha256_mem_from_spec _out _h _in _inlen _ms _out_init _h_init.
+proof.
+rewrite /_sha256____sha256_mem_from_spec; proc.
+wp; ecall (_sha256___sha256_finalize_proof out h buf total ms out_init h_init buf_init).
+wp; ecall (_sha256_absorb_mem_proof h buf total in_0 inlen ms h_init buf_init).
+auto => />.
+move=> &m _ _ _ _ j h1 h2.
+by have := umodc W64.zero 64 _; rewrite // W64.to_uint0 /=; smt().
+qed.
+
+lemma _sha224____sha256_mem_from_proof _out _h _in _inlen _ms _out_init _h_init :
+  _sha224____sha256_mem_from_spec _out _h _in _inlen _ms _out_init _h_init.
+proof.
+rewrite /_sha224____sha256_mem_from_spec; proc.
+wp; ecall (_sha224___sha256_finalize_proof out h buf total ms out_init h_init buf_init).
+wp; ecall (_sha256_absorb_mem_proof h buf total in_0 inlen ms h_init buf_init).
+auto => />.
+move=> &m _ _ _ _ j h1 h2.
+by have := umodc W64.zero 64 _; rewrite // W64.to_uint0 /=; smt().
+qed.
+
+lemma _sha256_mem_proof _out _in _inlen _ms _out_init :
+  _sha256_mem_spec _out _in _inlen _ms _out_init.
+proof.
+rewrite /_sha256_mem_spec; proc.
+wp; ecall (_sha256____sha256_mem_from_proof out h in_0 inlen ms out_init h_init).
+wp; ecall (__sha256_init_proof h h_init).
+by auto => />.
+qed.
+
+lemma _sha224_mem_proof _out _in _inlen _ms _out_init :
+  _sha224_mem_spec _out _in _inlen _ms _out_init.
+proof.
+rewrite /_sha224_mem_spec; proc.
+wp; ecall (_sha224____sha256_mem_from_proof out h in_0 inlen ms out_init h_init).
+wp; ecall (__sha224_init_proof h h_init).
+by auto => />.
+qed.
