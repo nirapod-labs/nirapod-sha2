@@ -106,3 +106,33 @@ qed.
 
 lemma min_le (h x : W64.t) : to_uint (if h \ult x then h else x) <= to_uint h.
 proof. by case: (h \ult x); rewrite ?W64.ultE /#. qed.
+
+(* The byte length of n blocks of b bytes, for n below the contract bound. *)
+lemma mulc_small (n : W64.t) b : 0 <= b < 18446744073709551616 =>
+  b * to_uint n < 18446744073709551616 =>
+  to_uint (W64.of_int b * n) = b * to_uint n.
+proof.
+move=> hb hbn; have hbm : b %% W64.modulus = b by rewrite pmod_small // w64_modulus.
+by rewrite W64.to_uintM_small; rewrite W64.of_uintK hbm ?w64_modulus.
+qed.
+
+lemma ult_const (n : W64.t) c : 0 <= c < 18446744073709551616 =>
+  n \ult W64.of_int c => to_uint n < c.
+proof.
+move=> hc; have hcm : c %% W64.modulus = c by rewrite pmod_small // w64_modulus.
+by rewrite W64.ultE W64.of_uintK hcm.
+qed.
+
+lemma subone (n : W64.t) : n <> W64.zero => to_uint (n - W64.one) = to_uint n - 1.
+proof.
+move=> hn; have h1 : 1 <= to_uint n.
++ have : to_uint n <> 0 by move: hn; apply contra => h; apply W64.to_uint_eq; rewrite h.
+  smt(W64.to_uint_cmp).
+by rewrite W64.to_uintB ?W64.uleE to_uint_one.
+qed.
+
+lemma nonzero (n : W64.t) : n <> W64.zero => 1 <= to_uint n.
+proof.
+move=> hn; have : to_uint n <> 0 by move: hn; apply contra => h; apply W64.to_uint_eq; rewrite h.
+smt(W64.to_uint_cmp).
+qed.

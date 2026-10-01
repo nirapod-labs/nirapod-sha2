@@ -34,7 +34,7 @@ lemma mask128_set8 (m : BArray128.t) d :
   BArray128.is_init (BArray128.set8 m d (W8.of_int 255)) 0 (d + 1).
 proof. by move=> hm hd; apply BArray128.is_init_set_last. qed.
 
-lemma mask64_set64 (m : BArray64.t) d :
+lemma mask64_put64 (m : BArray64.t) d :
   BArray64.is_init m 0 d => 0 <= d => d + 8 <= 64 =>
   BArray64.is_init (BArray64.set64d m d (W64.of_int 18446744073709551615)) 0 (d + 8).
 proof.
@@ -42,19 +42,13 @@ move=> hm hd hd8 j hj0 hj; rewrite BArray64.is_init_cell_set64d.
 by case: (j < d) => hjd; [right; apply hm | left] => /#.
 qed.
 
-lemma mask128_set64 (m : BArray128.t) d :
+lemma mask128_put64 (m : BArray128.t) d :
   BArray128.is_init m 0 d => 0 <= d => d + 8 <= 128 =>
   BArray128.is_init (BArray128.set64d m d (W64.of_int 18446744073709551615)) 0 (d + 8).
 proof.
 move=> hm hd hd8 j hj0 hj; rewrite BArray128.is_init_cell_set64d.
 by case: (j < d) => hjd; [right; apply hm | left] => /#.
 qed.
-
-lemma mask64_mono (m : BArray64.t) a b : BArray64.is_init m 0 b => a <= b => BArray64.is_init m 0 a.
-proof. by move=> hm hab j hj0 hj; apply hm => /#. qed.
-
-lemma mask128_mono (m : BArray128.t) a b : BArray128.is_init m 0 b => a <= b => BArray128.is_init m 0 a.
-proof. by move=> hm hab j hj0 hj; apply hm => /#. qed.
 
 (* ------------------------------------------------------------------ *)
 (* Byte reversal                                                      *)
@@ -104,7 +98,7 @@ wp; while (valid trace___fill64_mem /\ p_init /\ dst_init /\ n_init /\ more_init
   + by rewrite addc_small //; smt(W64.to_uint_cmp).
   rewrite hd8 hp8 subc_small 1:/#.
   do !split; 1: (by move=> i hi1 hi2; apply hv; smt(W64.to_uint_cmp)); 1..7: smt(W64.to_uint_cmp).
-  by apply mask64_set64 => //; smt(W64.to_uint_cmp).
+  by apply mask64_put64 => //; smt(W64.to_uint_cmp).
 wp; while (valid trace___fill64_mem /\ p_init /\ dst_init /\ n_init /\ end_init /\ more_init
        /\ ms_init
        /\ more = (dst \ult end_0)
@@ -178,7 +172,7 @@ wp; while (valid trace___fill128_mem /\ p_init /\ dst_init /\ n_init /\ more_ini
   + by rewrite addc_small //; smt(W64.to_uint_cmp).
   rewrite hd8 hp8 subc_small 1:/#.
   do !split; 1: (by move=> i hi1 hi2; apply hv; smt(W64.to_uint_cmp)); 1..7: smt(W64.to_uint_cmp).
-  by apply mask128_set64 => //; smt(W64.to_uint_cmp).
+  by apply mask128_put64 => //; smt(W64.to_uint_cmp).
 wp; while (valid trace___fill128_mem /\ p_init /\ dst_init /\ n_init /\ end_init /\ more_init
        /\ ms_init
        /\ more = (dst \ult end_0)
@@ -244,7 +238,7 @@ wp; while (valid trace___zero64 /\ lo_init /\ end_init /\ more_init /\ ms_init /
   + by rewrite addc_small //; smt(W64.to_uint_cmp).
   have h16 : to_uint (lo{m} + W64.of_int 16) = to_uint lo{m} + 16.
   + by rewrite addc_small //; smt(W64.to_uint_cmp).
-  have hm := mask64_set64 buf_init{m} (to_uint lo{m}) hb _ _; 1,2: smt(W64.to_uint_cmp).
+  have hm := mask64_put64 buf_init{m} (to_uint lo{m}) hb _ _; 1,2: smt(W64.to_uint_cmp).
   by rewrite h8 h16; do !split; smt(W64.to_uint_cmp).
 wp; while (valid trace___zero64 /\ lo_init /\ end_init /\ more_init /\ ms_init /\ z_init
        /\ more = (lo \ult end_0)
@@ -295,7 +289,7 @@ wp; while (valid trace___zero128 /\ lo_init /\ end_init /\ more_init /\ ms_init 
   + by rewrite addc_small //; smt(W64.to_uint_cmp).
   have h16 : to_uint (lo{m} + W64.of_int 16) = to_uint lo{m} + 16.
   + by rewrite addc_small //; smt(W64.to_uint_cmp).
-  have hm := mask128_set64 buf_init{m} (to_uint lo{m}) hb _ _; 1,2: smt(W64.to_uint_cmp).
+  have hm := mask128_put64 buf_init{m} (to_uint lo{m}) hb _ _; 1,2: smt(W64.to_uint_cmp).
   by rewrite h8 h16; do !split; smt(W64.to_uint_cmp).
 wp; while (valid trace___zero128 /\ lo_init /\ end_init /\ more_init /\ ms_init /\ z_init
        /\ more = (lo \ult end_0)
