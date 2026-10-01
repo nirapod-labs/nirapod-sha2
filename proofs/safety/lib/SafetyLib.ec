@@ -136,3 +136,30 @@ proof.
 move=> hn; have : to_uint n <> 0 by move: hn; apply contra => h; apply W64.to_uint_eq; rewrite h.
 smt(W64.to_uint_cmp).
 qed.
+
+(* Valid memory for each of k lanes: f i is lane i's address, l its length.
+   A named predicate, so that proof scripts keep it folded. *)
+op lanes_valid (mv : global_mem_v_t) (k : int) (f : int -> int) (l : int) =
+  forall i, 0 <= i < k => is_valid (2 ^ 64) mv (f i) l.
+
+lemma lanes_valid8 mv (f : int -> int) l :
+  is_valid (2 ^ 64) mv (f 0) l => is_valid (2 ^ 64) mv (f 1) l =>
+  is_valid (2 ^ 64) mv (f 2) l => is_valid (2 ^ 64) mv (f 3) l =>
+  is_valid (2 ^ 64) mv (f 4) l => is_valid (2 ^ 64) mv (f 5) l =>
+  is_valid (2 ^ 64) mv (f 6) l => is_valid (2 ^ 64) mv (f 7) l =>
+  lanes_valid mv 8 f l.
+proof.
+move=> h0 h1 h2 h3 h4 h5 h6 h7 i hi.
+have : i = 0 \/ i = 1 \/ i = 2 \/ i = 3 \/ i = 4 \/ i = 5 \/ i = 6 \/ i = 7 by smt().
+by case=> [->|[->|[->|[->|[->|[->|[->|->]]]]]]].
+qed.
+
+lemma lanes_valid4 mv (f : int -> int) l :
+  is_valid (2 ^ 64) mv (f 0) l => is_valid (2 ^ 64) mv (f 1) l =>
+  is_valid (2 ^ 64) mv (f 2) l => is_valid (2 ^ 64) mv (f 3) l =>
+  lanes_valid mv 4 f l.
+proof.
+move=> h0 h1 h2 h3 i hi.
+have : i = 0 \/ i = 1 \/ i = 2 \/ i = 3 by smt().
+by case=> [->|[->|[->|->]]].
+qed.
