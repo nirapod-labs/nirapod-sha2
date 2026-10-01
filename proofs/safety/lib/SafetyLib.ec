@@ -163,3 +163,53 @@ move=> h0 h1 h2 h3 i hi.
 have : i = 0 \/ i = 1 \/ i = 2 \/ i = 3 by smt().
 by case=> [->|[->|[->|->]]].
 qed.
+
+(* Block arithmetic of the absorb: fill = total mod B, whole blocks. *)
+lemma umodc (x : W64.t) c : 0 < c < 18446744073709551616 =>
+  to_uint (x \umod W64.of_int c) = to_uint x %% c.
+proof.
+move=> hc; have hcm : c %% W64.modulus = c by rewrite pmod_small // w64_modulus /#.
+rewrite W64.umodE /ulift2 !W64.of_uintK hcm pmod_small //.
+split; [smt(modz_ge0) | move=> _]; rewrite w64_modulus.
+by have := ltz_pmod (to_uint x) c _; [smt() | smt()].
+qed.
+
+lemma andmask (x : W64.t) k : 0 <= k < 64 =>
+  to_uint (x `&` W64.of_int (2 ^ k - 1)) = to_uint x %% 2 ^ k.
+proof.
+move=> hk; rewrite W64.and_mod 1:/# W64.of_uintK.
+have h1 : 0 < 2 ^ k by apply StdOrder.IntOrder.expr_gt0.
+have h2 : 2 ^ k <= 2 ^ 64 by apply StdOrder.IntOrder.ler_weexpn2l => /#.
+rewrite (pmod_small _ W64.modulus) //.
+split; first by apply modz_ge0 => /#.
+by move=> _; apply (StdOrder.IntOrder.ltr_le_trans (2 ^ k)) => //; apply ltz_pmod.
+qed.
+
+lemma and63 (x : W64.t) : to_uint (x `&` W64.of_int 63) = to_uint x %% 64.
+proof. by have := andmask x 6 _; 1: done. qed.
+
+lemma and127 (x : W64.t) : to_uint (x `&` W64.of_int 127) = to_uint x %% 128.
+proof. by have := andmask x 7 _; 1: done. qed.
+
+lemma shrc (x : W64.t) k : 0 <= k < 64 => to_uint (x `>>` W8.of_int k) = to_uint x %/ 2 ^ k.
+proof.
+move=> hk; rewrite /(`>>`) W64.to_uint_shr W8.of_uintK; 1: smt(modz_ge0).
+by rewrite (pmod_small k) 1:/#.
+qed.
+
+lemma shlc (x : W64.t) k : 0 <= k < 64 => to_uint (x `<<` W8.of_int k) = (to_uint x * 2 ^ k) %% 2 ^ 64.
+proof.
+move=> hk; rewrite /(`<<`) W64.to_uint_shl W8.of_uintK; 1: smt(modz_ge0).
+by rewrite (pmod_small k) 1:/#.
+qed.
+
+(* Whole blocks of b = 2^k bytes in x: (x >> k) << k. *)
+lemma blocksc (x : W64.t) k : 0 <= k < 64 =>
+  to_uint ((x `>>` W8.of_int k) `<<` W8.of_int k) = 2 ^ k * (to_uint x %/ 2 ^ k).
+proof.
+move=> hk; rewrite shlc // shrc // pmod_small; last by ring.
+have h1 : 0 < 2 ^ k by apply StdOrder.IntOrder.expr_gt0.
+split; first by apply StdOrder.IntOrder.mulr_ge0; smt(divz_ge0 W64.to_uint_cmp).
+move=> _; rewrite pow2_64; have := W64.to_uint_cmp x; rewrite w64_modulus => hx.
+smt(divz_eq modz_ge0).
+qed.
