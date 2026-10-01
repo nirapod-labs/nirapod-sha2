@@ -194,3 +194,284 @@ split; 1: by do !split; try (move=> i h1 h2; apply hv); smt(W64.to_uint_cmp).
 by move=> _ _ _ _ _ _ r h _.
 qed.
 
+
+(* ------------------------------------------------------------------ *)
+(* Padding and output                                                 *)
+
+(* src/sha512_DSIZE.jinc is compiled four times, for 28, 32, 48 and 64
+   output bytes. The safety proofs differ only in the output loops and
+   the output mask theory, so the short script is repeated per instance;
+   only SHA-512/224 runs the half-word loop. *)
+
+lemma _sha512___sha512_finalize_proof _out _h _buf _total _ms _out_init _h_init _buf_init :
+  _sha512___sha512_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init.
+proof.
+rewrite /_sha512___sha512_finalize_spec; proc; sp.
+seq 1 : (valid trace__sha512___sha512_finalize /\ total_init /\ fill_init /\ ms_init
+         /\ BArray64.is_init h_init 0 64 /\ to_uint fill <= 112
+         /\ BArray128.is_init buf_init 0 (to_uint fill)).
++ if.
+  + wp; ecall (_sha512_compress_proof h buf ms h_init buf_init); wp.
+    ecall (__zero128_proof buf fill hi ms buf_init); auto => /> &m hh hb _.
+    have hf := and127 total{m}.
+    have e : to_uint (total{m} `&` W64.of_int 127 + W64.one) = to_uint total{m} %% 128 + 1.
+    + by rewrite addone_small hf //; smt(modz_cmp).
+    move: hb; rewrite umodc // => hb.
+    have hs := mask128_set8 _buf_init (to_uint total{m} %% 128) hb _; 1: smt(modz_cmp).
+    rewrite W64.uleE e hf /=; split; 1: by split; [smt(modz_cmp) | exact hs].
+    by move=> _ _ r _ _ r0 _ _; split; [smt(modz_cmp) | exact (full128_init 0 0)].
+  auto => /> &m hh hb.
+  have hf := and127 total{m}.
+  have e : to_uint (total{m} `&` W64.of_int 127 + W64.one) = to_uint total{m} %% 128 + 1.
+  + by rewrite addone_small hf //; smt(modz_cmp).
+  move: hb; rewrite umodc // => hb.
+  have hs := mask128_set8 _buf_init (to_uint total{m} %% 128) hb _; 1: smt(modz_cmp).
+  rewrite W64.ultE e hf /= => h112.
+  by do !split => //; smt(modz_cmp).
+wp; while (valid trace__sha512___sha512_finalize /\ i_init /\ ms_init /\ i = 8
+           /\ inc = 8 /\ h_init = full64 /\ buf_init = full128
+           /\ BArray64.is_init out_init 0 64).
++ by wp; ecall (__bswap32_proof y); auto => />.
+wp; while (valid trace__sha512___sha512_finalize /\ i_init /\ ms_init /\ 0 <= i <= 8
+           /\ inc = 8 /\ h_init = full64 /\ buf_init = full128
+           /\ BArray64.is_init out_init 0 (8 * i)).
++ wp; ecall (__bswap64_proof x); auto => /> &m _ _ _ hi0 hi8 ho hlt.
+  have hm := mask64_set64 out_init{m} i{m} ho _ _; 1,2: smt().
+  by rewrite full64_init hm /=; smt().
+wp; ecall (_sha512_compress_proof h buf ms h_init buf_init); wp.
+ecall (__bswap64_proof t); wp; ecall (__bswap64_proof t); wp.
+ecall (__zero128_proof buf fill hi ms buf_init); auto => /> &m _ _ _ _ hh hf hb.
+rewrite W64.uleE /= hf /= => r hr _ _ _ _ _.
+have hp1 := mask128_put64 r.`3 112 hr _ _ => //=.
+have hp2 := mask128_put64 _ 120 hp1 _ _ => //=.
+rewrite hp2 /= => r2 h2 _.
+split; 1: by split; [exact full64E | exact (full64_init 0 0)].
+move=> i0 o0 _ hi _ hi0 hi8 _ ho; split; 2: by move=> *; exact (full128_init 0 128).
+by have <- : 8 * i0 = 64 by smt().
+qed.
+
+lemma _sha384___sha512_finalize_proof _out _h _buf _total _ms _out_init _h_init _buf_init :
+  _sha384___sha512_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init.
+proof.
+rewrite /_sha384___sha512_finalize_spec; proc; sp.
+seq 1 : (valid trace__sha384___sha512_finalize /\ total_init /\ fill_init /\ ms_init
+         /\ BArray64.is_init h_init 0 64 /\ to_uint fill <= 112
+         /\ BArray128.is_init buf_init 0 (to_uint fill)).
++ if.
+  + wp; ecall (_sha512_compress_proof h buf ms h_init buf_init); wp.
+    ecall (__zero128_proof buf fill hi ms buf_init); auto => /> &m hh hb _.
+    have hf := and127 total{m}.
+    have e : to_uint (total{m} `&` W64.of_int 127 + W64.one) = to_uint total{m} %% 128 + 1.
+    + by rewrite addone_small hf //; smt(modz_cmp).
+    move: hb; rewrite umodc // => hb.
+    have hs := mask128_set8 _buf_init (to_uint total{m} %% 128) hb _; 1: smt(modz_cmp).
+    rewrite W64.uleE e hf /=; split; 1: by split; [smt(modz_cmp) | exact hs].
+    by move=> _ _ r _ _ r0 _ _; split; [smt(modz_cmp) | exact (full128_init 0 0)].
+  auto => /> &m hh hb.
+  have hf := and127 total{m}.
+  have e : to_uint (total{m} `&` W64.of_int 127 + W64.one) = to_uint total{m} %% 128 + 1.
+  + by rewrite addone_small hf //; smt(modz_cmp).
+  move: hb; rewrite umodc // => hb.
+  have hs := mask128_set8 _buf_init (to_uint total{m} %% 128) hb _; 1: smt(modz_cmp).
+  rewrite W64.ultE e hf /= => h112.
+  by do !split => //; smt(modz_cmp).
+wp; while (valid trace__sha384___sha512_finalize /\ i_init /\ ms_init /\ i = 6
+           /\ inc = 6 /\ h_init = full64 /\ buf_init = full128
+           /\ BArray48.is_init out_init 0 48).
++ by wp; ecall (__bswap32_proof y); auto => />.
+wp; while (valid trace__sha384___sha512_finalize /\ i_init /\ ms_init /\ 0 <= i <= 6
+           /\ inc = 6 /\ h_init = full64 /\ buf_init = full128
+           /\ BArray48.is_init out_init 0 (8 * i)).
++ wp; ecall (__bswap64_proof x); auto => /> &m _ _ _ hi0 hi8 ho hlt.
+  have hm := mask48_set64 out_init{m} i{m} ho _ _; 1,2: smt().
+  by rewrite full64_init hm /=; smt().
+wp; ecall (_sha512_compress_proof h buf ms h_init buf_init); wp.
+ecall (__bswap64_proof t); wp; ecall (__bswap64_proof t); wp.
+ecall (__zero128_proof buf fill hi ms buf_init); auto => /> &m _ _ _ _ hh hf hb.
+rewrite W64.uleE /= hf /= => r hr _ _ _ _ _.
+have hp1 := mask128_put64 r.`3 112 hr _ _ => //=.
+have hp2 := mask128_put64 _ 120 hp1 _ _ => //=.
+rewrite hp2 /= => r2 h2 _.
+split; 1: by split; [exact full64E | exact (full48_init 0 0)].
+move=> i0 o0 _ hi _ hi0 hi8 _ ho; split; 2: by move=> *; exact (full128_init 0 128).
+by have <- : 8 * i0 = 48 by smt().
+qed.
+
+lemma _sha512_256___sha512_finalize_proof _out _h _buf _total _ms _out_init _h_init _buf_init :
+  _sha512_256___sha512_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init.
+proof.
+rewrite /_sha512_256___sha512_finalize_spec; proc; sp.
+seq 1 : (valid trace__sha512_256___sha512_finalize /\ total_init /\ fill_init /\ ms_init
+         /\ BArray64.is_init h_init 0 64 /\ to_uint fill <= 112
+         /\ BArray128.is_init buf_init 0 (to_uint fill)).
++ if.
+  + wp; ecall (_sha512_compress_proof h buf ms h_init buf_init); wp.
+    ecall (__zero128_proof buf fill hi ms buf_init); auto => /> &m hh hb _.
+    have hf := and127 total{m}.
+    have e : to_uint (total{m} `&` W64.of_int 127 + W64.one) = to_uint total{m} %% 128 + 1.
+    + by rewrite addone_small hf //; smt(modz_cmp).
+    move: hb; rewrite umodc // => hb.
+    have hs := mask128_set8 _buf_init (to_uint total{m} %% 128) hb _; 1: smt(modz_cmp).
+    rewrite W64.uleE e hf /=; split; 1: by split; [smt(modz_cmp) | exact hs].
+    by move=> _ _ r _ _ r0 _ _; split; [smt(modz_cmp) | exact (full128_init 0 0)].
+  auto => /> &m hh hb.
+  have hf := and127 total{m}.
+  have e : to_uint (total{m} `&` W64.of_int 127 + W64.one) = to_uint total{m} %% 128 + 1.
+  + by rewrite addone_small hf //; smt(modz_cmp).
+  move: hb; rewrite umodc // => hb.
+  have hs := mask128_set8 _buf_init (to_uint total{m} %% 128) hb _; 1: smt(modz_cmp).
+  rewrite W64.ultE e hf /= => h112.
+  by do !split => //; smt(modz_cmp).
+wp; while (valid trace__sha512_256___sha512_finalize /\ i_init /\ ms_init /\ i = 4
+           /\ inc = 4 /\ h_init = full64 /\ buf_init = full128
+           /\ BArray32.is_init out_init 0 32).
++ by wp; ecall (__bswap32_proof y); auto => />.
+wp; while (valid trace__sha512_256___sha512_finalize /\ i_init /\ ms_init /\ 0 <= i <= 4
+           /\ inc = 4 /\ h_init = full64 /\ buf_init = full128
+           /\ BArray32.is_init out_init 0 (8 * i)).
++ wp; ecall (__bswap64_proof x); auto => /> &m _ _ _ hi0 hi8 ho hlt.
+  have hm := mask32_set64 out_init{m} i{m} ho _ _; 1,2: smt().
+  by rewrite full64_init hm /=; smt().
+wp; ecall (_sha512_compress_proof h buf ms h_init buf_init); wp.
+ecall (__bswap64_proof t); wp; ecall (__bswap64_proof t); wp.
+ecall (__zero128_proof buf fill hi ms buf_init); auto => /> &m _ _ _ _ hh hf hb.
+rewrite W64.uleE /= hf /= => r hr _ _ _ _ _.
+have hp1 := mask128_put64 r.`3 112 hr _ _ => //=.
+have hp2 := mask128_put64 _ 120 hp1 _ _ => //=.
+rewrite hp2 /= => r2 h2 _.
+split; 1: by split; [exact full64E | exact (full32_init 0 0)].
+move=> i0 o0 _ hi _ hi0 hi8 _ ho; split; 2: by move=> *; exact (full128_init 0 128).
+by have <- : 8 * i0 = 32 by smt().
+qed.
+
+
+lemma _sha512_224___sha512_finalize_proof _out _h _buf _total _ms _out_init _h_init _buf_init :
+  _sha512_224___sha512_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init.
+proof.
+rewrite /_sha512_224___sha512_finalize_spec; proc; sp.
+seq 1 : (valid trace__sha512_224___sha512_finalize /\ total_init /\ fill_init /\ ms_init
+         /\ BArray64.is_init h_init 0 64 /\ to_uint fill <= 112
+         /\ BArray128.is_init buf_init 0 (to_uint fill)).
++ if.
+  + wp; ecall (_sha512_compress_proof h buf ms h_init buf_init); wp.
+    ecall (__zero128_proof buf fill hi ms buf_init); auto => /> &m hh hb _.
+    have hf := and127 total{m}.
+    have e : to_uint (total{m} `&` W64.of_int 127 + W64.one) = to_uint total{m} %% 128 + 1.
+    + by rewrite addone_small hf //; smt(modz_cmp).
+    move: hb; rewrite umodc // => hb.
+    have hs := mask128_set8 _buf_init (to_uint total{m} %% 128) hb _; 1: smt(modz_cmp).
+    rewrite W64.uleE e hf /=; split; 1: by split; [smt(modz_cmp) | exact hs].
+    by move=> _ _ r _ _ r0 _ _; split; [smt(modz_cmp) | exact (full128_init 0 0)].
+  auto => /> &m hh hb.
+  have hf := and127 total{m}.
+  have e : to_uint (total{m} `&` W64.of_int 127 + W64.one) = to_uint total{m} %% 128 + 1.
+  + by rewrite addone_small hf //; smt(modz_cmp).
+  move: hb; rewrite umodc // => hb.
+  have hs := mask128_set8 _buf_init (to_uint total{m} %% 128) hb _; 1: smt(modz_cmp).
+  rewrite W64.ultE e hf /= => h112.
+  by do !split => //; smt(modz_cmp).
+wp; while (valid trace__sha512_224___sha512_finalize /\ i_init /\ ms_init /\ 3 <= i <= 4
+           /\ inc = 4 /\ h_init = full64 /\ buf_init = full128
+           /\ BArray28.is_init out_init 0 (if i = 3 then 24 else 28)).
++ wp; ecall (__bswap32_proof y); auto => /> &m _ _ _ hi3 hi4 ho hlt.
+  have e3 : i{m} = 3 by smt().
+  move: ho; rewrite e3 /= => ho.
+  have hm := mask28_set32 out_init{m} 6 ho _ _ => //=.
+  by rewrite full64_init hm.
+wp; while (valid trace__sha512_224___sha512_finalize /\ i_init /\ ms_init /\ 0 <= i <= 3
+           /\ inc = 3 /\ h_init = full64 /\ buf_init = full128
+           /\ BArray28.is_init out_init 0 (8 * i)).
++ wp; ecall (__bswap64_proof x); auto => /> &m _ _ _ hi0 hi8 ho hlt.
+  have hm := mask28_set64 out_init{m} i{m} ho _ _; 1,2: smt().
+  by rewrite full64_init hm /=; smt().
+wp; ecall (_sha512_compress_proof h buf ms h_init buf_init); wp.
+ecall (__bswap64_proof t); wp; ecall (__bswap64_proof t); wp.
+ecall (__zero128_proof buf fill hi ms buf_init); auto => /> &m _ _ _ _ hh hf hb.
+rewrite W64.uleE /= hf /= => r hr _ _ _ _ _.
+have hp1 := mask128_put64 r.`3 112 hr _ _ => //=.
+have hp2 := mask128_put64 _ 120 hp1 _ _ => //=.
+rewrite hp2 /= => r2 h2 _.
+split; 1: by split; [exact full64E | exact (full28_init 0 0)].
+move=> i0 o0 _ hi _ hi0 hi3 _ ho; split; 1: by have <- : 8 * i0 = 24 by smt().
+move=> i1 o1 _ hi1 _ h3 h4 ho1; split; 2: exact (full128_init 0 128).
+by move: ho1; rewrite (_ : i1 <> 3) 1:/#.
+qed.
+
+(* ------------------------------------------------------------------ *)
+(* One-shot hashing                                                   *)
+
+lemma _sha512____sha512_mem_from_proof _out _h _in _inlen _ms _out_init _h_init :
+  _sha512____sha512_mem_from_spec _out _h _in _inlen _ms _out_init _h_init.
+proof.
+rewrite /_sha512____sha512_mem_from_spec; proc.
+wp; ecall (_sha512___sha512_finalize_proof out h buf total ms out_init h_init buf_init).
+wp; ecall (_sha512_absorb_mem_proof h buf total in_0 inlen ms h_init buf_init).
+auto => /> &m _ _ _ _ j h1 h2.
+by have := umodc W64.zero 128 _; rewrite // W64.to_uint0 /=; smt().
+qed.
+
+lemma _sha384____sha512_mem_from_proof _out _h _in _inlen _ms _out_init _h_init :
+  _sha384____sha512_mem_from_spec _out _h _in _inlen _ms _out_init _h_init.
+proof.
+rewrite /_sha384____sha512_mem_from_spec; proc.
+wp; ecall (_sha384___sha512_finalize_proof out h buf total ms out_init h_init buf_init).
+wp; ecall (_sha512_absorb_mem_proof h buf total in_0 inlen ms h_init buf_init).
+auto => /> &m _ _ _ _ j h1 h2.
+by have := umodc W64.zero 128 _; rewrite // W64.to_uint0 /=; smt().
+qed.
+
+lemma _sha512_224____sha512_mem_from_proof _out _h _in _inlen _ms _out_init _h_init :
+  _sha512_224____sha512_mem_from_spec _out _h _in _inlen _ms _out_init _h_init.
+proof.
+rewrite /_sha512_224____sha512_mem_from_spec; proc.
+wp; ecall (_sha512_224___sha512_finalize_proof out h buf total ms out_init h_init buf_init).
+wp; ecall (_sha512_absorb_mem_proof h buf total in_0 inlen ms h_init buf_init).
+auto => /> &m _ _ _ _ j h1 h2.
+by have := umodc W64.zero 128 _; rewrite // W64.to_uint0 /=; smt().
+qed.
+
+lemma _sha512_256____sha512_mem_from_proof _out _h _in _inlen _ms _out_init _h_init :
+  _sha512_256____sha512_mem_from_spec _out _h _in _inlen _ms _out_init _h_init.
+proof.
+rewrite /_sha512_256____sha512_mem_from_spec; proc.
+wp; ecall (_sha512_256___sha512_finalize_proof out h buf total ms out_init h_init buf_init).
+wp; ecall (_sha512_absorb_mem_proof h buf total in_0 inlen ms h_init buf_init).
+auto => /> &m _ _ _ _ j h1 h2.
+by have := umodc W64.zero 128 _; rewrite // W64.to_uint0 /=; smt().
+qed.
+
+lemma _sha512_mem_proof _out _in _inlen _ms _out_init :
+  _sha512_mem_spec _out _in _inlen _ms _out_init.
+proof.
+rewrite /_sha512_mem_spec; proc.
+wp; ecall (_sha512____sha512_mem_from_proof out h in_0 inlen ms out_init h_init).
+wp; ecall (__sha512_init_proof h h_init).
+by auto => />.
+qed.
+
+lemma _sha384_mem_proof _out _in _inlen _ms _out_init :
+  _sha384_mem_spec _out _in _inlen _ms _out_init.
+proof.
+rewrite /_sha384_mem_spec; proc.
+wp; ecall (_sha384____sha512_mem_from_proof out h in_0 inlen ms out_init h_init).
+wp; ecall (__sha384_init_proof h h_init).
+by auto => />.
+qed.
+
+lemma _sha512_224_mem_proof _out _in _inlen _ms _out_init :
+  _sha512_224_mem_spec _out _in _inlen _ms _out_init.
+proof.
+rewrite /_sha512_224_mem_spec; proc.
+wp; ecall (_sha512_224____sha512_mem_from_proof out h in_0 inlen ms out_init h_init).
+wp; ecall (__sha512_224_init_proof h h_init).
+by auto => />.
+qed.
+
+lemma _sha512_256_mem_proof _out _in _inlen _ms _out_init :
+  _sha512_256_mem_spec _out _in _inlen _ms _out_init.
+proof.
+rewrite /_sha512_256_mem_spec; proc.
+wp; ecall (_sha512_256____sha512_mem_from_proof out h in_0 inlen ms out_init h_init).
+wp; ecall (__sha512_256_init_proof h h_init).
+by auto => />.
+qed.

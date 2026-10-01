@@ -100,6 +100,14 @@ move=> hm hi hb j hj0 hj; rewrite BArray28.is_init_cell_set32d.
 by case: (j < 4 * i) => hji; [right; apply hm | left] => /#.
 qed.
 
+lemma mask28_set64 (m : BArray28.t) i :
+  BArray28.is_init m 0 (8 * i) => 0 <= i => 8 * (i + 1) <= 28 =>
+  BArray28.is_init (BArray28.set64 m i (W64.of_int 18446744073709551615)) 0 (8 * (i + 1)).
+proof.
+move=> hm hi hb j hj0 hj; rewrite BArray28.is_init_cell_set64d.
+by case: (j < 8 * i) => hji; [right; apply hm | left] => /#.
+qed.
+
 lemma full28_set8 k : BArray28.set8 full28 k (W8.of_int 255) = full28.
 proof.
 apply full28E => j hj0 hj1.
