@@ -234,3 +234,151 @@ move=> _ _ _ _ _ _ _ _ _ r h5 h6 h7 _.
 rewrite (full256E _ h6) (full512E _ h7) ctx784_full /=.
 by move=> *; exact (full784_init 0 784).
 qed.
+
+(* ------------------------------------------------------------------ *)
+(* Four-way SHA-512 context                                            *)
+
+lemma __sha512_x4_ctx_init_proof _ctx _ctx_init : __sha512_x4_ctx_init_spec _ctx _ctx_init.
+proof.
+rewrite /__sha512_x4_ctx_init_spec; proc.
+while (valid trace___sha512_x4_ctx_init /\ i_init /\ z_init /\ 0 <= i <= 64
+       /\ BArray784.is_init ctx_init 0 (272 + 8 * i)).
++ auto => /> &m _ _ _ hi0 hi8 hc hlt.
+  have hm := mask784_set64d ctx_init{m} (272 + 8 * i{m}) hc _ _; 1,2: smt().
+  by rewrite (_ : 272 + 8 * (i{m} + 1) = 272 + 8 * i{m} + 8) 1:/#; smt().
+wp; ecall (__sha512_x4_init_proof (SBArray784_256.get_sub64 ctx 2)
+             (SBArray784_256.get_sub ctx_init (8 * 2))).
+wp; ecall (__sha2_tag_proof 10).
+auto => /> r _ r0 h2 _.
+split; 1: exact (ctx784_hs _ _ (ctx784_header _ctx_init) h2).
+by move=> c i0 tr0 hlt _ hi0 hi8 hc; have <- : 272 + 8 * i0 = 784 by smt().
+qed.
+
+(* The state of a single-way SHA-256 context, copied into every lane. *)
+lemma _sha512_x4_ctx_from_proof _ctx _src _ms _ctx_init _src_init :
+  _sha512_x4_ctx_from_spec _ctx _src _ms _ctx_init _src_init.
+proof.
+rewrite /_sha512_x4_ctx_from_spec; proc; sp.
+seq 1 : (valid trace__sha512_x4_ctx_from /\ valid M.tmp__trace /\ src_init = full208 /\ ms_init).
++ ecall (__sha2_ctx_open_proof (SBArray208_16.get_sub8 src 0) ms (SBArray208_16.get_sub src_init 0)).
+  auto => /> hc; rewrite (full208E _ hc) /=.
+  by apply (sub208_16_get _ 0 0 16) => //; exact full208_init.
+sp; seq 1 : (valid trace__sha512_x4_ctx_from /\ valid M.tmp__trace /\ src_init = full208 /\ ms_init
+             /\ tag_init /\ total_init).
++ by ecall (__sha2_tag_proof 4); auto.
+sp; if; last first.
++ by auto => />; smt(one_neq_zero).
+wp; ecall (__sha512_x4_from_proof (SBArray784_256.get_sub64 ctx 2) (SBArray784_512.get_sub8 ctx 272)
+             (SBArray208_64.get_sub64 src 2) (SBArray208_128.get_sub8 src 80)
+             (SBArray784_256.get_sub ctx_init (8 * 2)) (SBArray784_512.get_sub ctx_init (1 * 272))
+             (SBArray208_64.get_sub src_init (8 * 2)) (SBArray208_128.get_sub src_init (1 * 80))).
+wp; ecall (__sha2_tag_proof 10).
+auto => /> &m tr _ _ _ _ _ r _; rewrite ctx208_h ctx208_buf.
+split; 1: by split; [exact full64_init | exact full128_init].
+move=> _ _ r0 h3 h4 _.
+exact (ctx784_store _ _ _ 512 (ctx784_header _) h3 h4 _).
+qed.
+
+(* The context stores the lane buffers whole, so their mask is the full
+   mask on entry; the absorb contract only promises the buffered
+   prefix of each lane. A full buffer mask stays full. *)
+lemma get512_128_full k : 0 <= k < 4 => SBArray512_128.get_sub full512 (128 * k) = full128.
+proof.
+by move=> hk; apply full128E; apply (sub512_128_get _ _ 0 128) => //;
+  [exact full512_init | smt() | smt()].
+qed.
+
+lemma set512_128_full k : 0 <= k < 4 => SBArray512_128.set_sub full512 (128 * k) full128 = full512.
+proof.
+move=> hk; apply full512E => j hj0 hj1; rewrite SBArray512_128.is_init_cell_set.
+case: (128 * k <= j < 128 * k + 128) => hj.
++ by rewrite ifT 1:/#; apply (full128_init 0 128) => /#.
+by rewrite ifF 1:/#; apply (full512_init 0 512).
+qed.
+
+lemma _sha512_x4_absorb_lanes_fullm :
+  hoare [M._sha512_x4_absorb_lanes : buf_init = full512 ==> res.`6 = full512].
+proof.
+proc; sp; seq 1 : (buf_init = full512).
++ while (buf_init = full512 /\ 0 <= k <= 4); 2: by auto.
+  wp; call __fill128_mem_full; auto => /> &m hk0 hk8 hlt.
+  by rewrite get512_128_full 1:/# /= => r ->; rewrite set512_128_full 1:/#; smt().
+sp; seq 1 : (buf_init = full512).
++ by if; [wp; call (: true ==> true) => //; auto | auto].
+sp; seq 1 : (buf_init = full512).
++ by if; [wp; call (: true ==> true) => //; auto | auto].
+sp; wp; while (buf_init = full512 /\ 0 <= k <= 4); 2: by auto.
+wp; call __fill128_mem_full; auto => /> &m hk0 hk8 hlt.
+by rewrite get512_128_full 1:/# /= => r ->; rewrite set512_128_full 1:/#; smt().
+qed.
+
+lemma _sha512_x4_absorb_lanes_full _h _buf _total _in _inlen _ms :
+  hoare [M._sha512_x4_absorb_lanes :
+    h = _h /\ buf = _buf /\ total = _total /\ in_0 = _in /\ inlen = _inlen /\ ms = _ms
+    /\ h_init = full256 /\ buf_init = full512 /\ in_init = full32
+    /\ _inlen \ult W64.of_int 2305843009213693952
+    /\ lanes_valid Glob.mem_v 4 (fun i => to_uint (BArray32.get64 _in i)) (to_uint _inlen)
+    ==> res.`5 = full256 /\ res.`6 = full512 /\ valid res.`7].
+proof.
+have := _sha512_x4_absorb_lanes_proof _h _buf _total _in _inlen _ms full256 full512 full32.
+rewrite /_sha512_x4_absorb_lanes_spec => h; conseq h _sha512_x4_absorb_lanes_fullm => />.
++ move=> &m _ _ _ _ _ _ -> -> -> hlt hlv; have := lanes_valid4E _ _ _ hlv.
+  rewrite /is_valid /= => [#] *.
+  by do !split => //; try apply full32_init; try apply full256_init; try apply full512_init;
+    move=> i h1 h2; smt().
+by move=> &m *; smt(full256E).
+qed.
+
+lemma _sha512_x4_ctx_update_proof _ctx _in _inlen _ms _ctx_init _in_init :
+  _sha512_x4_ctx_update_spec _ctx _in _inlen _ms _ctx_init _in_init.
+proof.
+rewrite /_sha512_x4_ctx_update_spec; proc; sp.
+seq 1 : (valid trace__sha512_x4_ctx_update /\ valid M.tmp__trace /\ ctx_init = full784
+         /\ in_init = full32 /\ ms_init /\ inlen_init
+         /\ lanes_valid Glob.mem_v 4 (fun i => to_uint (BArray32.get64 in_0 i)) (to_uint inlen)).
++ ecall (__sha2_ctx_open_proof (SBArray784_16.get_sub8 ctx 0) ms (SBArray784_16.get_sub ctx_init 0)).
+  auto => /> &m hi0 hi1 hi2 hi3 hc hin.
+  move=> v00 v01 v02 v10 v11 v12 v20 v21 v22 v30 v31 v32.
+  rewrite (full784E _ hc) ctx784_head /= => r _; split; 1: exact (full32E _ hin).
+  by apply lanes_valid4; rewrite /is_valid /=; do !split => //.
+sp; seq 1 : (valid trace__sha512_x4_ctx_update /\ valid M.tmp__trace /\ ctx_init = full784
+             /\ in_init = full32 /\ ms_init /\ inlen_init
+             /\ lanes_valid Glob.mem_v 4 (fun i => to_uint (BArray32.get64 in_0 i)) (to_uint inlen) /\ tag_init /\ total_init).
++ by ecall (__sha2_tag_proof 10); auto.
+sp; if; last by auto => />; rewrite ?full784_init.
+sp; seq 1 : (valid trace__sha512_x4_ctx_update /\ valid M.tmp__trace /\ ctx_init = full784
+             /\ in_init = full32 /\ ms_init /\ inlen_init
+             /\ lanes_valid Glob.mem_v 4 (fun i => to_uint (BArray32.get64 in_0 i)) (to_uint inlen) /\ total_init
+             /\ to_uint room <= 2305843009213693952).
++ by ecall (__sha2_room_bound); auto.
+sp; if; last by auto => />; rewrite ?full784_init.
+wp; ecall (_sha512_x4_absorb_lanes_full (SBArray784_256.get_sub64 ctx 2)
+             (SBArray784_512.get_sub8 ctx 272) total in_0 inlen ms).
+auto => /> &m tr _ _ _ _ _ _ hr hlt; rewrite ctx784_h ctx784_buf /=.
+split; 1: by move: hlt; rewrite !W64.ultE /#.
+by move=> _ r -> -> _; rewrite ctx784_full full784_set64d; exact (full784_init 0 784).
+qed.
+
+lemma _sha512_x4_ctx_final_proof _ctx _out _ms _ctx_init _out_init :
+  _sha512_x4_ctx_final_spec _ctx _out _ms _ctx_init _out_init.
+proof.
+rewrite /_sha512_x4_ctx_final_spec; proc; sp.
+seq 1 : (valid trace__sha512_x4_ctx_final /\ valid M.tmp__trace /\ ctx_init = full784 /\ ms_init).
++ ecall (__sha2_ctx_open_proof (SBArray784_16.get_sub8 ctx 0) ms (SBArray784_16.get_sub ctx_init 0)).
+  by auto => /> hc; rewrite (full784E _ hc) ctx784_head.
+sp; seq 1 : (valid trace__sha512_x4_ctx_final /\ valid M.tmp__trace /\ ctx_init = full784 /\ ms_init
+             /\ tag_init /\ total_init).
++ by ecall (__sha2_tag_proof 10); auto.
+sp; if; last by auto => />; smt(one_neq_zero full784_init).
+wp; while (valid trace__sha512_x4_ctx_final /\ i_init /\ z_init /\ inc = 98 /\ 0 <= i <= 98
+           /\ ctx_init = full784 /\ BArray256.is_init out_init 0 256).
++ by auto => /> &m *; rewrite full784_set64d; smt().
+wp; ecall (_sha512_x4_finalize_proof out (SBArray784_256.get_sub64 ctx 2)
+             (SBArray784_512.get_sub8 ctx 272) total ms out_init
+             (SBArray784_256.get_sub ctx_init (8 * 2)) (SBArray784_512.get_sub ctx_init (1 * 272))).
+auto => /> &m tr _ _ _ _ _; rewrite ctx784_h ctx784_buf.
+split; 1: by rewrite !full512_init full256_init.
+move=> _ _ _ _ _ r h5 h6 h7 _.
+rewrite (full256E _ h6) (full512E _ h7) ctx784_full /=.
+by move=> *; exact (full784_init 0 784).
+qed.
