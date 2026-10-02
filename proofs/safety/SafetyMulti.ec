@@ -423,3 +423,111 @@ rewrite e4 -hs.
 have [#] h0 h1 h2 h3 h4 h5 h6 h7 := lanes8E _ _ (lanes_end _ _ _ _ _ hb).
 by rewrite (full256_init 0 256) h0 h1 h2 h3 h4 h5 h6 h7.
 qed.
+
+(* ------------------------------------------------------------------ *)
+(* Eight-way SHA-256: padding and output                              *)
+
+lemma _sha256_x8_finalize_proof _out _h _buf _total _ms _out_init _h_init _buf_init :
+  _sha256_x8_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init.
+proof.
+rewrite /_sha256_x8_finalize_spec; proc; sp.
+seq 1 : (valid trace__sha256_x8_finalize /\ total_init /\ fill_init /\ ms_init /\ h_init = full256
+         /\ to_uint fill = to_uint total %% 64
+         /\ lanes buf_init 8 64 8 (to_uint fill + 1) (to_uint fill + 1)).
++ while (valid trace__sha256_x8_finalize /\ total_init /\ fill_init /\ ms_init /\ at_init
+         /\ t_init /\ k_init /\ 0 <= k <= 8 /\ h_init = full256
+         /\ to_uint fill = to_uint total %% 64 /\ to_uint at = to_uint fill + 64 * k
+         /\ lanes buf_init 8 64 k (to_uint fill) (to_uint fill + 1)).
+  + auto => /> &m _ _ _ _ _ _ _ hk0 hk8 hf ha hl hlt.
+    have hf64 : to_uint fill{m} < 64 by smt(modz_cmp).
+    split; 1: smt().
+    split; 1: smt().
+    split; 1: by rewrite W64.to_uintD_small; smt(W64.to_uint_cmp).
+    rewrite ha (_ : to_uint fill{m} + 64 * k{m} = 64 * k{m} + to_uint fill{m}) 1:/#.
+    by apply (lanes8_set8 _ _ _ hl); smt(W64.to_uint_cmp).
+  auto => /> hh hb0 hb1 hb2 hb3 hb4 hb5 hb6 hb7.
+  have hf := and63 _total.
+  have hl8 := lanes8I _ _ hb0 hb1 hb2 hb3 hb4 hb5 hb6 hb7.
+  move: hl8; rewrite umodc // -hf => hl8.
+  split; 1: by split; [exact (full256E _ hh) | split; [done | exact (lanes_start _ _ _ _ _ hl8)]].
+  move=> a0 ai0 b0 k0 tr0 hlt _ _ hk0 hk8 _ _ ha hb.
+  have ->> : k0 = 8 by smt().
+  exact (lanes_end _ _ _ _ _ hb).
+sp; seq 1 : (valid trace__sha256_x8_finalize /\ total_init /\ fill_init /\ ms_init
+             /\ h_init = full256 /\ to_uint fill <= 56
+             /\ lanes buf_init 8 64 8 (to_uint fill) (to_uint fill)).
++ if.
+  + wp; ecall (_sha256_x8_compress_proof h buf ms h_init buf_init).
+    wp; while (valid trace__sha256_x8_finalize /\ total_init /\ fill_init /\ ms_init /\ hi_init
+               /\ k_init /\ 0 <= k <= 8 /\ hi = W64.of_int 64 /\ h_init = full256
+               /\ to_uint fill <= 64 /\ lanes buf_init 8 64 k (to_uint fill) 64).
+    + wp; ecall (__zero64_proof (SBArray512_64.get_sub8 buf (64 * k)) fill hi ms
+                   (SBArray512_64.get_sub buf_init (1 * (64 * k)))).
+      auto => /> &m _ _ _ _ _ _ hk0 hk8 hf hl hlt.
+      rewrite W64.uleE /=; split.
+      + by split; [smt() | apply (lanes64_get _ _ _ _ hl); smt(W64.to_uint_cmp)].
+      move=> _ _ r hr _; split; 1: smt().
+      split; 1: smt().
+      by apply (lanes64_set _ _ _ _ _ hl) => //; smt(W64.to_uint_cmp).
+    auto => /> &m _ f0 _ _ _ _ _ hf hl h56.
+    have e : to_uint (f0 + W64.one) = to_uint f0 + 1.
+    + by rewrite W64.to_uintD_small to_uint_one //; smt(modz_cmp W64.to_uint_cmp).
+    rewrite e; split; 1: by split; [smt(modz_cmp) | exact (lanes_start _ _ _ _ _ hl)].
+    move=> b0 k0 ms0 tr0 hlt _ _ hk0 hk8 _ hb.
+    have ->> : k0 = 8 by smt().
+    rewrite (lanes8_full _ (lanes_end _ _ _ _ _ hb)).
+    split; 1: by split; [exact (full256_init 0 256) | exact (full512_init 0 512)].
+    by move=> _ _ r h3 _; split; [exact (full256E _ h3) | exact (lanes_full 8 64 8 0 0)].
+  auto => /> &m _ f0 _ _ _ _ _ hf hl h56.
+  have e : to_uint (f0 + W64.one) = to_uint f0 + 1.
+  + by rewrite W64.to_uintD_small to_uint_one //; smt(modz_cmp W64.to_uint_cmp).
+  rewrite e; split; 2: done.
+  by move: h56; rewrite W64.ultE e; smt().
+wp; while (valid trace__sha256_x8_finalize /\ k_init /\ ms_init /\ 0 <= k <= 8
+           /\ h_init = full256 /\ out_init = full256).
++ wp; while (valid trace__sha256_x8_finalize /\ k_init /\ j_init /\ ms_init /\ 0 <= k < 8
+             /\ 0 <= j <= 8 /\ h_init = full256 /\ out_init = full256).
+  + wp; ecall (__bswap32_proof x); auto => /> &m _ _ _ _ hk0 hk8 hj0 hj8 hlt r _.
+    by rewrite full256_set32d full256_init /=; smt().
+  by auto => /> &m *; smt().
+wp; ecall (_sha256_x8_compress_proof h buf ms h_init buf_init).
+wp; while (valid trace__sha256_x8_finalize /\ k_init /\ t_init /\ ms_init /\ 0 <= k <= 8
+           /\ h_init = full256 /\ lanes buf_init 8 64 k 56 64).
++ auto => /> &m _ _ _ _ hk0 hk8 hl hlt; split; 1: smt().
+  split; 1: smt().
+  by apply (lanes8_set64d _ _ hl); smt().
+wp; ecall (__bswap64_proof t).
+wp; while (valid trace__sha256_x8_finalize /\ total_init /\ fill_init /\ ms_init /\ hi_init
+           /\ k_init /\ 0 <= k <= 8 /\ hi = W64.of_int 56 /\ h_init = full256
+           /\ to_uint fill <= 56 /\ lanes buf_init 8 64 k (to_uint fill) 56).
++ wp; ecall (__zero64_proof (SBArray512_64.get_sub8 buf (64 * k)) fill hi ms
+               (SBArray512_64.get_sub buf_init (1 * (64 * k)))).
+  auto => /> &m _ _ _ _ _ _ hk0 hk8 hf hl hlt.
+  rewrite W64.uleE /=; split.
+  + by split; [smt() | apply (lanes64_get _ _ _ _ hl); smt(W64.to_uint_cmp)].
+  move=> _ _ r hr _; split; 1: smt().
+  split; 1: smt().
+  by apply (lanes64_set _ _ _ _ _ hl) => //; smt(W64.to_uint_cmp).
+auto => /> &m _ _ _ _ hf hl; split; 1: exact (lanes_start _ _ _ _ _ hl).
+move=> b0 k0 ms0 tr0 hlt _ _ hk0 hk8 hb r _.
+have ->> : k0 = 8 by smt().
+have hb56 := lanes_end _ _ _ _ _ hb.
+split; 1: exact (lanes_start _ _ _ _ _ hb56).
+move=> b1 k1 tr1 hlt1 _ hk1 hk18 hb1.
+have ->> : k1 = 8 by smt().
+rewrite (lanes8_full _ (lanes_end _ _ _ _ _ hb1)).
+split; 1: by split; [exact (full256_init 0 256) | exact (full512_init 0 512)].
+by move=> _ _ r0 h3 _; split; [exact (full256E _ h3) | move=> *; exact (full512_init 0 512)].
+qed.
+
+lemma _sha256_x8_lanes_proof _out _in _len _ms _out_init _in_init :
+  _sha256_x8_lanes_spec _out _in _len _ms _out_init _in_init.
+proof.
+rewrite /_sha256_x8_lanes_spec; proc.
+wp; ecall (_sha256_x8_finalize_proof out h buf total ms out_init h_init buf_init).
+wp; ecall (_sha256_x8_absorb_lanes_proof h buf total in_0 len ms h_init buf_init in_init).
+wp; ecall (__sha256_x8_init_proof h h_init).
+auto => /> &m *.
+have e : to_uint (W64.zero \umod W64.of_int 64) = 0 by rewrite umodc // W64.to_uint0.
+by rewrite e; do !split; move=> j /#.
+qed.
