@@ -571,3 +571,154 @@ wp; while (valid trace__sha512_256_ctx___sha2_ctx_final /\ i_init /\ z_init /\ i
 auto => /> &m *; split; 1: smt(full208E).
 by move=> *; exact (full208_init 0 208).
 qed.
+
+(* ------------------------------------------------------------------ *)
+(* HMAC contexts: the inner hash context, then the outer state        *)
+
+lemma set_sub144_112_full (a : BArray112.t) :
+  BArray112.is_init a 0 112 => SBArray144_112.set_sub full144 0 a = full144.
+proof.
+move=> ha; rewrite (full112E _ ha); apply full144E => j hj0 hj1.
+rewrite SBArray144_112.is_init_cell_set; case: (0 <= j < 0 + 112) => hj.
++ by rewrite ifT 1:/#; apply (full112_init 0 112) => /#.
+by rewrite ifF 1:/#; apply (full144_init 0 144).
+qed.
+
+lemma __hmac_sha256_ctx_init_proof _ctx _key _keylen _ms _ctx_init :
+  __hmac_sha256_ctx_init_spec _ctx _key _keylen _ms _ctx_init.
+proof.
+rewrite /__hmac_sha256_ctx_init_spec; proc.
+wp; while (valid trace___hmac_sha256_ctx_init /\ i_init /\ 0 <= i <= 8
+           /\ BArray32.is_init outer_init 0 32 /\ ctx_init = full144).
++ auto => /> &m _ _ hi0 hi8 ho hlt; rewrite full144_set32d /=.
+  have hw : BArray32.is_init outer_init{m} (i{m} * 4) 4 by move=> j hj0 hj1; apply ho => /#.
+  by smt().
+wp; ecall (__sha256_ctx_init_proof (SBArray144_112.get_sub8 ctx 0) inner tag total
+             (SBArray144_112.get_sub ctx_init (1 * 0)) inner_init).
+wp; ecall (__sha2_tag_proof 7).
+wp; ecall (__hmac_sha256_init_proof inner outer k0 ms inner_init outer_init k0_init).
+wp; ecall (_hmac_sha256_keyblock_mem_proof k0 key keylen ms k0_init).
+auto => /> &m _ _ _ r _ _ r0 _ _ _ r1 _ r2 h2 _.
+by split; [exact (set_sub144_112_full _ h2) | move=> *; exact (full144_init 0 144)].
+qed.
+
+lemma __hmac_sha256_ctx_final_proof _ctx _out _ms _ctx_init _out_init :
+  __hmac_sha256_ctx_final_spec _ctx _out _ms _ctx_init _out_init.
+proof.
+rewrite /__hmac_sha256_ctx_final_spec; proc; sp.
+seq 1 : (valid trace___hmac_sha256_ctx_final /\ valid M.tmp__trace /\ ctx_init = full144
+         /\ ms_init).
++ ecall (__sha2_ctx_open_proof (SBArray144_16.get_sub8 ctx 0) ms (SBArray144_16.get_sub ctx_init 0)).
+  auto => /> hc; rewrite (full144E _ hc) /=.
+  by apply (sub144_16_get _ 0 0 16) => //; exact full144_init.
+sp; seq 1 : (valid trace___hmac_sha256_ctx_final /\ valid M.tmp__trace /\ ctx_init = full144
+             /\ ms_init /\ tag_init /\ total_init).
++ by ecall (__sha2_tag_proof 7); auto.
+sp; if; last first.
++ auto => /> *; split; 1: exact (full144_init 0 144).
+  have -> : (W64.one = W64.zero) = false by smt(one_neq_zero).
+  by move=> j /#.
+wp; while (valid trace___hmac_sha256_ctx_final /\ i_init /\ z_init /\ inc = 18 /\ 0 <= i <= 18
+           /\ ctx_init = full144 /\ out_init = full32).
++ by auto => /> &m *; rewrite full144_set64d; smt().
+wp; while (valid trace___hmac_sha256_ctx_final /\ i_init /\ 0 <= i <= 4
+           /\ ctx_init = full144 /\ out_init = full32 /\ BArray32.is_init mac_init 0 32).
++ auto => /> &m _ _ hi0 hi4 hm hlt; rewrite full32_set64d /=.
+  have hw : BArray32.is_init mac_init{m} (i{m} * 8) 8 by move=> j hj0 hj1; apply hm => /#.
+  by smt().
+wp; ecall (__hmac_sha256_finalize_proof mac inner buf total outer ms mac_init inner_init
+             buf_init outer_init).
+wp; while (valid trace___hmac_sha256_ctx_final /\ i_init /\ total_init /\ ms_init
+           /\ 0 <= i <= 8 /\ ctx_init = full144 /\ BArray32.is_init inner_init 0 32
+           /\ BArray64.is_init buf_init 0 64 /\ BArray32.is_init outer_init 0 (4 * i)).
++ auto => /> &m _ _ _ _ hi0 hi8 hin hbuf ho hlt.
+  have hm := mask32_set32 outer_init{m} i{m} ho _ _; 1,2: smt().
+  have hc := full144_init (112 + 4 * i{m}) 4.
+  by smt().
+wp; ecall (__sha256_ctx_load_proof inner buf (SBArray144_112.get_sub8 ctx 0) inner_init
+             buf_init (SBArray144_112.get_sub ctx_init (1 * 0))).
+auto => /> &m tr _ _ _ _ _.
+have hg : BArray112.is_init (SBArray144_112.get_sub full144 0) 0 112.
++ by apply (sub144_112_get _ 0 0 112) => //; exact full144_init.
+split; 1: exact hg.
+move=> _ r h3 h4 _; split; 1: by move=> j /#.
+move=> i0 o0 tr1 hlt _ hi0 hi8 ho.
+have ho32 : BArray32.is_init o0 0 32 by have <- : 4 * i0 = 32 by smt().
+have hb : BArray64.is_init r.`4 0 (to_uint (total{m} \umod W64.of_int 64)).
++ by rewrite umodc //; apply (mask64_le _ _ 64 h4); smt().
+by split; [done | move=> *; split; [exact (full144_init 0 144) | exact (full32_init 0 32)]].
+qed.
+
+lemma set_sub272_208_full (a : BArray208.t) :
+  BArray208.is_init a 0 208 => SBArray272_208.set_sub full272 0 a = full272.
+proof.
+move=> ha; rewrite (full208E _ ha); apply full272E => j hj0 hj1.
+rewrite SBArray272_208.is_init_cell_set; case: (0 <= j < 0 + 208) => hj.
++ by rewrite ifT 1:/#; apply (full208_init 0 208) => /#.
+by rewrite ifF 1:/#; apply (full272_init 0 272).
+qed.
+
+lemma __hmac_sha512_ctx_init_proof _ctx _key _keylen _ms _ctx_init :
+  __hmac_sha512_ctx_init_spec _ctx _key _keylen _ms _ctx_init.
+proof.
+rewrite /__hmac_sha512_ctx_init_spec; proc.
+wp; while (valid trace___hmac_sha512_ctx_init /\ i_init /\ 0 <= i <= 8
+           /\ BArray64.is_init outer_init 0 64 /\ ctx_init = full272).
++ auto => /> &m _ _ hi0 hi8 ho hlt; rewrite full272_set64d /=.
+  have hw : BArray64.is_init outer_init{m} (i{m} * 8) 8 by move=> j hj0 hj1; apply ho => /#.
+  by smt().
+wp; ecall (__sha512_ctx_init_proof (SBArray272_208.get_sub8 ctx 0) inner tag total
+             (SBArray272_208.get_sub ctx_init (1 * 0)) inner_init).
+wp; ecall (__sha2_tag_proof 8).
+wp; ecall (__hmac_sha512_init_proof inner outer k0 ms inner_init outer_init k0_init).
+wp; ecall (_hmac_sha512_keyblock_mem_proof k0 key keylen ms k0_init).
+auto => /> &m _ _ _ r _ _ r0 _ _ _ r1 _ r2 h2 _.
+by split; [exact (set_sub272_208_full _ h2) | move=> *; exact (full272_init 0 272)].
+qed.
+
+lemma __hmac_sha512_ctx_final_proof _ctx _out _ms _ctx_init _out_init :
+  __hmac_sha512_ctx_final_spec _ctx _out _ms _ctx_init _out_init.
+proof.
+rewrite /__hmac_sha512_ctx_final_spec; proc; sp.
+seq 1 : (valid trace___hmac_sha512_ctx_final /\ valid M.tmp__trace /\ ctx_init = full272
+         /\ ms_init).
++ ecall (__sha2_ctx_open_proof (SBArray272_16.get_sub8 ctx 0) ms (SBArray272_16.get_sub ctx_init 0)).
+  auto => /> hc; rewrite (full272E _ hc) /=.
+  by apply (sub272_16_get _ 0 0 16) => //; exact full272_init.
+sp; seq 1 : (valid trace___hmac_sha512_ctx_final /\ valid M.tmp__trace /\ ctx_init = full272
+             /\ ms_init /\ tag_init /\ total_init).
++ by ecall (__sha2_tag_proof 8); auto.
+sp; if; last first.
++ auto => /> *; split; 1: exact (full272_init 0 272).
+  have -> : (W64.one = W64.zero) = false by smt(one_neq_zero).
+  by move=> j /#.
+wp; while (valid trace___hmac_sha512_ctx_final /\ i_init /\ z_init /\ inc = 34 /\ 0 <= i <= 34
+           /\ ctx_init = full272 /\ out_init = full64).
++ by auto => /> &m *; rewrite full272_set64d; smt().
+wp; while (valid trace___hmac_sha512_ctx_final /\ i_init /\ 0 <= i <= 8
+           /\ ctx_init = full272 /\ out_init = full64 /\ BArray64.is_init mac_init 0 64).
++ auto => /> &m _ _ hi0 hi4 hm hlt; rewrite full64_set64d /=.
+  have hw : BArray64.is_init mac_init{m} (i{m} * 8) 8 by move=> j hj0 hj1; apply hm => /#.
+  by smt().
+wp; ecall (__hmac_sha512_finalize_proof mac inner buf total outer ms mac_init inner_init
+             buf_init outer_init).
+wp; while (valid trace___hmac_sha512_ctx_final /\ i_init /\ total_init /\ ms_init
+           /\ 0 <= i <= 8 /\ ctx_init = full272 /\ BArray64.is_init inner_init 0 64
+           /\ BArray128.is_init buf_init 0 128 /\ BArray64.is_init outer_init 0 (8 * i)).
++ auto => /> &m _ _ _ _ hi0 hi8 hin hbuf ho hlt.
+  have hm := mask64_set64 outer_init{m} i{m} ho _ _; 1,2: smt().
+  have hc := full272_init (208 + 8 * i{m}) 8.
+  by smt().
+wp; ecall (__sha512_ctx_load_proof inner buf (SBArray272_208.get_sub8 ctx 0) inner_init
+             buf_init (SBArray272_208.get_sub ctx_init (1 * 0))).
+auto => /> &m tr _ _ _ _ _.
+have hg : BArray208.is_init (SBArray272_208.get_sub full272 0) 0 208.
++ by apply (sub272_208_get _ 0 0 208) => //; exact full272_init.
+split; 1: exact hg.
+move=> _ r h3 h4 _; split; 1: by move=> j /#.
+move=> i0 o0 tr1 hlt _ hi0 hi8 ho.
+have ho32 : BArray64.is_init o0 0 64 by have <- : 8 * i0 = 64 by smt().
+have hb : BArray128.is_init r.`4 0 (to_uint (total{m} \umod W64.of_int 128)).
++ by rewrite umodc //; apply (mask128_le _ _ 128 h4); smt().
+by split; [done | move=> *; split; [exact (full272_init 0 272) | exact (full64_init 0 64)]].
+qed.
