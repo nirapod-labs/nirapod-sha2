@@ -531,3 +531,418 @@ auto => /> &m *.
 have e : to_uint (W64.zero \umod W64.of_int 64) = 0 by rewrite umodc // W64.to_uint0.
 by rewrite e; do !split; move=> j /#.
 qed.
+
+(* ------------------------------------------------------------------ *)
+(* Four-way SHA-512: lane masks                                       *)
+
+lemma lanes4I (m : BArray512.t) l :
+  BArray512.is_init m 0 l => BArray512.is_init m 128 l => BArray512.is_init m 256 l =>
+  BArray512.is_init m 384 l => lanes m 4 128 4 l l.
+proof.
+move=> h0 h1 h2 h3 j hj; rewrite (_ : (if j < 4 then l else l) = l) 1:/#.
+have : j = 0 \/ j = 1 \/ j = 2 \/ j = 3 by smt().
+by case=> [->|[->|[->|->]]].
+qed.
+
+lemma lanes4E (m : BArray512.t) l : lanes m 4 128 4 l l =>
+  BArray512.is_init m 0 l /\ BArray512.is_init m 128 l /\ BArray512.is_init m 256 l
+  /\ BArray512.is_init m 384 l.
+proof. by move=> h; do !split; [have := h 0 | have := h 1 | have := h 2 | have := h 3]. qed.
+
+lemma lanes4_full (m : BArray512.t) : lanes m 4 128 4 128 128 => m = full512.
+proof.
+move=> h; apply full512E => i hi0 hi1.
+by have := h (i %/ 128) _ i _ _; smt(divz_eq modz_ge0 ltz_pmod).
+qed.
+
+lemma lanes_valid4E mv (f : int -> int) l : lanes_valid mv 4 f l =>
+  is_valid (2 ^ 64) mv (f 0) l /\ is_valid (2 ^ 64) mv (f 1) l /\ is_valid (2 ^ 64) mv (f 2) l
+  /\ is_valid (2 ^ 64) mv (f 3) l.
+proof. by move=> h; do 3!(split; 1: by apply h); apply h. qed.
+
+(* The two length words of lane k, at offsets 112 and 120. *)
+lemma lanes4_set112 (m : BArray512.t) k :
+  lanes m 4 128 k 112 128 => 0 <= k < 4 =>
+  lanes (BArray512.set64d (BArray512.set64d m (128 * k + 112) (W64.of_int 18446744073709551615))
+           (128 * k + 120) (W64.of_int 18446744073709551615)) 4 128 (k + 1) 112 128.
+proof.
+move=> h hk j hj i hi0 hi1; rewrite !BArray512.is_init_cell_set64d.
+case: (128 * k + 112 <= i < 128 * k + 128) => hi; 1: smt().
+by right; right; have := h j hj i _ _; [smt() | smt() | smt()].
+qed.
+
+(* The lane kernel contract with the per-lane conditions folded. *)
+lemma _sha512_x4_compress_lanes_lv _h4 _in _off _n _ms _h4_init :
+  hoare [M._sha512_x4_compress_lanes :
+    h4 = _h4 /\ in_0 = _in /\ off = _off /\ n = _n /\ ms = _ms /\ h4_init = _h4_init
+    /\ in_init = full32 /\ BArray256.is_init _h4_init 0 256
+    /\ _n \ult W64.of_int 144115188075855872 /\ _off \ult W64.of_int 2305843009213693952
+    /\ lanes_valid Glob.mem_v 4 (fun i => to_uint (BArray32.get64 _in i + _off))
+         (to_uint (W64.of_int 128 * _n))
+    ==> BArray256.is_init res.`3 0 256 /\ valid res.`4].
+proof.
+have := _sha512_x4_compress_lanes_proof _h4 _in _off _n _ms _h4_init full32.
+rewrite /_sha512_x4_compress_lanes_spec => h; conseq h => />.
+move=> &m _ _ _ _ _ _ -> hh hn ho hlv; have := lanes_valid4E _ _ _ hlv.
+rewrite /is_valid /= => [#] *.
+by do !split => //; try apply full32_init; move=> i h1 h2; smt().
+qed.
+
+(* ------------------------------------------------------------------ *)
+(* Four-way SHA-512: state                                            *)
+
+(* Word 4 * j + k of the interleaved state is word j of lane k. *)
+lemma __sha512_x4_init_proof _h _h_init : __sha512_x4_init_spec _h _h_init.
+proof.
+rewrite /__sha512_x4_init_spec; proc.
+while (valid trace___sha512_x4_init /\ j_init /\ 0 <= j <= 8 /\ iv_init = full64
+       /\ BArray256.is_init h_init 0 (8 * (4 * j))).
++ wp; while (valid trace___sha512_x4_init /\ j_init /\ k_init /\ t_init /\ 0 <= j < 8
+             /\ 0 <= k <= 4 /\ iv_init = full64 /\ BArray256.is_init h_init 0 (8 * (4 * j + k))).
+  + auto => /> &m _ _ _ _ hj0 hj8 hk0 hk8 hh hlt.
+    have hm := mask256_set64 h_init{m} (4 * j{m} + k{m}) hh _ _; 1,2: smt().
+    by rewrite (_ : 8 * (4 * j{m} + (k{m} + 1)) = 8 * (4 * j{m} + k{m} + 1)) 1:/#; smt().
+  auto => /> &m _ _ hj0 hj8 hh hlt; split; 1: by rewrite full64_init /=; smt().
+  move=> h0 k0 tr0 hlt0 _ hk0 hk8 hh0; split; 1: smt().
+  by have <- : 8 * (4 * j{m} + k0) = 8 * (4 * (j{m} + 1)) by smt().
+auto => /> *; split; 1: by move=> j /#.
+by move=> h0 j0 tr0 hlt _ hj0 hj8 hh; have <- : 8 * (4 * j0) = 256 by smt().
+qed.
+
+lemma __sha512_x4_from_proof _h _buf _hs _bs _h_init _buf_init _hs_init _bs_init :
+  __sha512_x4_from_spec _h _buf _hs _bs _h_init _buf_init _hs_init _bs_init.
+proof.
+rewrite /__sha512_x4_from_spec; proc.
+while (valid trace___sha512_x4_from /\ i_init /\ 0 <= i <= 16 /\ BArray256.is_init h_init 0 256
+       /\ BArray128.is_init bs_init 0 128
+       /\ forall c, 0 <= c < 512 => c %% 128 < 8 * i => BArray512.is_init_cell buf_init c).
++ wp; while (valid trace___sha512_x4_from /\ i_init /\ k_init /\ t_init /\ 0 <= i < 16
+             /\ 0 <= k <= 4 /\ BArray256.is_init h_init 0 256 /\ BArray128.is_init bs_init 0 128
+             /\ forall c, 0 <= c < 512 => (c %% 128 < 8 * i \/ c %% 128 < 8 * i + 8 /\ c %/ 128 < k)
+                  => BArray512.is_init_cell buf_init c).
+  + auto => /> &m _ _ _ _ hi0 hi8 hk0 hk8 hh hbs hb hlt.
+    split; 1: smt().
+    split; 1: smt().
+    move=> c hc0 hc1 hc.
+    case: (c %% 128 < 8 * i{m} \/ c %% 128 < 8 * i{m} + 8 /\ c %/ 128 < k{m}) => hcase.
+    + by right; apply hb.
+    by left; smt(divz_eq modz_ge0 ltz_pmod).
+  auto => /> &m _ _ hi0 hi8 hh hbs hb hlt.
+  have hw : BArray128.is_init bs_init{m} (i{m} * 8) 8 by move=> j hj0 hj1; apply hbs => /#.
+  split.
+  + split; 1: smt().
+    by move=> c hc0 hc1 [hc|hc]; [apply hb | smt()].
+  move=> b0 k0 tr0 hlt0 _ hk0 hk8 hb0; split; 1: smt().
+  move=> c hc0 hc1 hc; apply hb0 => //.
+  case: (c %% 128 < 8 * i{m}) => hci; [by left | right; smt(divz_eq modz_ge0 ltz_pmod)].
+wp; while (valid trace___sha512_x4_from /\ j_init /\ 0 <= j <= 8 /\ BArray64.is_init hs_init 0 64
+           /\ BArray128.is_init bs_init 0 128 /\ BArray256.is_init h_init 0 (8 * (4 * j))).
++ wp; while (valid trace___sha512_x4_from /\ j_init /\ k_init /\ x_init /\ 0 <= j < 8
+             /\ 0 <= k <= 4 /\ BArray64.is_init hs_init 0 64 /\ BArray128.is_init bs_init 0 128
+             /\ BArray256.is_init h_init 0 (8 * (4 * j + k))).
+  + auto => /> &m _ _ _ _ hj0 hj8 hk0 hk8 hs hbs hh hlt.
+    have hm := mask256_set64 h_init{m} (4 * j{m} + k{m}) hh _ _; 1,2: smt().
+    by rewrite (_ : 8 * (4 * j{m} + (k{m} + 1)) = 8 * (4 * j{m} + k{m} + 1)) 1:/#; smt().
+  auto => /> &m _ _ hj0 hj8 hs hbs hh hlt.
+  have hw : BArray64.is_init hs_init{m} (j{m} * 8) 8 by move=> j hj0' hj1; apply hs => /#.
+  split; 1: smt().
+  move=> h0 k0 tr0 hlt0 _ hk0 hk8 hh0; split; 1: smt().
+  by have <- : 8 * (4 * j{m} + k0) = 8 * (4 * (j{m} + 1)) by smt().
+auto => /> hs hbs; split; 1: by move=> j /#.
+move=> h0 j0 tr0 hlt _ hj0 hj8 hh.
+have hh256 : BArray256.is_init h0 0 256 by have <- : 8 * (4 * j0) = 256 by smt().
+split; 1: by split; [done | smt(modz_ge0)].
+by move=> b0 i0 tr1 hlt1 _ hi0 hi8 _ hb c hc0 hc1; apply hb => //; smt(ltz_pmod).
+qed.
+
+(* ------------------------------------------------------------------ *)
+(* Four-way SHA-512: absorb                                           *)
+
+(* The single-way absorb of SafetySha512, lane by lane: every lane has
+   the same fill f and length, so one head computation serves all. *)
+lemma _sha512_x4_absorb_lanes_proof _h _buf _total _in _inlen _ms _h_init _buf_init _in_init :
+  _sha512_x4_absorb_lanes_spec _h _buf _total _in _inlen _ms _h_init _buf_init _in_init.
+proof.
+rewrite /_sha512_x4_absorb_lanes_spec; proc; sp.
+seq 1 : (valid trace__sha512_x4_absorb_lanes /\ total_init /\ fill_init /\ inlen_init
+         /\ ms_init /\ n_init /\ total = _total + _inlen /\ in_0 = _in /\ inlen = _inlen
+         /\ h_init = full256 /\ in_init = full32 /\ _inlen \ult W64.of_int 2305843009213693952
+         /\ to_uint fill = to_uint _total %% 128 /\ to_uint fill + to_uint n <= 128
+         /\ to_uint n <= to_uint _inlen /\ (to_uint fill = 0 => to_uint n = 0)
+         /\ (to_uint fill <> 0 => to_uint fill + to_uint n <> 128 => to_uint n = to_uint _inlen)
+         /\ lanes buf_init 4 128 4 (to_uint fill + to_uint n) (to_uint fill + to_uint n)
+         /\ lanes_valid Glob.mem_v 4 (fun i => to_uint (BArray32.get64 _in i)) (to_uint _inlen)).
++ while (valid trace__sha512_x4_absorb_lanes /\ total_init /\ fill_init /\ inlen_init
+         /\ ms_init /\ n_init /\ k_init /\ 0 <= k <= 4 /\ total = _total + _inlen /\ in_0 = _in
+         /\ inlen = _inlen /\ h_init = full256 /\ in_init = full32
+         /\ _inlen \ult W64.of_int 2305843009213693952
+         /\ to_uint fill = to_uint _total %% 128 /\ to_uint fill + to_uint n <= 128
+         /\ to_uint n <= to_uint _inlen /\ (to_uint fill = 0 => to_uint n = 0)
+         /\ (to_uint fill <> 0 => to_uint fill + to_uint n <> 128 => to_uint n = to_uint _inlen)
+         /\ lanes buf_init 4 128 k (to_uint fill) (to_uint fill + to_uint n)
+         /\ lanes_valid Glob.mem_v 4 (fun i => to_uint (BArray32.get64 _in i)) (to_uint _inlen)).
+  + wp; ecall (__fill128_mem_proof (SBArray512_128.get_sub8 buf (128 * k)) fill p n ms
+                 (SBArray512_128.get_sub buf_init (1 * (128 * k)))).
+    auto => /> &m _ _ _ _ _ _ _ hk0 hk8 hult hf hfn hnl hf0 hfl hl hlv hlt.
+    have := hlv k{m} _; 1: smt().
+    rewrite /is_valid /= => -[hv1 [hv2 hv3]].
+    have efn : to_uint (fill{m} + n{m}) = to_uint fill{m} + to_uint n{m}.
+    + by rewrite W64.to_uintD_small; smt(W64.to_uint_cmp).
+    rewrite /protect_64 !W64.uleE /= efn.
+    split.
+    + split.
+      + split; 1: smt(W64.to_uint_cmp).
+        by apply (lanes128_get _ _ _ _ hl); smt(W64.to_uint_cmp).
+      by split; [move=> i h1 h2; apply hv1 | split]; smt().
+    move=> _ _ _ _ _ _ _ r hr _; split; 1: by rewrite full32_init; smt().
+    split; 1: smt().
+    by apply (lanes128_set _ _ _ _ _ hl) => //; smt(W64.to_uint_cmp).
+  auto => /> &m hi0 hi1 hi2 hi3 hh hb0 hb1 hb2 hb3 hult hin.
+  move=> v00 v01 v02 v10 v11 v12 v20 v21 v22 v30 v31 v32.
+  pose f := _total `&` W64.of_int 127.
+  pose nn := if f = W64.of_int 0 then f
+             else if inlen{m} \ult W64.of_int 128 - f then inlen{m} else W64.of_int 128 - f.
+  have [#] hf hfn hnl hln hf0 hfl := absorb_head512 _total inlen{m} f nn _ _ => //.
+  have hl8 := lanes4I _ _ hb0 hb1 hb2 hb3.
+  move: hl8; rewrite umodc // -hf => hl8.
+  split.
+  + split; 1: exact (full256E _ hh).
+    split; 1: exact (full32E _ hin).
+    do 5!(split; 1: done).
+    split; 1: exact (lanes_start _ _ _ _ _ hl8).
+    by apply lanes_valid4; rewrite /is_valid /=; do !split => //.
+  move=> b0 k0 ms0 tr0 hlt _ _ hk0 hk8 _ _ _ _ _ _ _ hb hlv.
+  have ->> : k0 = 4 by smt().
+  exact (lanes_end _ _ _ _ _ hb).
+sp; seq 1 : (valid trace__sha512_x4_absorb_lanes /\ total_init /\ fill_init /\ inlen_init
+             /\ ms_init /\ off_init /\ total = _total + _inlen /\ in_0 = _in /\ inlen = _inlen
+             /\ h_init = full256 /\ in_init = full32 /\ _inlen \ult W64.of_int 2305843009213693952
+             /\ to_uint fill < 128 /\ lanes buf_init 4 128 4 (to_uint fill) (to_uint fill)
+             /\ to_uint off <= to_uint _inlen /\ (to_uint fill <> 0 => to_uint off = to_uint _inlen)
+             /\ (to_uint fill + (to_uint _inlen - to_uint off)) %% 128
+                = (to_uint _total %% 128 + to_uint _inlen) %% 128
+             /\ lanes_valid Glob.mem_v 4 (fun i => to_uint (BArray32.get64 _in i)) (to_uint _inlen)).
++ if.
+  + wp; ecall (_sha512_x4_compress_proof h buf ms h_init buf_init).
+    auto => /> &m _ f0 _ _ _ _ _ _ _ hult hf hfn hnl hf0 hfl hl hlv hfull.
+    have efn : to_uint (f0 + n{m}) = to_uint f0 + to_uint n{m}.
+    + by rewrite W64.to_uintD_small; smt(W64.to_uint_cmp).
+    have e64 : to_uint f0 + to_uint n{m} = 128 by rewrite -efn hfull.
+    move: hl; rewrite e64 => hl; rewrite (lanes4_full _ hl).
+    split; 1: by split; [exact (full256_init 0 256) | exact (full512_init 0 512)].
+    move=> _ _ r h3 _; split; 1: exact (full256E _ h3).
+    split; 1: exact (lanes_full 4 128 4 0 0).
+    rewrite /protect_64 (_ : to_uint _total %% 128 + to_uint inlen{m}
+                             = (to_uint inlen{m} - to_uint n{m}) + 1 * 128) 1:/#.
+    by rewrite modzMDr.
+  auto => /> &m _ f0 _ _ _ _ _ _ _ hult hf hfn hnl hf0 hfl hl hlv hfull.
+  have efn : to_uint (f0 + n{m}) = to_uint f0 + to_uint n{m}.
+  + by rewrite W64.to_uintD_small; smt(W64.to_uint_cmp).
+  have h64 : to_uint f0 + to_uint n{m} <> 128.
+  + by move: hfull; rewrite W64.to_uint_eq efn W64.to_uint_small.
+  rewrite efn; split; 1: smt().
+  split; 1: exact hl.
+  by split; smt().
+sp; seq 1 : (valid trace__sha512_x4_absorb_lanes /\ total_init /\ fill_init /\ inlen_init
+             /\ ms_init /\ off_init /\ total = _total + _inlen /\ in_0 = _in /\ inlen = _inlen
+             /\ h_init = full256 /\ in_init = full32 /\ to_uint off <= to_uint _inlen
+             /\ to_uint fill + (to_uint _inlen - to_uint off)
+                = (to_uint _total %% 128 + to_uint _inlen) %% 128
+             /\ lanes buf_init 4 128 4 (to_uint fill) (to_uint fill)
+             /\ lanes_valid Glob.mem_v 4 (fun i => to_uint (BArray32.get64 _in i)) (to_uint _inlen)).
++ if.
+  + wp; ecall (_sha512_x4_compress_lanes_lv h in_0 off n ms h_init).
+    auto => /> &m _ _ _ _ _ _ _ hult hf hl ho hf0 hm hlv hnz.
+    have eLO : to_uint (inlen{m} - off{m}) = to_uint inlen{m} - to_uint off{m}.
+    + by rewrite W64.to_uintB 1:W64.uleE.
+    have hn : to_uint (inlen{m} - off{m} `>>` W8.of_int 7)
+              = (to_uint inlen{m} - to_uint off{m}) %/ 128.
+    + by rewrite -eLO; have := shrc (inlen{m} - off{m}) 7 _.
+    have hn1 := nonzero _ hnz.
+    have hdm := divz_eq (to_uint inlen{m} - to_uint off{m}) 128.
+    have hmd := modz_ge0 (to_uint inlen{m} - to_uint off{m}) 128 _; 1: done.
+    have hlt : to_uint inlen{m} < 2305843009213693952 by move: hult; rewrite W64.ultE.
+    have e := mulc_small (inlen{m} - off{m} `>>` W8.of_int 7) 128 _ _; 1: done.
+    + by rewrite hn; smt(W64.to_uint_cmp).
+    have hb : to_uint ((inlen{m} - off{m} `>>` W8.of_int 7) `<<` W8.of_int 7)
+              = 128 * ((to_uint inlen{m} - to_uint off{m}) %/ 128).
+    + by rewrite -eLO; have := blocksc (inlen{m} - off{m}) 7 _.
+    split.
+    + split; 1: exact (full256_init 0 256).
+      split; 1: by rewrite W64.ultE hn; smt(W64.to_uint_cmp).
+      split; 1: by rewrite W64.ultE; smt(W64.to_uint_cmp).
+      move=> k hk; have := hlv k hk; rewrite /is_valid /= => -[hv1 [hv2 hv3]].
+      have ep : to_uint (get64d in_0{m} (8 * k) + off{m})
+                = to_uint (get64d in_0{m} (8 * k)) + to_uint off{m}.
+      + by rewrite W64.to_uintD_small; smt(W64.to_uint_cmp).
+      rewrite /is_valid /= ep e hn; split; [move=> i hi; apply hv1 | split]; smt(W64.to_uint_cmp).
+    move=> _ _ _ _ r h3 _; rewrite /protect_64.
+    have eo : to_uint (off{m} + ((inlen{m} - off{m} `>>` W8.of_int 7) `<<` W8.of_int 7))
+              = to_uint off{m} + 128 * ((to_uint inlen{m} - to_uint off{m}) %/ 128).
+    + by rewrite W64.to_uintD_small hb; smt(W64.to_uint_cmp).
+    rewrite eo; split; 1: exact (full256E _ h3).
+    have hz : to_uint fill{m} = 0 by smt(W64.to_uint_cmp).
+    split; 1: smt().
+    split; 2: exact (lanes_full 4 128 4 0 0).
+    rewrite (_ : to_uint inlen{m} - (to_uint off{m} + 128 * ((to_uint inlen{m} - to_uint off{m}) %/ 128))
+                 = (to_uint inlen{m} - to_uint off{m}) %% 128) 1:/#.
+    by move: hm; rewrite hz.
+  auto => /> &m _ _ _ _ _ _ _ hult hf hl ho hf0 hm hlv hz.
+  have eLO : to_uint (inlen{m} - off{m}) = to_uint inlen{m} - to_uint off{m}.
+  + by rewrite W64.to_uintB 1:W64.uleE.
+  have hn : (to_uint inlen{m} - to_uint off{m}) %/ 128 = 0.
+  + have := shrc (inlen{m} - off{m}) 7 _; 1: done.
+    by rewrite hz W64.to_uint0 eLO => ->.
+  have hl64 : to_uint inlen{m} - to_uint off{m} < 128 by smt(divz_eq modz_ge0 ltz_pmod).
+  by rewrite -hm pmod_small; smt(W64.to_uint_cmp).
+wp; while (valid trace__sha512_x4_absorb_lanes /\ total_init /\ fill_init /\ inlen_init
+           /\ ms_init /\ off_init /\ n_init /\ k_init /\ 0 <= k <= 4 /\ total = _total + _inlen
+           /\ in_0 = _in /\ inlen = _inlen /\ h_init = full256 /\ in_init = full32
+           /\ n = _inlen - off /\ to_uint off <= to_uint _inlen
+           /\ to_uint fill + (to_uint _inlen - to_uint off)
+              = (to_uint _total %% 128 + to_uint _inlen) %% 128
+           /\ lanes buf_init 4 128 k (to_uint fill) (to_uint fill + (to_uint _inlen - to_uint off))
+           /\ lanes_valid Glob.mem_v 4 (fun i => to_uint (BArray32.get64 _in i)) (to_uint _inlen)).
++ wp; ecall (__fill128_mem_proof (SBArray512_128.get_sub8 buf (128 * k)) fill p n ms
+               (SBArray512_128.get_sub buf_init (1 * (128 * k)))).
+  auto => /> &m _ _ _ _ _ _ _ _ hk0 hk8 ho hs hl hlv hlt.
+  have := hlv k{m} _; 1: smt().
+  rewrite /is_valid /= => -[hv1 [hv2 hv3]].
+  have eLO : to_uint (_inlen - off{m}) = to_uint _inlen - to_uint off{m}.
+  + by rewrite W64.to_uintB 1:W64.uleE.
+  have hfl : to_uint fill{m} + (to_uint _inlen - to_uint off{m}) < 128 by rewrite hs; smt(modz_cmp).
+  have efn : to_uint (fill{m} + (_inlen - off{m}))
+             = to_uint fill{m} + (to_uint _inlen - to_uint off{m}).
+  + by rewrite W64.to_uintD_small eLO; smt(W64.to_uint_cmp).
+  have ep : to_uint (get64d _in (8 * k{m}) + off{m})
+            = to_uint (get64d _in (8 * k{m})) + to_uint off{m}.
+  + by rewrite W64.to_uintD_small; smt(W64.to_uint_cmp).
+  rewrite /protect_64 !W64.uleE /= efn eLO ep.
+  split.
+  + split.
+    + split; 1: smt(W64.to_uint_cmp).
+      by apply (lanes128_get _ _ _ _ hl); smt(W64.to_uint_cmp).
+    by split; [move=> i h1 h2; apply hv1 | split]; smt(W64.to_uint_cmp).
+  move=> _ _ _ _ _ _ _ r hr _; split; 1: by rewrite full32_init; smt().
+  split; 1: smt().
+  by apply (lanes128_set _ _ _ _ _ hl) => //; smt(W64.to_uint_cmp).
+auto => /> &m _ _ _ _ _ _ ho hs hl hlv; split; 1: exact (lanes_start _ _ _ _ _ hl).
+move=> b0 k0 ms0 tr0 hlt _ _ hk0 hk8 hb.
+have ->> : k0 = 4 by smt().
+have e4 : to_uint ((_total + _inlen) \umod W64.of_int 128)
+          = (to_uint _total %% 128 + to_uint _inlen) %% 128.
++ rewrite umodc // W64.to_uintD w64_modulus.
+  by rewrite (modz_dvd _ _ 128) // modzDml.
+rewrite e4 -hs.
+have [#] h0 h1 h2 h3 := lanes4E _ _ (lanes_end _ _ _ _ _ hb).
+by rewrite (full256_init 0 256) h0 h1 h2 h3.
+qed.
+
+(* ------------------------------------------------------------------ *)
+(* Four-way SHA-512: padding and output                               *)
+
+lemma _sha512_x4_finalize_proof _out _h _buf _total _ms _out_init _h_init _buf_init :
+  _sha512_x4_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init.
+proof.
+rewrite /_sha512_x4_finalize_spec; proc; sp.
+seq 1 : (valid trace__sha512_x4_finalize /\ total_init /\ fill_init /\ ms_init /\ h_init = full256
+         /\ to_uint fill = to_uint total %% 128
+         /\ lanes buf_init 4 128 4 (to_uint fill + 1) (to_uint fill + 1)).
++ while (valid trace__sha512_x4_finalize /\ total_init /\ fill_init /\ ms_init /\ at_init
+         /\ t_init /\ k_init /\ 0 <= k <= 4 /\ h_init = full256
+         /\ to_uint fill = to_uint total %% 128 /\ to_uint at = to_uint fill + 128 * k
+         /\ lanes buf_init 4 128 k (to_uint fill) (to_uint fill + 1)).
+  + auto => /> &m _ _ _ _ _ _ _ hk0 hk8 hf ha hl hlt.
+    have hf64 : to_uint fill{m} < 128 by smt(modz_cmp).
+    split; 1: smt().
+    split; 1: smt().
+    split; 1: by rewrite W64.to_uintD_small; smt(W64.to_uint_cmp).
+    rewrite ha (_ : to_uint fill{m} + 128 * k{m} = 128 * k{m} + to_uint fill{m}) 1:/#.
+    by apply (lanes4_set8 _ _ _ hl); smt(W64.to_uint_cmp).
+  auto => /> hh hb0 hb1 hb2 hb3.
+  have hf := and127 _total.
+  have hl8 := lanes4I _ _ hb0 hb1 hb2 hb3.
+  move: hl8; rewrite umodc // -hf => hl8.
+  split; 1: by split; [exact (full256E _ hh) | split; [done | exact (lanes_start _ _ _ _ _ hl8)]].
+  move=> a0 ai0 b0 k0 tr0 hlt _ _ hk0 hk8 _ _ ha hb.
+  have ->> : k0 = 4 by smt().
+  exact (lanes_end _ _ _ _ _ hb).
+sp; seq 1 : (valid trace__sha512_x4_finalize /\ total_init /\ fill_init /\ ms_init
+             /\ h_init = full256 /\ to_uint fill <= 112
+             /\ lanes buf_init 4 128 4 (to_uint fill) (to_uint fill)).
++ if.
+  + wp; ecall (_sha512_x4_compress_proof h buf ms h_init buf_init).
+    wp; while (valid trace__sha512_x4_finalize /\ total_init /\ fill_init /\ ms_init /\ hi_init
+               /\ k_init /\ 0 <= k <= 4 /\ hi = W64.of_int 128 /\ h_init = full256
+               /\ to_uint fill <= 128 /\ lanes buf_init 4 128 k (to_uint fill) 128).
+    + wp; ecall (__zero128_proof (SBArray512_128.get_sub8 buf (128 * k)) fill hi ms
+                   (SBArray512_128.get_sub buf_init (1 * (128 * k)))).
+      auto => /> &m _ _ _ _ _ _ hk0 hk8 hf hl hlt.
+      rewrite W64.uleE /=; split.
+      + by split; [smt() | apply (lanes128_get _ _ _ _ hl); smt(W64.to_uint_cmp)].
+      move=> _ _ r hr _; split; 1: smt().
+      split; 1: smt().
+      by apply (lanes128_set _ _ _ _ _ hl) => //; smt(W64.to_uint_cmp).
+    auto => /> &m _ f0 _ _ _ _ _ hf hl h56.
+    have e : to_uint (f0 + W64.one) = to_uint f0 + 1.
+    + by rewrite W64.to_uintD_small to_uint_one //; smt(modz_cmp W64.to_uint_cmp).
+    rewrite e; split; 1: by split; [smt(modz_cmp) | exact (lanes_start _ _ _ _ _ hl)].
+    move=> b0 k0 ms0 tr0 hlt _ _ hk0 hk8 _ hb.
+    have ->> : k0 = 4 by smt().
+    rewrite (lanes4_full _ (lanes_end _ _ _ _ _ hb)).
+    split; 1: by split; [exact (full256_init 0 256) | exact (full512_init 0 512)].
+    by move=> _ _ r h3 _; split; [exact (full256E _ h3) | exact (lanes_full 4 128 4 0 0)].
+  auto => /> &m _ f0 _ _ _ _ _ hf hl h56.
+  have e : to_uint (f0 + W64.one) = to_uint f0 + 1.
+  + by rewrite W64.to_uintD_small to_uint_one //; smt(modz_cmp W64.to_uint_cmp).
+  rewrite e; split; 2: done.
+  by move: h56; rewrite W64.ultE e; smt().
+wp; while (valid trace__sha512_x4_finalize /\ k_init /\ ms_init /\ 0 <= k <= 4
+           /\ h_init = full256 /\ out_init = full256).
++ wp; while (valid trace__sha512_x4_finalize /\ k_init /\ j_init /\ ms_init /\ 0 <= k < 4
+             /\ 0 <= j <= 8 /\ h_init = full256 /\ out_init = full256).
+  + wp; ecall (__bswap64_proof x); auto => /> &m _ _ _ _ hk0 hk8 hj0 hj8 hlt r _.
+    by rewrite full256_set64d full256_init /=; smt().
+  by auto => /> &m *; smt().
+wp; ecall (_sha512_x4_compress_proof h buf ms h_init buf_init).
+wp; while (valid trace__sha512_x4_finalize /\ k_init /\ t_init /\ u_init /\ ms_init /\ 0 <= k <= 4
+           /\ h_init = full256 /\ lanes buf_init 4 128 k 112 128).
++ auto => /> &m _ _ _ _ _ hk0 hk8 hl hlt; split; 1: smt().
+  split; 1: smt().
+  by apply (lanes4_set112 _ _ hl); smt().
+wp; ecall (__bswap64_proof u).
+wp; ecall (__bswap64_proof t).
+wp; while (valid trace__sha512_x4_finalize /\ total_init /\ fill_init /\ ms_init /\ hi_init
+           /\ k_init /\ 0 <= k <= 4 /\ hi = W64.of_int 112 /\ h_init = full256
+           /\ to_uint fill <= 112 /\ lanes buf_init 4 128 k (to_uint fill) 112).
++ wp; ecall (__zero128_proof (SBArray512_128.get_sub8 buf (128 * k)) fill hi ms
+               (SBArray512_128.get_sub buf_init (1 * (128 * k)))).
+  auto => /> &m _ _ _ _ _ _ hk0 hk8 hf hl hlt.
+  rewrite W64.uleE /=; split.
+  + by split; [smt() | apply (lanes128_get _ _ _ _ hl); smt(W64.to_uint_cmp)].
+  move=> _ _ r hr _; split; 1: smt().
+  split; 1: smt().
+  by apply (lanes128_set _ _ _ _ _ hl) => //; smt(W64.to_uint_cmp).
+auto => /> &m _ _ _ _ hf hl; split; 1: exact (lanes_start _ _ _ _ _ hl).
+move=> b0 k0 ms0 tr0 hlt _ _ hk0 hk8 hb r _ r1 _.
+have ->> : k0 = 4 by smt().
+have hb56 := lanes_end _ _ _ _ _ hb.
+split; 1: exact (lanes_start _ _ _ _ _ hb56).
+move=> b1 k1 tr1 hlt1 _ hk1 hk18 hb1.
+have ->> : k1 = 4 by smt().
+rewrite (lanes4_full _ (lanes_end _ _ _ _ _ hb1)).
+split; 1: by split; [exact (full256_init 0 256) | exact (full512_init 0 512)].
+by move=> _ _ r0 h3 _; split; [exact (full256E _ h3) | move=> *; exact (full512_init 0 512)].
+qed.
+
+lemma _sha512_x4_lanes_proof _out _in _len _ms _out_init _in_init :
+  _sha512_x4_lanes_spec _out _in _len _ms _out_init _in_init.
+proof.
+rewrite /_sha512_x4_lanes_spec; proc.
+wp; ecall (_sha512_x4_finalize_proof out h buf total ms out_init h_init buf_init).
+wp; ecall (_sha512_x4_absorb_lanes_proof h buf total in_0 len ms h_init buf_init in_init).
+wp; ecall (__sha512_x4_init_proof h h_init).
+auto => /> &m *.
+have e : to_uint (W64.zero \umod W64.of_int 128) = 0 by rewrite umodc // W64.to_uint0.
+by rewrite e; do !split; move=> j /#.
+qed.
