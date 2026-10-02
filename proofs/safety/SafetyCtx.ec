@@ -318,3 +318,256 @@ have h16 : BArray208.is_init full208 (16 + 0) 64 by exact full208_init.
 rewrite h48 (sub208_64_get _ 16 0 64 h16) //= => r -> -> _.
 by rewrite set_sub208_64_full // set_sub208_128_full // full208_set64d; exact (full208_init 0 208).
 qed.
+
+(* ------------------------------------------------------------------ *)
+(* Final                                                              *)
+
+(* A failed final reports status 1, so its digest mask covers nothing. *)
+lemma one_neq_zero : W64.one <> W64.zero.
+proof. by rewrite W64.to_uint_eq to_uint_one. qed.
+
+lemma ctx112_h : SBArray112_32.get_sub full112 16 = full32.
+proof. by apply full32E; apply (sub112_32_get _ 16 0 32) => //; exact full112_init. qed.
+
+lemma ctx112_buf : SBArray112_64.get_sub full112 48 = full64.
+proof. by apply full64E; apply (sub112_64_get _ 48 0 64) => //; exact full112_init. qed.
+
+lemma ctx112_store (a : BArray32.t) (b : BArray64.t) :
+  BArray32.is_init a 0 32 => BArray64.is_init b 0 64 =>
+  SBArray112_64.set_sub (SBArray112_32.set_sub full112 16 a) 48 b = full112.
+proof.
+move=> ha hb; rewrite (full32E _ ha) (full64E _ hb).
+by rewrite set_sub112_32_full // set_sub112_64_full.
+qed.
+
+lemma _sha224_ctx____ctx_finalize_proof _ctx _digest _total _ms _ctx_init _digest_init :
+  _sha224_ctx____ctx_finalize_spec _ctx _digest _total _ms _ctx_init _digest_init.
+proof.
+rewrite /_sha224_ctx____ctx_finalize_spec; proc; wp.
+ecall (_sha224___sha256_finalize_proof digest (SBArray112_32.get_sub32 ctx 4)
+         (SBArray112_64.get_sub8 ctx 48) total ms digest_init
+         (SBArray112_32.get_sub ctx_init (4 * 4)) (SBArray112_64.get_sub ctx_init (1 * 48))).
+auto => /> hc; rewrite (full112E _ hc) /= ctx112_h ctx112_buf.
+split; 1: by split; [exact full32_init | exact full64_init].
+by move=> _ _ r _ h6 h7 _; rewrite ctx112_store //; exact full112_init.
+qed.
+
+lemma _sha224_ctx___sha2_ctx_final_proof _ctx _digest _expect _ms _ctx_init _digest_init :
+  _sha224_ctx___sha2_ctx_final_spec _ctx _digest _expect _ms _ctx_init _digest_init.
+proof.
+rewrite /_sha224_ctx___sha2_ctx_final_spec; proc; sp.
+seq 1 : (valid trace__sha224_ctx___sha2_ctx_final /\ valid M.tmp__trace /\ ctx_init = full112
+         /\ ms_init /\ expect_init).
++ ecall (__sha2_ctx_open_proof (SBArray112_16.get_sub8 ctx 0) ms (SBArray112_16.get_sub ctx_init 0)).
+  auto => /> hc; rewrite (full112E _ hc) /=.
+  by apply (sub112_16_get _ 0 0 16) => //; exact full112_init.
+sp; if; last first.
++ auto => /> &m *; split; 1: exact (full112_init 0 112).
+  have -> : (W64.one = W64.zero) = false by smt(one_neq_zero).
+  by move=> j /#.
+sp; seq 1 : (valid trace__sha224_ctx___sha2_ctx_final /\ valid M.tmp__trace
+             /\ BArray112.is_init ctx_init 0 112 /\ BArray28.is_init digest_init 0 28 /\ ms_init).
++ ecall (_sha224_ctx____ctx_finalize_proof ctx digest total ms ctx_init digest_init); auto => /> *.
+  exact (full112_init 0 112).
+wp; while (valid trace__sha224_ctx___sha2_ctx_final /\ i_init /\ z_init /\ inc = 14 /\ 0 <= i <= 14
+       /\ ctx_init = full112 /\ BArray28.is_init digest_init 0 28).
++ by auto => /> &m *; rewrite full112_set64d; smt().
+auto => /> &m *; split; 1: smt(full112E).
+by move=> *; exact (full112_init 0 112).
+qed.
+
+lemma _sha256_ctx____ctx_finalize_proof _ctx _digest _total _ms _ctx_init _digest_init :
+  _sha256_ctx____ctx_finalize_spec _ctx _digest _total _ms _ctx_init _digest_init.
+proof.
+rewrite /_sha256_ctx____ctx_finalize_spec; proc; wp.
+ecall (_sha256___sha256_finalize_proof digest (SBArray112_32.get_sub32 ctx 4)
+         (SBArray112_64.get_sub8 ctx 48) total ms digest_init
+         (SBArray112_32.get_sub ctx_init (4 * 4)) (SBArray112_64.get_sub ctx_init (1 * 48))).
+auto => /> hc; rewrite (full112E _ hc) /= ctx112_h ctx112_buf.
+split; 1: by split; [exact full32_init | exact full64_init].
+by move=> _ _ r _ h6 h7 _; rewrite ctx112_store //; exact full112_init.
+qed.
+
+lemma _sha256_ctx___sha2_ctx_final_proof _ctx _digest _expect _ms _ctx_init _digest_init :
+  _sha256_ctx___sha2_ctx_final_spec _ctx _digest _expect _ms _ctx_init _digest_init.
+proof.
+rewrite /_sha256_ctx___sha2_ctx_final_spec; proc; sp.
+seq 1 : (valid trace__sha256_ctx___sha2_ctx_final /\ valid M.tmp__trace /\ ctx_init = full112
+         /\ ms_init /\ expect_init).
++ ecall (__sha2_ctx_open_proof (SBArray112_16.get_sub8 ctx 0) ms (SBArray112_16.get_sub ctx_init 0)).
+  auto => /> hc; rewrite (full112E _ hc) /=.
+  by apply (sub112_16_get _ 0 0 16) => //; exact full112_init.
+sp; if; last first.
++ auto => /> &m *; split; 1: exact (full112_init 0 112).
+  have -> : (W64.one = W64.zero) = false by smt(one_neq_zero).
+  by move=> j /#.
+sp; seq 1 : (valid trace__sha256_ctx___sha2_ctx_final /\ valid M.tmp__trace
+             /\ BArray112.is_init ctx_init 0 112 /\ BArray32.is_init digest_init 0 32 /\ ms_init).
++ ecall (_sha256_ctx____ctx_finalize_proof ctx digest total ms ctx_init digest_init); auto => /> *.
+  exact (full112_init 0 112).
+wp; while (valid trace__sha256_ctx___sha2_ctx_final /\ i_init /\ z_init /\ inc = 14 /\ 0 <= i <= 14
+       /\ ctx_init = full112 /\ BArray32.is_init digest_init 0 32).
++ by auto => /> &m *; rewrite full112_set64d; smt().
+auto => /> &m *; split; 1: smt(full112E).
+by move=> *; exact (full112_init 0 112).
+qed.
+
+(* SHA-384, SHA-512, SHA-512/224 and SHA-512/256 over the 208-byte context. *)
+
+lemma ctx208_h : SBArray208_64.get_sub full208 16 = full64.
+proof. by apply full64E; apply (sub208_64_get _ 16 0 64) => //; exact full208_init. qed.
+
+lemma ctx208_buf : SBArray208_128.get_sub full208 80 = full128.
+proof. by apply full128E; apply (sub208_128_get _ 80 0 128) => //; exact full208_init. qed.
+
+lemma ctx208_store (a : BArray64.t) (b : BArray128.t) :
+  BArray64.is_init a 0 64 => BArray128.is_init b 0 128 =>
+  SBArray208_128.set_sub (SBArray208_64.set_sub full208 16 a) 80 b = full208.
+proof.
+move=> ha hb; rewrite (full64E _ ha) (full128E _ hb).
+by rewrite set_sub208_64_full // set_sub208_128_full.
+qed.
+
+lemma _sha384_ctx____ctx_finalize_proof _ctx _digest _total _ms _ctx_init _digest_init :
+  _sha384_ctx____ctx_finalize_spec _ctx _digest _total _ms _ctx_init _digest_init.
+proof.
+rewrite /_sha384_ctx____ctx_finalize_spec; proc; wp.
+ecall (_sha384___sha512_finalize_proof digest (SBArray208_64.get_sub64 ctx 2)
+         (SBArray208_128.get_sub8 ctx 80) total ms digest_init
+         (SBArray208_64.get_sub ctx_init (8 * 2)) (SBArray208_128.get_sub ctx_init (1 * 80))).
+auto => /> hc; rewrite (full208E _ hc) /= ctx208_h ctx208_buf.
+split; 1: by split; [exact full64_init | exact full128_init].
+by move=> _ _ r _ h6 h7 _; rewrite ctx208_store //; exact full208_init.
+qed.
+
+lemma _sha384_ctx___sha2_ctx_final_proof _ctx _digest _expect _ms _ctx_init _digest_init :
+  _sha384_ctx___sha2_ctx_final_spec _ctx _digest _expect _ms _ctx_init _digest_init.
+proof.
+rewrite /_sha384_ctx___sha2_ctx_final_spec; proc; sp.
+seq 1 : (valid trace__sha384_ctx___sha2_ctx_final /\ valid M.tmp__trace /\ ctx_init = full208
+         /\ ms_init /\ expect_init).
++ ecall (__sha2_ctx_open_proof (SBArray208_16.get_sub8 ctx 0) ms (SBArray208_16.get_sub ctx_init 0)).
+  auto => /> hc; rewrite (full208E _ hc) /=.
+  by apply (sub208_16_get _ 0 0 16) => //; exact full208_init.
+sp; if; last first.
++ auto => /> &m *; split; 1: exact (full208_init 0 208).
+  have -> : (W64.one = W64.zero) = false by smt(one_neq_zero).
+  by move=> j /#.
+sp; seq 1 : (valid trace__sha384_ctx___sha2_ctx_final /\ valid M.tmp__trace
+             /\ BArray208.is_init ctx_init 0 208 /\ BArray48.is_init digest_init 0 48 /\ ms_init).
++ ecall (_sha384_ctx____ctx_finalize_proof ctx digest total ms ctx_init digest_init); auto => /> *.
+  exact (full208_init 0 208).
+wp; while (valid trace__sha384_ctx___sha2_ctx_final /\ i_init /\ z_init /\ inc = 26 /\ 0 <= i <= 26
+       /\ ctx_init = full208 /\ BArray48.is_init digest_init 0 48).
++ by auto => /> &m *; rewrite full208_set64d; smt().
+auto => /> &m *; split; 1: smt(full208E).
+by move=> *; exact (full208_init 0 208).
+qed.
+
+lemma _sha512_ctx____ctx_finalize_proof _ctx _digest _total _ms _ctx_init _digest_init :
+  _sha512_ctx____ctx_finalize_spec _ctx _digest _total _ms _ctx_init _digest_init.
+proof.
+rewrite /_sha512_ctx____ctx_finalize_spec; proc; wp.
+ecall (_sha512___sha512_finalize_proof digest (SBArray208_64.get_sub64 ctx 2)
+         (SBArray208_128.get_sub8 ctx 80) total ms digest_init
+         (SBArray208_64.get_sub ctx_init (8 * 2)) (SBArray208_128.get_sub ctx_init (1 * 80))).
+auto => /> hc; rewrite (full208E _ hc) /= ctx208_h ctx208_buf.
+split; 1: by split; [exact full64_init | exact full128_init].
+by move=> _ _ r _ h6 h7 _; rewrite ctx208_store //; exact full208_init.
+qed.
+
+lemma _sha512_ctx___sha2_ctx_final_proof _ctx _digest _expect _ms _ctx_init _digest_init :
+  _sha512_ctx___sha2_ctx_final_spec _ctx _digest _expect _ms _ctx_init _digest_init.
+proof.
+rewrite /_sha512_ctx___sha2_ctx_final_spec; proc; sp.
+seq 1 : (valid trace__sha512_ctx___sha2_ctx_final /\ valid M.tmp__trace /\ ctx_init = full208
+         /\ ms_init /\ expect_init).
++ ecall (__sha2_ctx_open_proof (SBArray208_16.get_sub8 ctx 0) ms (SBArray208_16.get_sub ctx_init 0)).
+  auto => /> hc; rewrite (full208E _ hc) /=.
+  by apply (sub208_16_get _ 0 0 16) => //; exact full208_init.
+sp; if; last first.
++ auto => /> &m *; split; 1: exact (full208_init 0 208).
+  have -> : (W64.one = W64.zero) = false by smt(one_neq_zero).
+  by move=> j /#.
+sp; seq 1 : (valid trace__sha512_ctx___sha2_ctx_final /\ valid M.tmp__trace
+             /\ BArray208.is_init ctx_init 0 208 /\ BArray64.is_init digest_init 0 64 /\ ms_init).
++ ecall (_sha512_ctx____ctx_finalize_proof ctx digest total ms ctx_init digest_init); auto => /> *.
+  exact (full208_init 0 208).
+wp; while (valid trace__sha512_ctx___sha2_ctx_final /\ i_init /\ z_init /\ inc = 26 /\ 0 <= i <= 26
+       /\ ctx_init = full208 /\ BArray64.is_init digest_init 0 64).
++ by auto => /> &m *; rewrite full208_set64d; smt().
+auto => /> &m *; split; 1: smt(full208E).
+by move=> *; exact (full208_init 0 208).
+qed.
+
+lemma _sha512_224_ctx____ctx_finalize_proof _ctx _digest _total _ms _ctx_init _digest_init :
+  _sha512_224_ctx____ctx_finalize_spec _ctx _digest _total _ms _ctx_init _digest_init.
+proof.
+rewrite /_sha512_224_ctx____ctx_finalize_spec; proc; wp.
+ecall (_sha512_224___sha512_finalize_proof digest (SBArray208_64.get_sub64 ctx 2)
+         (SBArray208_128.get_sub8 ctx 80) total ms digest_init
+         (SBArray208_64.get_sub ctx_init (8 * 2)) (SBArray208_128.get_sub ctx_init (1 * 80))).
+auto => /> hc; rewrite (full208E _ hc) /= ctx208_h ctx208_buf.
+split; 1: by split; [exact full64_init | exact full128_init].
+by move=> _ _ r _ h6 h7 _; rewrite ctx208_store //; exact full208_init.
+qed.
+
+lemma _sha512_224_ctx___sha2_ctx_final_proof _ctx _digest _expect _ms _ctx_init _digest_init :
+  _sha512_224_ctx___sha2_ctx_final_spec _ctx _digest _expect _ms _ctx_init _digest_init.
+proof.
+rewrite /_sha512_224_ctx___sha2_ctx_final_spec; proc; sp.
+seq 1 : (valid trace__sha512_224_ctx___sha2_ctx_final /\ valid M.tmp__trace /\ ctx_init = full208
+         /\ ms_init /\ expect_init).
++ ecall (__sha2_ctx_open_proof (SBArray208_16.get_sub8 ctx 0) ms (SBArray208_16.get_sub ctx_init 0)).
+  auto => /> hc; rewrite (full208E _ hc) /=.
+  by apply (sub208_16_get _ 0 0 16) => //; exact full208_init.
+sp; if; last first.
++ auto => /> &m *; split; 1: exact (full208_init 0 208).
+  have -> : (W64.one = W64.zero) = false by smt(one_neq_zero).
+  by move=> j /#.
+sp; seq 1 : (valid trace__sha512_224_ctx___sha2_ctx_final /\ valid M.tmp__trace
+             /\ BArray208.is_init ctx_init 0 208 /\ BArray28.is_init digest_init 0 28 /\ ms_init).
++ ecall (_sha512_224_ctx____ctx_finalize_proof ctx digest total ms ctx_init digest_init); auto => /> *.
+  exact (full208_init 0 208).
+wp; while (valid trace__sha512_224_ctx___sha2_ctx_final /\ i_init /\ z_init /\ inc = 26 /\ 0 <= i <= 26
+       /\ ctx_init = full208 /\ BArray28.is_init digest_init 0 28).
++ by auto => /> &m *; rewrite full208_set64d; smt().
+auto => /> &m *; split; 1: smt(full208E).
+by move=> *; exact (full208_init 0 208).
+qed.
+
+lemma _sha512_256_ctx____ctx_finalize_proof _ctx _digest _total _ms _ctx_init _digest_init :
+  _sha512_256_ctx____ctx_finalize_spec _ctx _digest _total _ms _ctx_init _digest_init.
+proof.
+rewrite /_sha512_256_ctx____ctx_finalize_spec; proc; wp.
+ecall (_sha512_256___sha512_finalize_proof digest (SBArray208_64.get_sub64 ctx 2)
+         (SBArray208_128.get_sub8 ctx 80) total ms digest_init
+         (SBArray208_64.get_sub ctx_init (8 * 2)) (SBArray208_128.get_sub ctx_init (1 * 80))).
+auto => /> hc; rewrite (full208E _ hc) /= ctx208_h ctx208_buf.
+split; 1: by split; [exact full64_init | exact full128_init].
+by move=> _ _ r _ h6 h7 _; rewrite ctx208_store //; exact full208_init.
+qed.
+
+lemma _sha512_256_ctx___sha2_ctx_final_proof _ctx _digest _expect _ms _ctx_init _digest_init :
+  _sha512_256_ctx___sha2_ctx_final_spec _ctx _digest _expect _ms _ctx_init _digest_init.
+proof.
+rewrite /_sha512_256_ctx___sha2_ctx_final_spec; proc; sp.
+seq 1 : (valid trace__sha512_256_ctx___sha2_ctx_final /\ valid M.tmp__trace /\ ctx_init = full208
+         /\ ms_init /\ expect_init).
++ ecall (__sha2_ctx_open_proof (SBArray208_16.get_sub8 ctx 0) ms (SBArray208_16.get_sub ctx_init 0)).
+  auto => /> hc; rewrite (full208E _ hc) /=.
+  by apply (sub208_16_get _ 0 0 16) => //; exact full208_init.
+sp; if; last first.
++ auto => /> &m *; split; 1: exact (full208_init 0 208).
+  have -> : (W64.one = W64.zero) = false by smt(one_neq_zero).
+  by move=> j /#.
+sp; seq 1 : (valid trace__sha512_256_ctx___sha2_ctx_final /\ valid M.tmp__trace
+             /\ BArray208.is_init ctx_init 0 208 /\ BArray32.is_init digest_init 0 32 /\ ms_init).
++ ecall (_sha512_256_ctx____ctx_finalize_proof ctx digest total ms ctx_init digest_init); auto => /> *.
+  exact (full208_init 0 208).
+wp; while (valid trace__sha512_256_ctx___sha2_ctx_final /\ i_init /\ z_init /\ inc = 26 /\ 0 <= i <= 26
+       /\ ctx_init = full208 /\ BArray32.is_init digest_init 0 32).
++ by auto => /> &m *; rewrite full208_set64d; smt().
+auto => /> &m *; split; 1: smt(full208E).
+by move=> *; exact (full208_init 0 208).
+qed.
