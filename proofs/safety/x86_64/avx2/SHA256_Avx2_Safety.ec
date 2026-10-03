@@ -250,3 +250,160 @@ rewrite valid_cat hval' /valid /= (K128.is_init_full _ hx) (K32.is_init_full _ h
 move=> h0 ii0 l0 tr2 wki1 hc'' hval'' _ _ _ _.
 by move: hval''; rewrite /valid all_cat => ->.
 qed.
+
+(* ------------------------------------------------------------------ *)
+(* Entry points                                                        *)
+
+lemma x_ext (m : BArray128.t) i : 0 <= i => BArray128.is_init m 0 (32 * i) =>
+  BArray128.is_init
+    (BArray128.set256d m (32 * i)
+       (W256.of_int 115792089237316195423570985008687907853269984665640564039457584007913129639935))
+    0 (32 * i + 32).
+proof.
+move=> hi hm j hj1 hj2; rewrite BArray128.is_init_cell_set256d.
+by case: (j < 32 * i) => hj; [right; apply hm | left] => /#.
+qed.
+
+lemma x_here (m : BArray128.t) i :
+  BArray128.is_init
+    (BArray128.set256d m i
+       (W256.of_int 115792089237316195423570985008687907853269984665640564039457584007913129639935))
+    i 32.
+proof. by move=> j hj1 hj2; rewrite BArray128.is_init_cell_set256d; left. qed.
+
+lemma _sha256_compress_proof _h _block _ms _h_init _block_init :
+  _sha256_compress_spec _h _block _ms _h_init _block_init.
+proof.
+rewrite /_sha256_compress_spec; proc; wp.
+ecall (__sha256_avx2_proof h x 1 ms h_init x_init); wp.
+while (valid trace__sha256_compress /\ i_init /\ mask_init /\ ms_init /\ 0 <= i <= 4 /\
+       BArray64.is_init block_init 0 64 /\ BArray32.is_init h_init 0 32 /\
+       BArray128.is_init x_init 0 (32 * i)).
++ wp; skip => &hr [[#] hv hii hmi hms hi0 hi1 hb hh hxi] hlt.
+  have hbi : BArray64.is_init block_init{hr} (i{hr} * 16) 16.
+  + by apply (K64.is_init_sub _ 0 64) => //; smt().
+  rewrite /= !valid_cat hv /valid /= hii hmi hms hbi hb hh (_: i{hr} * 32 = 32 * i{hr}) 1:/# x_here.
+  have h1 := x_ext x_init{hr} i{hr} hi0 hxi.
+  have h2 := x_ext _ i{hr} hi0 (K128.is_init_sub _ 0 (32 * i{hr} + 32) 0 (32 * i{hr}) _ _ h1); 1,2: smt().
+  rewrite (_: 32 * (i{hr} + 1) = 32 * i{hr} + 32) 1:/# h2 /=.
+  by move: hi0 hlt; clear hv h1 h2; smt().
+auto => /> hh hb; split.
++ rewrite /valid /=; split; 1: by move=> j _ _; apply (BArray32.init_arrP witness).
+  by move=> j /#.
+move=> i tr xi hi8 hv hi0 hil hxi.
+have e : 32 * i = 128 by smt().
+move: hxi; rewrite e => hxi; split; 1: done.
+move=> _ r _ hvr.
+by rewrite !valid_cat hv hvr /valid.
+qed.
+
+lemma _sha256_compress_one_proof _h _p _ms _h_init : _sha256_compress_one_spec _h _p _ms _h_init.
+proof.
+rewrite /_sha256_compress_one_spec; proc; wp.
+ecall (__sha256_avx2_proof h x 1 ms h_init x_init); wp.
+while (valid trace__sha256_compress_one /\ i_init /\ mask_init /\ ms_init /\ p_init /\ 0 <= i <= 4 /\
+       is_valid ptr_modulus Glob.mem_v (W64.to_uint p) 64 /\ BArray32.is_init h_init 0 32 /\
+       BArray128.is_init x_init 0 (32 * i)).
++ wp; skip => &hr [[#] hv hii hmi hms hpi hi0 hi1 hval hh hxi] hlt.
+  have hm := valid_sub _ _ _ (16 * i{hr}) 16 hval _ _ _; 1..3: smt().
+  rewrite /= !valid_cat hv /valid /= hii hmi hms hpi hm hval hh (_: i{hr} * 32 = 32 * i{hr}) 1:/# x_here.
+  have h1 := x_ext x_init{hr} i{hr} hi0 hxi.
+  have h2 := x_ext _ i{hr} hi0 (K128.is_init_sub _ 0 (32 * i{hr} + 32) 0 (32 * i{hr}) _ _ h1); 1,2: smt().
+  rewrite (_: 32 * (i{hr} + 1) = 32 * i{hr} + 32) 1:/# h2 /=.
+  by move: hi0 hlt; clear hv h1 h2 hval hm; smt().
+auto => /> &hr hh hv1 hv2 hv3; split.
++ split; 1: by move=> j _ _; apply (BArray32.init_arrP witness).
+  by move=> j /#.
+move=> i tr xi hi8 hv hi0 hil hxi.
+have e : 32 * i = 128 by smt().
+move: hxi; rewrite e => hxi; split; 1: done.
+move=> _ r _ hvr.
+by rewrite !valid_cat hv hvr /valid.
+qed.
+
+lemma _sha256_compress_two_proof _h _p _ms _h_init : _sha256_compress_two_spec _h _p _ms _h_init.
+proof.
+rewrite /_sha256_compress_two_spec; proc; wp.
+ecall (__sha256_avx2_proof h x 2 ms h_init x_init); wp.
+while (valid trace__sha256_compress_two /\ i_init /\ mask_init /\ ms_init /\ p_init /\ 0 <= i <= 4 /\
+       is_valid ptr_modulus Glob.mem_v (W64.to_uint p) 128 /\ BArray32.is_init h_init 0 32 /\
+       BArray128.is_init x_init 0 (32 * i)).
++ wp; skip => &hr [[#] hv hii hmi hms hpi hi0 hi1 hval hh hxi] hlt.
+  have hm := valid_sub _ _ _ (16 * i{hr}) 16 hval _ _ _; 1..3: smt().
+  have hm1 := valid_sub _ _ _ 64 64 hval _ _ _; 1..3: smt().
+  have hm2 := valid_sub _ _ _ (16 * i{hr}) 16 hm1 _ _ _; 1..3: smt().
+  rewrite /= !valid_cat hv /valid /= hii hmi hms hpi hm hm2 hval hh (_: i{hr} * 32 = 32 * i{hr}) 1:/#.
+  rewrite !x_here.
+  have h1 := x_ext x_init{hr} i{hr} hi0 hxi.
+  have h2 := x_ext _ i{hr} hi0 (K128.is_init_sub _ 0 (32 * i{hr} + 32) 0 (32 * i{hr}) _ _ h1); 1,2: smt().
+  have h3 := x_ext _ i{hr} hi0 (K128.is_init_sub _ 0 (32 * i{hr} + 32) 0 (32 * i{hr}) _ _ h2); 1,2: smt().
+  rewrite (_: 32 * (i{hr} + 1) = 32 * i{hr} + 32) 1:/# h3 /=.
+  by move: hi0 hlt; clear hv h1 h2 h3 hval hm hm1 hm2; smt().
+auto => /> &hr hh hv1 hv2 hv3; split.
++ split; 1: by move=> j _ _; apply (BArray32.init_arrP witness).
+  by move=> j /#.
+move=> i tr xi hi8 hv hi0 hil hxi.
+have e : 32 * i = 128 by smt().
+move: hxi; rewrite e => hxi; split; 1: done.
+move=> _ r _ hvr.
+by rewrite !valid_cat hv hvr /valid.
+qed.
+
+lemma valid_pre mv (p : W64.t) n l : is_valid ptr_modulus mv (W64.to_uint p) n => 0 <= l <= n =>
+  is_valid ptr_modulus mv (W64.to_uint p) l.
+proof.
+rewrite /is_valid => -[hv [h0 hb]] hl; split; 1: by move=> j hj; apply hv; smt().
+by move: h0 hb hl; clear hv; smt().
+qed.
+
+lemma ule2s (n : W64.t) : (W64.of_int 2 \ule n) = (2 <= W64.to_uint n).
+proof. by rewrite W64.uleE W64.of_uintK pmod_small. qed.
+
+lemma sub2 (n : W64.t) : 2 <= W64.to_uint n => W64.to_uint (n - W64.of_int 2) = W64.to_uint n - 2.
+proof.
+by move=> h2; rewrite W64.to_uintB 1:ule2s //.
+qed.
+
+lemma _sha256_compress_blocks_proof _h _p _n _ms _h_init :
+  _sha256_compress_blocks_spec _h _p _n _ms _h_init.
+proof.
+rewrite /_sha256_compress_blocks_spec; proc.
+seq 10 : (valid trace__sha256_compress_blocks /\ p_init /\ n_init /\ ms_init /\ more_init /\
+          !more /\ more = (2 <= W64.to_uint n) /\ BArray32.is_init h_init 0 32 /\
+          is_valid ptr_modulus Glob.mem_v (W64.to_uint p) (64 * W64.to_uint n)).
++ while (valid trace__sha256_compress_blocks /\ p_init /\ n_init /\ ms_init /\ more_init /\
+         more = (2 <= W64.to_uint n) /\ BArray32.is_init h_init 0 32 /\
+         is_valid ptr_modulus Glob.mem_v (W64.to_uint p) (64 * W64.to_uint n)).
+  + wp; ecall (_sha256_compress_two_proof h p ms h_init); wp; skip.
+    move=> &hr [[#] hv hpi hni hmsi hmi hmore hh hval] hc.
+    have h2 : 2 <= W64.to_uint n{hr} by rewrite -hmore.
+    rewrite /= /SLH64.protect_64 hh (valid_pre _ _ _ 128 hval) /=; 1: by move: h2; clear hval; smt().
+    move=> r [hr hvr]; rewrite ule2s sub2 // hr /=.
+    rewrite !valid_cat hv hvr /valid /= hpi hni hmi hmsi /=.
+    have := valid_sub _ _ _ 128 (64 * (W64.to_uint n{hr} - 2)) hval _ _ _; 1..3: by move: h2; clear hval; smt().
+    by move=> ->.
+  wp; skip => &hr [#] 5!->> _ _ _ hh hlt hval0.
+  have hn : W64.to_uint n{hr} < 288230376151711744.
+  + by move: hlt; rewrite W64.ultE W64.to_uint_small.
+  have e : W64.to_uint (W64.of_int 64 * n{hr}) = 64 * W64.to_uint n{hr}.
+  + rewrite W64.to_uintM_small W64.to_uint_small //.
+    by move: hn; smt(W64.to_uint_cmp).
+  move: hval0; rewrite e => hval0.
+  split; 1: by rewrite /valid /= ule2s hh hval0.
+  move=> h0 mo moi msi n0 ni p0 pi tr hmo [#] hv hpi hni hms hmi hmore hh0 hval.
+  by do 8!(split; 1: assumption); assumption.
+sp; if.
++ wp; ecall (_sha256_compress_one_proof h p ms h_init); wp; skip.
+  move=> &hr [[moi0 mo0 msi0 ms0 tr0 [#] _ hmsi1 hmore' hmoi1 htr hv hpi hni hmsi hmoi hmo hmo2 hh hval] hc].
+  have hne : n{hr} <> W64.zero by rewrite -hmore'.
+  have hn2 : W64.to_uint n{hr} < 2 by move: hmo; rewrite hmo2; smt().
+  have h1 : W64.to_uint n{hr} = 1.
+  + case: (W64.to_uint n{hr} = 0) => hz; last by move: hn2 hz; smt(W64.to_uint_cmp).
+    by move: hne; rewrite W64.to_uint_eq hz W64.to_uint0.
+  split.
+  + by rewrite /= hh (valid_pre _ _ _ 64 hval) // h1.
+  move=> _ r [hr3 hvr] /=; rewrite hr3 /=.
+  by rewrite htr !valid_cat hv hvr /valid /= hpi hmsi hmoi hmsi1 hmoi1 hni.
+wp; skip => &hr [[moi0 mo0 msi0 ms0 tr0 [#] _ hmsi1 hmore' hmoi1 htr hv hpi hni hmsi hmoi hmo hmo2 hh hval] hc].
+by rewrite /= hh htr !valid_cat hv /valid /= hmsi hmoi hmsi1 hmoi1 hni.
+qed.
