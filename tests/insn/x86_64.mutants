@@ -1,0 +1,78 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# tests/insn/x86_64.mutants
+# =========================
+#
+# Wrong models, each a one-place change to a copy of the toolchain's
+# EasyCrypt library. The test checks the cases of the listed entries
+# against each wrong model and requires every one of those entries to be
+# rejected, which shows that the cases depend on that part of the model.
+#
+#     mutant NAME
+#       entries  ENTRY...       entries whose cases must be rejected
+#       file     FILE           a file of the library
+#       from     TEXT           text that occurs exactly once in FILE
+#       to       TEXT           what replaces it
+#
+# The functions of SHA.ec are those of FIPS 180-4, section 4.1.2.
+
+mutant Sigma1-rotation
+  entries  sha256rnds2
+  file     SHA.ec
+  from     (e `|>>>|` 25)
+  to       (e `|>>>|` 24)
+
+mutant Sigma0-rotation
+  entries  sha256rnds2
+  file     SHA.ec
+  from     (a `|>>>|` 13)
+  to       (a `|>>>|` 12)
+
+mutant Ch-operand
+  entries  sha256rnds2
+  file     SHA.ec
+  from     (invw e `&` g)
+  to       (invw f `&` g)
+
+mutant Maj-term
+  entries  sha256rnds2
+  file     SHA.ec
+  from     a `&` b +^ a `&` c +^ b `&` c.
+  to       a `&` b +^ a `&` c +^ b `|` c.
+
+mutant sigma0-shift
+  entries  sha256msg1
+  file     SHA.ec
+  from     (w `>>>` 3)
+  to       (w `>>>` 4)
+
+mutant sigma1-rotation
+  entries  sha256msg2
+  file     SHA.ec
+  from     (w `|>>>|` 19)
+  to       (w `|>>>|` 18)
+
+mutant rnds2-result-order
+  entries  sha256rnds2
+  file     SHA.ec
+  from     pack4 [e1; e2; a1; a2]
+  to       pack4 [e2; e1; a1; a2]
+
+mutant rnds2-operand-order
+  entries  sha256rnds2
+  file     JModel_x86.ec
+  from     = SHA.rnds2 v1 v2 v3.
+  to       = SHA.rnds2 v2 v1 v3.
+
+mutant msg1-operand-order
+  entries  sha256msg1
+  file     JModel_x86.ec
+  from     = SHA.msg1 v1 v2.
+  to       = SHA.msg1 v2 v1.
+
+mutant msg2-operand-order
+  entries  sha256msg2
+  file     JModel_x86.ec
+  from     = SHA.msg2 v1 v2.
+  to       = SHA.msg2 v2 v1.
