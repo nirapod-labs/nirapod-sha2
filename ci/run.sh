@@ -5,7 +5,7 @@
 # ci/run.sh
 # =========
 #
-# The local CI entry point of nirapod-sha2. It runs every gate of the
+# The local CI entry point of nirapod-sha2. It runs every check of the
 # project as a separate job, in order, each in its own process with its
 # own wall-clock limit, and prints one summary table at the end.
 #
