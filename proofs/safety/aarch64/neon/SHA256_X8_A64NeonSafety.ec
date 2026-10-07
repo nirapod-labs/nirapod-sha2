@@ -758,3 +758,85 @@ have ->> : i0 = 4 by smt().
 rewrite htr /= (_ : 256 * (x{m} + 1) = 16 * (16 * x{m} + 16)) 1:/#.
 by apply a64n_slots512n => [/# | s0 hs0]; apply hw0 => /#.
 qed.
+
+(* ------------------------------------------------------------------ *)
+(* The lanes entry point                                              *)
+
+lemma a64n_valid_step mv (p n : W64.t) :
+  is_valid ptr_modulus mv (W64.to_uint p) (64 * W64.to_uint n) => n <> W64.zero =>
+  is_valid ptr_modulus mv (W64.to_uint p) 64 /\
+  is_valid ptr_modulus mv (W64.to_uint (p + W64.of_int 64)) (64 * W64.to_uint (n - W64.one)).
+proof.
+move=> hval hn.
+have hn1 : 1 <= W64.to_uint n.
++ have hc := W64.to_uint_cmp n.
+  have : W64.to_uint n <> 0.
+  + by move: hn; apply contra => h; rewrite W64.to_uint_eq h.
+  by move: hc; clear hval; smt().
+have -> : W64.to_uint (n - W64.one) = W64.to_uint n - 1.
++ by rewrite W64.to_uintB ?W64.uleE W64.to_uint1.
+split.
++ have := hval; rewrite is_validP => h; apply h; move: hn1; clear h hval; smt().
+by apply (a64n_valid_sub _ _ _ _ _ hval); move: hn1; clear hval; smt().
+qed.
+
+(* Every lane's remaining blocks are valid memory. *)
+op a64n_lv mv (inp : BArray64.t) (off n : W64.t) : bool =
+  forall k, 0 <= k < 8 =>
+  is_valid ptr_modulus mv (W64.to_uint (BArray64.get64 inp k + off)) (64 * W64.to_uint n).
+
+lemma a64n_lv_step mv inp (off n : W64.t) : a64n_lv mv inp off n => n <> W64.zero =>
+  (forall k, 0 <= k < 8 =>
+     is_valid ptr_modulus mv (W64.to_uint (BArray64.get64 inp k + off)) 64) /\
+  a64n_lv mv inp (off + W64.of_int 64) (n - W64.of_int 1).
+proof.
+move=> h hn; split.
++ by move=> k hk; have [] := a64n_valid_step _ _ _ (h k hk) hn.
+move=> k hk; have [_ h2] := a64n_valid_step _ _ _ (h k hk) hn.
+by move: h2; rewrite W64.WRingA.addrA.
+qed.
+
+lemma _sha256_x8_compress_lanes_proof _h8 _in _off _n _ms _h8_init _in_init :
+  _sha256_x8_compress_lanes_spec _h8 _in _off _n _ms _h8_init _in_init.
+proof.
+rewrite /_sha256_x8_compress_lanes_spec; proc.
+wp.
+while (valid trace__sha256_x8_compress_lanes /\ more_init /\ ms_init /\ n_init /\ off_init /\
+       h8_init = a64n_I256 /\ in_init = a64n_I64 /\ more = (n <> W64.zero) /\
+       a64n_lv Glob.mem_v in_0 off n).
++ wp; ecall (_sha256_x8_block_proof h8 w ms h8_init w_init).
+  wp; ecall (__sha256_x8_load_lanes_proof w 1 p4 p5 p6 p7 w_init).
+  wp; ecall (__sha256_x8_load_lanes_proof w 0 p0 p1 p2 p3 w_init).
+  auto => &m [#] hv hmi hms hn hof -> -> hmore hlv hm /=.
+  rewrite /SLH64.protect_64 /=.
+  have hn0 : n{m} <> W64.zero by rewrite -hmore.
+  have [hl64 hlv'] := a64n_lv_step _ _ _ _ hlv hn0.
+  have /= e0 := hl64 0 _; 1: done.
+  have /= e1 := hl64 1 _; 1: done.
+  have /= e2 := hl64 2 _; 1: done.
+  have /= e3 := hl64 3 _; 1: done.
+  have /= e4 := hl64 4 _; 1: done.
+  have /= e5 := hl64 5 _; 1: done.
+  have /= e6 := hl64 6 _; 1: done.
+  have /= e7 := hl64 7 _; 1: done.
+  have hz : BArray512.is_init w_init{m} 0 0 by move=> i /#.
+  rewrite hz e0 e1 e2 e3 e4 e5 e6 e7 /=.
+  move=> o1 [ho1 ho2]; rewrite ho1 /= => o2 [hq1 hq2]; rewrite a64n_I256_init hq1 /=.
+  move=> o3 [hb1 hb2].
+  rewrite !valid_cat !a64n_valid1 hv hmi hms hn hof ho2 hq2 hb2 !a64n_I64_init /=.
+  by rewrite (a64n_full256 _ hb1) hlv'.
+auto => &m [#] <- <- _ <- <- <- _ _ _ _ _ _ _ _ _ hh hin hlt hoff v0 v1 v2 v3 v4 v5 v6 v7.
+have hn : W64.to_uint _n < 288230376151711744.
++ by move: hlt; rewrite W64.ultE W64.to_uint_small.
+have e : W64.to_uint (W64.of_int 64 * _n) = 64 * W64.to_uint _n.
++ rewrite W64.to_uintM_small W64.to_uint_small //.
+  by move: hn; smt(W64.to_uint_cmp).
+have hlv : a64n_lv Glob.mem_v{m} _in _off _n.
++ rewrite /a64n_lv => k hk; rewrite -e.
+  have : k = 0 \/ k = 1 \/ k = 2 \/ k = 3 \/ k = 4 \/ k = 5 \/ k = 6 \/ k = 7 by smt().
+  by case=> [->|[->|[->|[->|[->|[->|[->|->]]]]]]] /=; assumption.
+rewrite (a64n_full256 _ hh) (a64n_full64 _ hin) hlv /=.
+split; 1: by rewrite /valid.
+move=> h0 in0 ini0 mo0 moi0 msi0 n0 ni0 of0 ofi0 tr0 hmo [#] htr hmoi hmsi _ _ -> _ _ _.
+by rewrite a64n_I256_init !valid_cat !a64n_valid1 htr hmoi hmsi.
+qed.
