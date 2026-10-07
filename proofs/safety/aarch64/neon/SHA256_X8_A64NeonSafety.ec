@@ -109,6 +109,17 @@ case=> [<-|h] i hi0 hi1; rewrite BArray288.is_init_cell_set128d; first by left; 
 by right; apply h.
 qed.
 
+lemma a64n_slot512 (si : BArray512.t) (x y : int) :
+  BArray512.is_init (BArray512.set128d si (16 * x) a64n_ONE) (y * 16) 16
+  = (x = y \/ BArray512.is_init si (y * 16) 16).
+proof.
+rewrite eq_iff; split.
++ move=> h; case: (x = y) => // hne; right => i hi0 hi1.
+  by have := h i hi0 hi1; rewrite BArray512.is_init_cell_set128d /#.
+case=> [<-|h] i hi0 hi1; rewrite BArray512.is_init_cell_set128d; first by left; smt().
+by right; apply h.
+qed.
+
 (* The whole of a small array from its 16-byte slots. *)
 lemma a64n_slots64 (si : BArray64.t) :
   (forall s, 0 <= s < 4 => BArray64.is_init si (s * 16) 16) => BArray64.is_init si 0 64.
@@ -599,4 +610,151 @@ rewrite htr1 hv1 habok /=.
 move=> ab1 kd0 kq0 t0 tr2 v2 w0 x0' ht [#] htr2 hx0' hkq hkd ht0 ht64 hw0 hv2 hab2.
 have ->> : t0 = 64 by smt().
 by rewrite htr2 hx0' hkq hkd hw0 hv2.
+qed.
+
+(* ------------------------------------------------------------------ *)
+(* The entry points                                                   *)
+
+lemma _sha256_x8_compress_proof _h8 _blocks _ms _h8_init _blocks_init :
+  _sha256_x8_compress_spec _h8 _blocks _ms _h8_init _blocks_init.
+proof.
+rewrite /_sha256_x8_compress_spec; proc.
+wp; ecall (_sha256_x8_block_proof h8 w ms h8_init w_init).
+wp.
+while (valid trace__sha256_x8_compress /\ ms_init /\ x_init /\ 0 <= x <= 2 /\
+       h8_init = a64n_I256 /\ blocks_init = a64n_I512 /\
+       (forall s, 0 <= s < 16 * x => BArray512.is_init w_init (s * 16) 16)).
++ wp.
+  while (valid trace__sha256_x8_compress /\ ms_init /\ x_init /\ i_init /\ 0 <= x < 2 /\
+         0 <= i <= 4 /\ h8_init = a64n_I256 /\ blocks_init = a64n_I512 /\
+         (forall s, 0 <= s < 16 * x + 4 * i => BArray512.is_init w_init (s * 16) 16)).
+  + wp.
+    while (valid trace__sha256_x8_compress /\ ms_init /\ x_init /\ i_init /\ k_init /\
+           0 <= x < 2 /\ 0 <= i < 4 /\ 0 <= k <= 4 /\ h8_init = a64n_I256 /\
+           blocks_init = a64n_I512 /\ r_init = a64n_I64 /\
+           (forall s, 0 <= s < 16 * x + 4 * i + k => BArray512.is_init w_init (s * 16) 16)).
+    + auto => &m [#] hv hms hx hi hk hx0 hx2 hi0 hi4 hk0 hk4 -> -> -> hw hlt /=.
+      rewrite !valid_cat !a64n_valid1 hv hx hi hk !a64n_I64_init /=.
+      have hf : forall s, 0 <= s < 16 * x{m} + 4 * i{m} + (k{m} + 1) =>
+        BArray512.is_init (BArray512.set128d w_init{m} (16 * (16 * x{m} + 4 * i{m} + k{m}))
+          a64n_ONE) (s * 16) 16.
+      + move=> s0 hs0; rewrite a64n_slot512.
+        by case: (16 * x{m} + 4 * i{m} + k{m} = s0) => h; [left | right; apply hw => /#].
+      smt().
+    wp; ecall (__sha256_x8_rows_proof r r_init).
+    wp.
+    while (valid trace__sha256_x8_compress /\ ms_init /\ x_init /\ i_init /\ k_init /\
+           0 <= x < 2 /\ 0 <= i < 4 /\ 0 <= k <= 4 /\ h8_init = a64n_I256 /\
+           blocks_init = a64n_I512 /\
+           (forall s', 0 <= s' < k => BArray64.is_init r_init (s' * 16) 16) /\
+           (forall s, 0 <= s < 16 * x + 4 * i => BArray512.is_init w_init (s * 16) 16)).
+    + auto => &m [#] hv hms hx hi hk hx0 hx2 hi0 hi4 hk0 hk4 -> -> hr hw hlt /=.
+      rewrite !valid_cat !a64n_valid1 hv hx hi hk !a64n_I512_init /=.
+      have hf : forall s', 0 <= s' < k{m} + 1 =>
+        BArray64.is_init (BArray64.set128d r_init{m} (16 * k{m}) a64n_ONE) (s' * 16) 16.
+      + move=> s0 hs0; rewrite a64n_slot64.
+        by case: (k{m} = s0) => h; [left | right; apply hr => /#].
+      smt().
+    auto => &m [#] hv hms hx hi hx0 hx2 hi0 hi4 -> -> hw hlt /=.
+    split; first smt().
+    move=> k0 r0 tr0 hk [#] htr _ _ _ _ _ _ _ hk0 hk4 hr _.
+    have ->> : k0 = 4 by smt().
+    split; first by apply a64n_slots64.
+    move=> _ o3 [hres hvr].
+    rewrite !valid_cat !a64n_valid1 htr hvr (a64n_full64 _ hres) /=.
+    split; first smt().
+    move=> k1 tr1 w0 hk1 [#] htr1 _ _ _ _ _ _ _ hk10 hk14 hw1.
+    have ->> : k1 = 4 by smt().
+    rewrite htr1 /=.
+    smt().
+  auto => &m [#] hv hms hx hx0 hx2 -> -> hw hlt /=.
+  split; first smt().
+  move=> i0 tr0 w0 hi [#] htr _ _ _ _ hi0 hi4 hw0.
+  have ->> : i0 = 4 by smt().
+  rewrite htr /=; smt().
+auto => &m [#] /= -> -> _ _ _ hh hb.
+rewrite (a64n_full256 _ hh) (a64n_full512 _ hb) /=.
+split; first by rewrite /valid /=; smt().
+move=> tr0 w0 x0 hx [#] htr hx0 hx2 hw.
+have ->> : x0 = 2 by smt().
+split; first by rewrite a64n_I256_init /=; apply a64n_slots512 => s0 hs0; apply hw => /#.
+move=> _ o4 [ho1 ho2].
+by rewrite ho1 !valid_cat !a64n_valid1 htr ho2.
+qed.
+
+(* ------------------------------------------------------------------ *)
+(* Loading the lanes from memory                                      *)
+
+lemma a64n_valid_sub mv (p : W64.t) (n o l : int) :
+  is_valid ptr_modulus mv (W64.to_uint p) n => 0 <= o => 0 <= l => o + l <= n =>
+  is_valid ptr_modulus mv (W64.to_uint (p + W64.of_int o)) l.
+proof.
+move=> hval ho hl hol; have := hval; rewrite /is_valid => -[hv [h0 hb]].
+have hlt : W64.to_uint p + o < W64.modulus by move: hb hol hl; clear hv hval; smt().
+have -> : W64.to_uint (p + W64.of_int o) = W64.to_uint p + o.
++ rewrite W64.to_uintD_small W64.to_uint_small //; move: hlt ho; clear hv hval; smt(W64.to_uint_cmp).
+split; 1: by move=> j hj; apply hv; move: hj ho hol hl; clear hv hval; smt().
+by move: h0 hb ho hol hl; clear hv hval; smt().
+qed.
+
+lemma a64n_four64 (m : BArray64.t) :
+  BArray64.set128d (BArray64.set128d (BArray64.set128d (BArray64.set128d m 0 a64n_ONE)
+    16 a64n_ONE) 32 a64n_ONE) 48 a64n_ONE = a64n_I64.
+proof. apply a64n_full64 => i hi0 hi1; rewrite !BArray64.is_init_cell_set128d; smt(). qed.
+
+lemma a64n_slots512n (si : BArray512.t) n : 0 <= n =>
+  (forall s, 0 <= s < n => BArray512.is_init si (s * 16) 16) => BArray512.is_init si 0 (16 * n).
+proof. by move=> hn h i hi0 hi1; have := h (i %/ 16) _ i _ _; smt(). qed.
+
+lemma __sha256_x8_load_lanes_proof _w _x _p0 _p1 _p2 _p3 _w_init :
+  __sha256_x8_load_lanes_spec _w _x _p0 _p1 _p2 _p3 _w_init.
+proof.
+rewrite /__sha256_x8_load_lanes_spec; proc.
+while (valid trace___sha256_x8_load_lanes /\ x_init /\ p0_init /\ p1_init /\ p2_init /\
+       p3_init /\ i_init /\ 0 <= i <= 4 /\ x = _x /\ 0 <= _x < 2 /\
+       p0 = _p0 /\ p1 = _p1 /\ p2 = _p2 /\ p3 = _p3 /\
+       is_valid ptr_modulus Glob.mem_v (W64.to_uint _p0) 64 /\
+       is_valid ptr_modulus Glob.mem_v (W64.to_uint _p1) 64 /\
+       is_valid ptr_modulus Glob.mem_v (W64.to_uint _p2) 64 /\
+       is_valid ptr_modulus Glob.mem_v (W64.to_uint _p3) 64 /\
+       (forall s, 0 <= s < 16 * _x + 4 * i => BArray512.is_init w_init (s * 16) 16)).
++ wp.
+  while (valid trace___sha256_x8_load_lanes /\ x_init /\ p0_init /\ p1_init /\ p2_init /\
+         p3_init /\ i_init /\ k_init /\ 0 <= i < 4 /\ 0 <= k <= 4 /\ x = _x /\ 0 <= _x < 2 /\
+         p0 = _p0 /\ p1 = _p1 /\ p2 = _p2 /\ p3 = _p3 /\
+         is_valid ptr_modulus Glob.mem_v (W64.to_uint _p0) 64 /\
+         is_valid ptr_modulus Glob.mem_v (W64.to_uint _p1) 64 /\
+         is_valid ptr_modulus Glob.mem_v (W64.to_uint _p2) 64 /\
+         is_valid ptr_modulus Glob.mem_v (W64.to_uint _p3) 64 /\ r_init = a64n_I64 /\
+         (forall s, 0 <= s < 16 * _x + 4 * i + k => BArray512.is_init w_init (s * 16) 16)).
+  + auto => &m [#] hv hx hp0 hp1 hp2 hp3 hi hk hi0 hi4 hk0 hk4 -> hx0 hx2 -> -> -> -> hv0 hv1 hv2 hv3 -> hw hlt /=.
+    rewrite !valid_cat !a64n_valid1 hv hx hi hk !a64n_I64_init hp0 hp1 hp2 hp3 hv0 hv1 hv2 hv3 /=.
+    have hf : forall s, 0 <= s < 16 * _x + 4 * i{m} + (k{m} + 1) =>
+      BArray512.is_init (BArray512.set128d w_init{m} (16 * (16 * _x + 4 * i{m} + k{m}))
+        a64n_ONE) (s * 16) 16.
+    + move=> s0 hs0; rewrite a64n_slot512.
+      by case: (16 * _x + 4 * i{m} + k{m} = s0) => h; [left | right; apply hw => /#].
+    smt().
+  wp; ecall (__sha256_x8_rows_proof r r_init).
+  auto => &m [#] hv hx hp0 hp1 hp2 hp3 hi hi0 hi4 -> hx0 hx2 -> -> -> -> hv0 hv1 hv2 hv3 hw hlt /=.
+  rewrite a64n_four64 a64n_I64_init /=.
+  move=> o5 [ho1 ho2].
+  have s0 := a64n_valid_sub _ _ _ (16 * i{m}) 16 hv0 _ _ _; 1..3: smt().
+  have s1 := a64n_valid_sub _ _ _ (16 * i{m}) 16 hv1 _ _ _; 1..3: smt().
+  have s2 := a64n_valid_sub _ _ _ (16 * i{m}) 16 hv2 _ _ _; 1..3: smt().
+  have s3 := a64n_valid_sub _ _ _ (16 * i{m}) 16 hv3 _ _ _; 1..3: smt().
+  rewrite !valid_cat !a64n_valid1 hv hp0 hp1 hp2 hp3 hi ho2 s0 s1 s2 s3 (a64n_full64 _ ho1) /=.
+  split; first smt().
+  move=> k0 tr0 w0 hk [#] htr _ _ _ hk0 hk4 _ _ _ _ _ _ hw0.
+  have ->> : k0 = 4 by smt().
+  rewrite htr /=; smt().
+auto => &m [#] /= -> -> -> -> -> -> _ hx0 hx2 hw hv0 hv1 hv2 hv3.
+rewrite hv0 hv1 hv2 hv3 hx0 hx2 /=.
+split.
++ split; first by rewrite /valid.
+  by move=> s0 hs0 i hi0 hi1; apply hw => /#.
+move=> i0 tr0 w0 hi [#] htr hi0 hi4 hw0.
+have ->> : i0 = 4 by smt().
+rewrite htr /= (_ : 256 * (x{m} + 1) = 16 * (16 * x{m} + 16)) 1:/#.
+by apply a64n_slots512n => [/# | s0 hs0]; apply hw0 => /#.
 qed.
