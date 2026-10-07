@@ -12,17 +12,19 @@
  *
  * Workloads
  *
- *     A workload is a function, a message length and a mode. Workloads of
- *     the six hashes and the two HMACs name the message length; a
+ *     A workload is a function, a message length and a mode, and for an
+ *     HMAC also a key length. Workloads of the six hashes and the two
+ *     HMACs name the message length; a
  *     multi-way workload names the length of each message, and its
  *     work_bytes is the total over all lanes. The *_REF workloads do the
  *     work of a multi-way call as 8 (or 4) one-shot single-way calls: they
  *     are the "same number of single calls" the multi-way forms are
  *     compared against, timed as one unit.
  *
- *     Message bytes follow bench_fill_msg and the HMAC key bench_fill_key.
- *     bench_kat returns the digest of each workload; a backend's output
- *     must equal it before the workload is timed.
+ *     Message bytes follow bench_fill_msg and the HMAC key bench_fill_key;
+ *     an HMAC workload with key length k uses the first k bytes of the key
+ *     buffer. bench_kat returns the digest of each workload; a backend's
+ *     output must equal it before the workload is timed.
  */
 
 #ifndef NIRAPOD_SHA2_BENCH_H
@@ -31,7 +33,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define BENCH_HMAC_KEY_LEN 32
+/*
+ * HMAC key lengths: one shorter than both block sizes, and one longer than
+ * both (131 bytes, the long key of RFC 4231 test cases 6 and 7), which
+ * makes HMAC hash the key first.
+ */
+#define BENCH_HMAC_KEY_SHORT 32
+#define BENCH_HMAC_KEY_LONG 131
+#define BENCH_HMAC_KEY_MAX BENCH_HMAC_KEY_LONG
 #define BENCH_MAX_OUT 256
 #define BENCH_MAX_LEN 1048576
 #define BENCH_MAX_WORK_BYTES (8 * BENCH_MAX_LEN)
@@ -56,6 +65,7 @@ typedef struct bench_workload {
     bench_fn fn;
     int incremental;
     size_t len;
+    size_t key_len;    /* HMAC only; 0 for the other functions */
 } bench_workload;
 
 /*
@@ -85,8 +95,9 @@ const uint8_t *bench_key(void);
 size_t bench_fn_out_len(bench_fn fn);
 size_t bench_work_bytes(const bench_workload *w);
 const char *bench_fn_name(bench_fn fn);
+const char *bench_workload_name(const bench_workload *w);
 
 /* bench_kat.c, generated. */
-const unsigned char *bench_kat(bench_fn fn, size_t len, size_t *out_len);
+const unsigned char *bench_kat(bench_fn fn, size_t len, size_t key_len, size_t *out_len);
 
 #endif /* NIRAPOD_SHA2_BENCH_H */
