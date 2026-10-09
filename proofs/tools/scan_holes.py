@@ -10,7 +10,7 @@
 #   pragma            changes checking options; `pragma Proofs:weak` makes
 #                     EasyCrypt accept every following proof unchecked
 #   exit              stops processing the file with status 0, so nothing
-#                     after it, including the end-of-file gate lemma of
+#                     after it, including the end-of-file lemma of
 #                     `make compile-files`, is checked
 #   fail              runs a command expecting it to fail, so a statement
 #                     prefixed with it is never established
