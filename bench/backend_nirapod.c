@@ -268,10 +268,10 @@ static int nz_run(const bench_variant *v, const bench_workload *w, uint8_t *out)
     case BENCH_HMAC_SHA256:
     case BENCH_HMAC_SHA512:
         if (!w->incremental) {
-            return nz_hmac(k, w->fn, out, bench_key(), BENCH_HMAC_KEY_LEN, in, w->len);
+            return nz_hmac(k, w->fn, out, bench_key(), w->key_len, in, w->len);
         } else {
             nz_ctx ctx;
-            int rc = nz_hmac_init(k, w->fn, &ctx, bench_key(), BENCH_HMAC_KEY_LEN);
+            int rc = nz_hmac_init(k, w->fn, &ctx, bench_key(), w->key_len);
 
             if (rc == 0) {
                 rc = nz_update(k, w->fn, &ctx, in, w->len);

@@ -158,9 +158,9 @@ static int evp_run(const bench_variant *v, const bench_workload *w, uint8_t *out
     case BENCH_HMAC_SHA256:
     case BENCH_HMAC_SHA512:
         return w->incremental
-                   ? evp_hmac_incremental(w->fn, out, bench_key(), BENCH_HMAC_KEY_LEN,
+                   ? evp_hmac_incremental(w->fn, out, bench_key(), w->key_len,
                                           bench_msg(), w->len)
-                   : evp_hmac(w->fn, out, bench_key(), BENCH_HMAC_KEY_LEN,
+                   : evp_hmac(w->fn, out, bench_key(), w->key_len,
                               bench_msg(), w->len);
     case BENCH_SHA256_X8_REF:
     case BENCH_SHA512_X4_REF: {

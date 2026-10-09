@@ -30,7 +30,7 @@ from collections import defaultdict
 
 FUNCTION_ORDER = [
     "sha224", "sha256", "sha384", "sha512", "sha512_224", "sha512_256",
-    "hmac_sha256", "hmac_sha512",
+    "hmac_sha256", "hmac_sha256_key131", "hmac_sha512", "hmac_sha512_key131",
     "sha256_x8", "sha256_x8_ref", "sha512_x4", "sha512_x4_ref",
 ]
 
