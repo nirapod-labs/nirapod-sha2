@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# GENERATED FILE. DO NOT EDIT.
+#
+# Inventory of the aarch64/portable proofs. No theorem is claimed for this unit, so
+# no axiom, theorem statement or definition is listed.
+#
+# Generator: proofs/Makefile, target inventory
+# Regenerate: make -C proofs inventory   (check: make -C proofs check-inventory)
+
+theorems 0

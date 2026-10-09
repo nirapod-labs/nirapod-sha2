@@ -1,0 +1,147 @@
+(* SPDX-FileCopyrightText: nirapod-sha2 contributors
+   SPDX-License-Identifier: Apache-2.0
+
+   tests/insn/WordEval.ec.in
+   =========================
+
+   Rewriting rules that let EasyCrypt compute with machine words given as
+   literals. tests/insn/insn.py expands this template into WordEval.ec:
+   the block between "@size" and "@end" once for each word size, the block
+   between "@pack" and "@end" once for each way of splitting a word into
+   lanes.
+
+   The word operators of JWord are opaque to reduction (most are
+   "axiomatized by"), so cbv alone cannot evaluate an expression such as
+   SHA256MSG1 (W128.of_int x) (W128.of_int y). Each rule below turns one
+   operator applied to of_int literals into of_int of an integer that
+   reduction can compute, bit by bit for the logical operators, by integer
+   addition for +. Declared as simplification hints, they let cbv rewrite
+   every intermediate word of an expression into a literal, from the
+   innermost operator outwards, until both sides of the goal are literals.
+
+   Every rule is a lemma, proved for all arguments. This file adds no
+   axiom, so it cannot make a false equation provable; it only decides
+   which true ones cbv can close. *)
+
+require import AllCore IntDiv List Bool BitEncoding.
+from Jasmin require import JUtils JWord.
+import BS2Int.
+
+(* evl s is the integer whose binary digits, least significant first, are
+   the bits of s. A right fold that reduction evaluates directly. *)
+op evl (s : bool list) : int =
+  foldr (fun (b : bool) (n : int) => b2i b + 2 * n) 0 s.
+
+lemma evlE (s : bool list) : evl s = bs2int s.
+proof.
+  elim: s => [|b s ih]; first by rewrite /evl bs2int_nil.
+  by rewrite bs2int_cons -ih.
+qed.
+
+(* @size N *)
+theory Eval@N@.
+
+(* ev f is the @N@-bit word whose bit i is f i, as an integer. It is
+   opaque inside this theory, so that matching a goal against ev_ext does
+   not unfold the @N@ bits; the hint evE below unfolds it for cbv. *)
+op ev (f : int -> bool) : int = evl (map f (iotared 0 @N@))
+axiomatized by evE.
+
+lemma ev_ext (w : W@N@.t) (f : int -> bool) :
+  (forall i, 0 <= i < @N@ => w.[i] = f i) => w = W@N@.of_int (ev f).
+proof.
+  move=> h; rewrite -{1}(W@N@.to_uintK' w) W@N@.to_uintE evE evlE /W@N@.w2bits.
+  rewrite iotaredE; congr; congr; apply eq_in_map => i.
+  by rewrite mem_iota => hi; apply h; smt().
+qed.
+
+lemma xorE (a b : int) :
+  W@N@.of_int a +^ W@N@.of_int b
+  = W@N@.of_int (ev (fun i => W@N@.int_bit a i ^^ W@N@.int_bit b i)).
+proof. by apply ev_ext => i hi; rewrite W@N@.xorwE !W@N@.of_intwE hi. qed.
+
+lemma andE (a b : int) :
+  W@N@.andw (W@N@.of_int a) (W@N@.of_int b)
+  = W@N@.of_int (ev (fun i => W@N@.int_bit a i /\ W@N@.int_bit b i)).
+proof. by apply ev_ext => i hi; rewrite W@N@.andwE !W@N@.of_intwE hi. qed.
+
+lemma orE (a b : int) :
+  W@N@.orw (W@N@.of_int a) (W@N@.of_int b)
+  = W@N@.of_int (ev (fun i => W@N@.int_bit a i \/ W@N@.int_bit b i)).
+proof. by apply ev_ext => i hi; rewrite W@N@.orwE !W@N@.of_intwE hi. qed.
+
+lemma invE (a : int) :
+  W@N@.invw (W@N@.of_int a) = W@N@.of_int (ev (fun i => !W@N@.int_bit a i)).
+proof. by apply ev_ext => i hi; rewrite W@N@.invwE !W@N@.of_intwE hi. qed.
+
+lemma rorE (a k : int) :
+  W@N@.ror (W@N@.of_int a) k
+  = W@N@.of_int (ev (fun i => W@N@.int_bit a ((i + k) %% @N@))).
+proof.
+  apply ev_ext => i hi; rewrite W@N@.rorwE hi /= W@N@.of_intwE.
+  by have -> : 0 <= (i + k) %% @N@ < @N@ by smt().
+qed.
+
+lemma rolE (a k : int) :
+  W@N@.rol (W@N@.of_int a) k
+  = W@N@.of_int (ev (fun i => W@N@.int_bit a ((i - k) %% @N@))).
+proof.
+  apply ev_ext => i hi; rewrite W@N@.rolwE hi /= W@N@.of_intwE.
+  by have -> : 0 <= (i - k) %% @N@ < @N@ by smt().
+qed.
+
+lemma shrE (a k : int) :
+  W@N@.of_int a `>>>` k
+  = W@N@.of_int (ev (fun i => 0 <= i + k < @N@ /\ W@N@.int_bit a (i + k))).
+proof. by apply ev_ext => i hi; rewrite W@N@.shrwE hi /= W@N@.of_intwE. qed.
+
+lemma shlE (a k : int) :
+  W@N@.of_int a `<<<` k
+  = W@N@.of_int (ev (fun i => 0 <= i - k < @N@ /\ W@N@.int_bit a (i - k))).
+proof. by apply ev_ext => i hi; rewrite W@N@.shlwE hi /= W@N@.of_intwE. qed.
+
+lemma addE (a b : int) : W@N@.of_int a + W@N@.of_int b = W@N@.of_int (a + b).
+proof. by rewrite W@N@.of_intD. qed.
+
+end Eval@N@.
+(* @end *)
+
+(* @pack T S B R *)
+theory Eval@T@.
+
+(* @T@ views a @B@-bit word as @R@ lanes of @S@ bits: lane i of a
+   literal, and a word assembled from lanes. *)
+lemma bitsE (x i : int) :
+  W@B@.of_int x \bits@S@ i
+  = W@S@.of_int (Eval@S@.ev (fun j => 0 <= i * @S@ + j < @B@ /\ W@B@.int_bit x (i * @S@ + j))).
+proof.
+  by apply Eval@S@.ev_ext => j hj; rewrite @T@.bits@S@iE // W@B@.of_intwE.
+qed.
+
+lemma packE (ws : @T@.Pack.pack_t) :
+  @T@.pack@R@_t ws
+  = W@B@.of_int (Eval@B@.ev (fun i => ws.[i %/ @S@].[i %% @S@])).
+proof. by apply Eval@B@.ev_ext => i hi; rewrite @T@.pack@R@wE. qed.
+
+end Eval@T@.
+(* @end *)
+
+(* JModel writes some index lists with iota_, which reduction does not
+   unfold; iotared is the same list and does. *)
+lemma iota_iotared (i n : int) : iota_ i n = iotared i n.
+proof. by rewrite iotaredE. qed.
+
+(* The hints come last. Declared earlier, they would let simplification
+   unfold ev and the index lists inside the proofs above, which makes
+   those proofs very slow. of_intwE gives bit i of a literal. *)
+(* @size N *)
+hint simplify (Eval@N@.evE, Eval@N@.xorE, Eval@N@.andE, Eval@N@.orE, Eval@N@.invE,
+               Eval@N@.rorE, Eval@N@.rolE, Eval@N@.shrE, Eval@N@.shlE,
+               Eval@N@.addE).
+(* @end *)
+(* @pack T S B R *)
+hint simplify (Eval@T@.bitsE, Eval@T@.packE).
+(* @end *)
+
+hint simplify (W8.of_intwE, W16.of_intwE, W32.of_intwE, W64.of_intwE, W128.of_intwE).
+hint simplify iota_iotared.
