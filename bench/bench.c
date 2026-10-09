@@ -69,11 +69,11 @@
 
 #include "bench.h"
 
-#define BENCH_MAX_WORKLOADS 320
+#define BENCH_MAX_WORKLOADS 400
 #define BENCH_MAX_REPS 64
 
 static uint8_t msg[BENCH_MAX_WORK_BYTES];
-static uint8_t key[BENCH_HMAC_KEY_LEN];
+static uint8_t key[BENCH_HMAC_KEY_MAX];
 static uint8_t out[BENCH_MAX_OUT];
 
 const bench_variant *bench_variants;
@@ -113,7 +113,7 @@ void bench_fill_key(uint8_t *p)
 {
     size_t i;
 
-    for (i = 0; i < BENCH_HMAC_KEY_LEN; i++) {
+    for (i = 0; i < BENCH_HMAC_KEY_MAX; i++) {
         p[i] = (uint8_t)((i * 197 + 11) & 0xff);
     }
 }
@@ -186,13 +186,30 @@ const char *bench_fn_name(bench_fn fn)
     }
 }
 
+/*
+ * The function column of the CSV. An HMAC with the long key is a function
+ * of its own there, so that rows stay matched on function, mode and length.
+ */
+const char *bench_workload_name(const bench_workload *w)
+{
+    if (w->key_len == BENCH_HMAC_KEY_LONG) {
+        switch (w->fn) {
+        case BENCH_HMAC_SHA256: return "hmac_sha256_key131";
+        case BENCH_HMAC_SHA512: return "hmac_sha512_key131";
+        default: break;
+        }
+    }
+    return bench_fn_name(w->fn);
+}
+
 static size_t build_workloads(bench_workload *list)
 {
     static const size_t lengths[] = {
-        0, 1, 16, 32, 55, 56, 64, 100, 128, 200, 256,
+        0, 1, 16, 32, 55, 56, 64, 100, 111, 112, 128, 200, 256,
         1024, 2048, 4096, 8192, 16384, 1048576
     };
-    static const size_t hmac_lengths[] = { 32, 1024 };
+    static const size_t hmac_lengths[] = { 32, 1024, 1048576 };
+    static const size_t hmac_keys[] = { BENCH_HMAC_KEY_SHORT, BENCH_HMAC_KEY_LONG };
     static const bench_fn hashes[] = {
         BENCH_SHA224, BENCH_SHA256, BENCH_SHA384, BENCH_SHA512,
         BENCH_SHA512_224, BENCH_SHA512_256
@@ -203,7 +220,7 @@ static size_t build_workloads(bench_workload *list)
         BENCH_SHA256_X8_REF, BENCH_SHA512_X4_REF
     };
     size_t n = 0;
-    size_t i, j;
+    size_t i, j, k;
     int mode;
 
     for (i = 0; i < sizeof(hashes) / sizeof(hashes[0]); i++) {
@@ -211,18 +228,22 @@ static size_t build_workloads(bench_workload *list)
             for (mode = 0; mode <= 1; mode++) {
                 list[n].fn = hashes[i];
                 list[n].len = lengths[j];
+                list[n].key_len = 0;
                 list[n].incremental = mode;
                 n++;
             }
         }
     }
     for (i = 0; i < sizeof(hmacs) / sizeof(hmacs[0]); i++) {
-        for (j = 0; j < sizeof(hmac_lengths) / sizeof(hmac_lengths[0]); j++) {
-            for (mode = 0; mode <= 1; mode++) {
-                list[n].fn = hmacs[i];
-                list[n].len = hmac_lengths[j];
-                list[n].incremental = mode;
-                n++;
+        for (k = 0; k < sizeof(hmac_keys) / sizeof(hmac_keys[0]); k++) {
+            for (j = 0; j < sizeof(hmac_lengths) / sizeof(hmac_lengths[0]); j++) {
+                for (mode = 0; mode <= 1; mode++) {
+                    list[n].fn = hmacs[i];
+                    list[n].len = hmac_lengths[j];
+                    list[n].key_len = hmac_keys[k];
+                    list[n].incremental = mode;
+                    n++;
+                }
             }
         }
     }
@@ -230,6 +251,7 @@ static size_t build_workloads(bench_workload *list)
         for (j = 0; j < sizeof(lengths) / sizeof(lengths[0]); j++) {
             list[n].fn = multi[i];
             list[n].len = lengths[j];
+            list[n].key_len = 0;
             list[n].incremental = 0;
             n++;
         }
@@ -240,22 +262,22 @@ static size_t build_workloads(bench_workload *list)
 static int verify_workload(const bench_variant *v, const bench_workload *w)
 {
     size_t want_len = 0;
-    const unsigned char *want = bench_kat(w->fn, w->len, &want_len);
+    const unsigned char *want = bench_kat(w->fn, w->len, w->key_len, &want_len);
 
     if (want == NULL) {
         fprintf(stderr, "bench: no known answer for %s len %zu\n",
-                bench_fn_name(w->fn), w->len);
+                bench_workload_name(w), w->len);
         return -1;
     }
     if (v->run(v, w, out) != 0) {
         fprintf(stderr, "bench: %s/%s: %s len %zu mode %s failed\n",
-                v->library, v->variant, bench_fn_name(w->fn), w->len,
+                v->library, v->variant, bench_workload_name(w), w->len,
                 w->incremental ? "incremental" : "one-shot");
         return -1;
     }
     if (memcmp(out, want, want_len) != 0) {
         fprintf(stderr, "bench: %s/%s: %s len %zu mode %s: wrong output\n",
-                v->library, v->variant, bench_fn_name(w->fn), w->len,
+                v->library, v->variant, bench_workload_name(w), w->len,
                 w->incremental ? "incremental" : "one-shot");
         return -1;
     }
@@ -814,7 +836,7 @@ int main(int argc, char **argv)
                     fprintf(csv, "%s,%s,%s,%s,%s,%s,%s,%zu,%zu,below-call-site,"
                                  "%s,%s,%s\n",
                             run_label, v->library, v->version, v->revision,
-                            v->variant, bench_fn_name(work->fn),
+                            v->variant, bench_workload_name(work),
                             work->incremental ? "incremental" : "oneshot",
                             work->len, depth, cpu_model, arch_name, os_name);
                 } else {
@@ -832,7 +854,7 @@ int main(int argc, char **argv)
                     fprintf(csv, "%s,%s,%s,%s,%s,%s,%s,%zu,%zu,%zu,%zu,"
                                  "%.2f,%.2f,%.2f,%.2f,%.2f",
                             run_label, v->library, v->version, v->revision,
-                            v->variant, bench_fn_name(work->fn),
+                            v->variant, bench_workload_name(work),
                             work->incremental ? "incremental" : "oneshot",
                             work->len, bench_work_bytes(work), reps, iters,
                             ns_stats.median, ns_stats.iqr, ns_stats.min,

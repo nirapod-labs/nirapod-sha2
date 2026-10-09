@@ -29,6 +29,8 @@
 #                      check-extraction, extraction-identity and
 #                      extraction-control, the checks on them (see
 #                      "EasyCrypt models" below)
+#     make insn-check  the EasyCrypt models of the host's instructions
+#                      against this processor (see "Instruction models")
 #     make clean       remove build/
 #
 # Assembly comes from the Jasmin sources, compiled by JASMINC.
@@ -477,6 +479,30 @@ extraction-control: extract
 	$(PYTHON) -I $(TESTS)/extraction/control.py --jasmin2ec $(JASMIN2EC) \
 	  --entry $(EXTRACT_ENTRY) --units $(BUILD)/units --src $(SRC) \
 	  --models $(EXTRACT) --work $(BUILD)/extract/control $(EXTRACT_UNITS)
+
+# --------------------------------------------------------------------
+# Instruction models
+# --------------------------------------------------------------------
+#
+#     make insn-check   the EasyCrypt models of the instructions listed in
+#                       tests/insn/<host arch>.insn, evaluated on inputs
+#                       and results of this processor, with the negative
+#                       controls (tests/insn/README.md)
+#
+# The table lists the x86-64 SHA-NI instructions, so the check runs on an
+# x86-64 processor with SHA-NI. It needs JASMINC, JASMIN2EC and EASYCRYPT
+# of the pinned toolchain. INSN_SEED and INSN_RANDOM choose the random
+# vectors.
+EASYCRYPT   ?= easycrypt
+INSN_SEED   ?= 1
+INSN_RANDOM ?= 256
+
+.PHONY: insn-check
+
+insn-check:
+	JASMINC='$(JASMINC)' JASMIN2EC='$(JASMIN2EC)' EASYCRYPT='$(EASYCRYPT)' \
+	  CC='$(CC)' PYTHON='$(PYTHON)' INSN_SEED='$(INSN_SEED)' INSN_RANDOM='$(INSN_RANDOM)' \
+	  $(TESTS)/insn/check.sh $(HOST_ARCH) $(BUILD)/insn/$(HOST_ARCH)
 
 clean:
 	rm -rf $(BUILD)
