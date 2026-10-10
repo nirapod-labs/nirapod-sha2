@@ -34,7 +34,7 @@ require import AllCore List IntDiv StdOrder.
 import IntOrder.
 require BitEncoding.
 import BitEncoding.BitChunking.
-from Jasmin require import JWord JUtils JMemory Jslh.
+from Jasmin require import JWord JUtils JMemory Jslh JByte_array.
 import SLH64.
 require import BArray16 BArray28 BArray32 BArray64 BArray112.
 require import SBArray112_16 SBArray112_32 SBArray112_64.
@@ -167,6 +167,21 @@ proc; while (true) (8 - i); first by auto => /#.
 by wp; while (true) (8 - i); auto => /#.
 qed.
 
+(* A fresh context of the empty message. *)
+lemma sha256_ctx_init_correct (h1 : BArray32.t) (t : W64.t) :
+  hoare [M.__sha256_ctx_init :
+           h = h1 /\ tag = t /\ total = W64.zero ==> ctx256 t (h256 h1) [] res].
+proof.
+conseq (ctx_init256_correct h1 t W64.zero) => // &m _ c [ht [hz hs]].
+rewrite /ctx256 ht hz /=.
+by apply stream256_nil; rewrite hs.
+qed.
+
+lemma sha256_ctx_init_total (h1 : BArray32.t) (t : W64.t) :
+  phoare [M.__sha256_ctx_init :
+           h = h1 /\ tag = t /\ total = W64.zero ==> ctx256 t (h256 h1) [] res] = 1%r.
+proof. by conseq ctx_init256_ll (sha256_ctx_init_correct h1 t). qed.
+
 (* ------------------------------------------------------------------ *)
 (* Absorbing into a context                                           *)
 
@@ -263,3 +278,201 @@ lemma sha256_ctx_update_total (c0 : BArray112.t) (tag0 : W64.t) (h0 : W32.t list
                    ctx256 tag0 h0 (m ++ memread Glob.mem (to_uint p0) (to_uint l0)) res.`1
               else res.`2 = W64.of_int 2)] = 1%r.
 proof. by conseq sha256_ctx_update_ll (sha256_ctx_update_correct c0 tag0 h0 m p0 l0). qed.
+
+(* ------------------------------------------------------------------ *)
+(* Finishing a context, once for every digest size                    *)
+
+(* src/context.jinc writes the finishing step once over _DSIZE, as
+   src/sha256.jinc does for __sha256_finalize (SHA256_Stream.ec); the
+   theory below repeats it with the size abstract, over the finalize of
+   Final256 at the same size, and each instance is a clone checked
+   against the extracted text by sim. *)
+abstract theory CtxFinal256.
+
+op dsize : int.
+
+axiom dsize_ok : 4 <= dsize <= 32 /\ dsize %% 4 = 0.
+
+clone import ByteArray as BArrayD with op size <= dsize.
+
+clone import Final256 as FD with op dsize <= dsize, theory BArrayD <= BArrayD
+proof dsize_ok by exact dsize_ok.
+
+module C = {
+  proc ctx_finalize (ctx:BArray112.t, digest:BArrayD.t,
+                                    total:W64.t, ms:W64.t) : BArray112.t *
+                                                             BArrayD.t *
+                                                             W64.t = {
+    var aux:BArrayD.t;
+    var aux_0:BArray32.t;
+    var aux_1:BArray64.t;
+    var aux_2:W64.t;
+    (aux, aux_0, aux_1, aux_2) <@ FD.F.finalize (digest,
+    (SBArray112_32.get_sub32 ctx 4), (SBArray112_64.get_sub8 ctx 48), 
+    total, ms);
+    digest <- aux;
+    ctx <- (SBArray112_32.set_sub32 ctx 4 aux_0);
+    ctx <- (SBArray112_64.set_sub8 ctx 48 aux_1);
+    ms <- aux_2;
+    return (ctx, digest, ms);
+  }
+  proc ctx_final (ctx:BArray112.t, digest:BArrayD.t,
+                                     expect_0:W64.t, ms:W64.t) : BArray112.t *
+                                                                 BArrayD.t *
+                                                                 W64.t *
+                                                                 W64.t = {
+    var inc:int;
+    var status:W64.t;
+    var tag:W64.t;
+    var total:W64.t;
+    var ok:bool;
+    var z:W64.t;
+    var i:int;
+    (tag, total) <@ M.__sha2_ctx_open ((SBArray112_16.get_sub8 ctx 0), ms);
+    status <- (W64.of_int 1);
+    ok <- (tag = expect_0);
+    if (ok) {
+      ms <- (update_msf ok ms);
+      (ctx, digest, ms) <@ ctx_finalize (ctx, digest, 
+      total, ms);
+      z <- (W64.of_int 0);
+      inc <- (112 %/ 8);
+      i <- 0;
+      while ((i < inc)) {
+        ctx <- (BArray112.set64d ctx (8 * i) z);
+        i <- (i + 1);
+      }
+      status <- (W64.of_int 0);
+    } else {
+      ms <- (update_msf (! ok) ms);
+    }
+    return (ctx, digest, status, ms);
+  }
+}.
+
+lemma ctx_final_correct (c0 : BArray112.t) (tag0 : W64.t) (h0 : W32.t list) (m : bytes) (d0 : BArrayD.t) :
+  hoare [C.ctx_final :
+           ctx = c0 /\ digest = d0 /\ expect_0 = tag0 ==>
+           (BArray112.get64d c0 0 <> tag0 => res.`3 = W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+           (ctx256 tag0 h0 m c0 =>
+              res.`3 = W64.zero /\
+              BArrayD.to_list res.`2 = take dsize (flatten (map w32_be (SHA256.hash h0 m))) /\
+              forall i, 0 <= i < 112 => BArray112.get8 res.`1 i = W8.zero)].
+proof.
+proc.
+seq 1 : (ctx = c0 /\ digest = d0 /\ expect_0 = tag0 /\
+         tag = BArray112.get64d c0 0 /\ total = BArray112.get64d c0 8).
++ ecall (ctx_open_correct (SBArray112_16.get_sub8 ctx 0)); auto => /> r -> ->.
+  by rewrite head_tag head_total.
+sp; if.
++ wp; while (0 <= i <= 14 /\ inc = 14 /\ z = W64.zero /\
+             (forall b, 0 <= b < 8 * i => BArray112.get8 ctx b = W8.zero)).
+  + auto => /> &hr hi0 hi14 hb hlt; split; first smt().
+    move=> b hb0 hb1; rewrite BArray112.get8_set64dE.
+    case: (8 * i{hr} <= b < 8 * i{hr} + 8) => hbi.
+    + by rewrite ifT 1:/# W8u8.get_zero.
+    by rewrite ifF 1:/#; apply hb; smt().
+  inline C.ctx_finalize; wp.
+  case: (ctx256 tag0 h0 m c0).
+  + ecall (FD.finalize_correct h0 m); auto => /> &hr htag hok hrep.
+    move=> [d1 h1 b1 ms1] /= hd; split; first smt().
+    by move=> c1 i1 hn hi0 hi14 hb b hb0 hb1; apply hb; smt().
+  call (: true) => //; auto => /> &hr; smt().
+by auto => /> &hr htag hne; rewrite /ctx256; smt().
+qed.
+
+lemma ctx_final_ll : islossless C.ctx_final.
+proof.
+proc.
+seq 3 : true 1%r 1%r 0%r 0%r => //; first by wp; call ctx_open_ll; auto.
+if; last by auto.
+wp; while (true) (inc - i); first by auto => /#.
+by inline C.ctx_finalize; wp; call FD.finalize_ll; auto => /#.
+qed.
+
+end CtxFinal256.
+
+clone CtxFinal256 as CF256 with op dsize <= 32, theory BArrayD <= BArray32
+proof dsize_ok by done.
+
+clone CtxFinal256 as CF224 with op dsize <= 28, theory BArrayD <= BArray28
+proof dsize_ok by done.
+
+equiv cf224_fin_eq : M._sha224___sha256_finalize ~ CF224.FD.F.finalize : ={arg} ==> ={res}.
+proof. by proc; sim. qed.
+
+equiv cf224_fz_eq : M._sha224_ctx____ctx_finalize ~ CF224.C.ctx_finalize : ={arg} ==> ={res}.
+proof. by proc; wp; call cf224_fin_eq; auto. qed.
+
+equiv cf224_eq : M._sha224_ctx___sha2_ctx_final ~ CF224.C.ctx_final : ={arg} ==> ={res}.
+proof.
+proc; seq 3 3 : (={ctx, digest, expect_0, ms, tag, total, status, ok}); first by sim.
+if => //; last by auto.
+wp; while (={i, inc, ctx, z}); first by auto.
+by wp; call cf224_fz_eq; auto.
+qed.
+
+lemma sha224_ctx_final_ll : islossless M._sha224_ctx___sha2_ctx_final.
+proof. by conseq cf224_eq CF224.ctx_final_ll => /#. qed.
+
+lemma sha224_ctx_final_correct (c0 : BArray112.t) (tag0 : W64.t) (h0 : W32.t list) (m : bytes)
+  (d0 : BArray28.t) :
+  hoare [M._sha224_ctx___sha2_ctx_final :
+           ctx = c0 /\ digest = d0 /\ expect_0 = tag0 ==>
+           (BArray112.get64d c0 0 <> tag0 => res.`3 = W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+           (ctx256 tag0 h0 m c0 =>
+              res.`3 = W64.zero /\
+              BArray28.to_list res.`2 = take 28 (flatten (map w32_be (SHA256.hash h0 m))) /\
+              forall i, 0 <= i < 112 => BArray112.get8 res.`1 i = W8.zero)].
+proof. by conseq cf224_eq (CF224.ctx_final_correct c0 tag0 h0 m d0) => /#. qed.
+
+lemma sha224_ctx_final_total (c0 : BArray112.t) (tag0 : W64.t) (h0 : W32.t list) (m : bytes)
+  (d0 : BArray28.t) :
+  phoare [M._sha224_ctx___sha2_ctx_final :
+           ctx = c0 /\ digest = d0 /\ expect_0 = tag0 ==>
+           (BArray112.get64d c0 0 <> tag0 => res.`3 = W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+           (ctx256 tag0 h0 m c0 =>
+              res.`3 = W64.zero /\
+              BArray28.to_list res.`2 = take 28 (flatten (map w32_be (SHA256.hash h0 m))) /\
+              forall i, 0 <= i < 112 => BArray112.get8 res.`1 i = W8.zero)] = 1%r.
+proof. by conseq sha224_ctx_final_ll (sha224_ctx_final_correct c0 tag0 h0 m d0). qed.
+
+equiv cf256_fin_eq : M._sha256___sha256_finalize ~ CF256.FD.F.finalize : ={arg} ==> ={res}.
+proof. by proc; sim. qed.
+
+equiv cf256_fz_eq : M._sha256_ctx____ctx_finalize ~ CF256.C.ctx_finalize : ={arg} ==> ={res}.
+proof. by proc; wp; call cf256_fin_eq; auto. qed.
+
+equiv cf256_eq : M._sha256_ctx___sha2_ctx_final ~ CF256.C.ctx_final : ={arg} ==> ={res}.
+proof.
+proc; seq 3 3 : (={ctx, digest, expect_0, ms, tag, total, status, ok}); first by sim.
+if => //; last by auto.
+wp; while (={i, inc, ctx, z}); first by auto.
+by wp; call cf256_fz_eq; auto.
+qed.
+
+lemma sha256_ctx_final_ll : islossless M._sha256_ctx___sha2_ctx_final.
+proof. by conseq cf256_eq CF256.ctx_final_ll => /#. qed.
+
+lemma sha256_ctx_final_correct (c0 : BArray112.t) (tag0 : W64.t) (h0 : W32.t list) (m : bytes)
+  (d0 : BArray32.t) :
+  hoare [M._sha256_ctx___sha2_ctx_final :
+           ctx = c0 /\ digest = d0 /\ expect_0 = tag0 ==>
+           (BArray112.get64d c0 0 <> tag0 => res.`3 = W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+           (ctx256 tag0 h0 m c0 =>
+              res.`3 = W64.zero /\
+              BArray32.to_list res.`2 = take 32 (flatten (map w32_be (SHA256.hash h0 m))) /\
+              forall i, 0 <= i < 112 => BArray112.get8 res.`1 i = W8.zero)].
+proof. by conseq cf256_eq (CF256.ctx_final_correct c0 tag0 h0 m d0) => /#. qed.
+
+lemma sha256_ctx_final_total (c0 : BArray112.t) (tag0 : W64.t) (h0 : W32.t list) (m : bytes)
+  (d0 : BArray32.t) :
+  phoare [M._sha256_ctx___sha2_ctx_final :
+           ctx = c0 /\ digest = d0 /\ expect_0 = tag0 ==>
+           (BArray112.get64d c0 0 <> tag0 => res.`3 = W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+           (ctx256 tag0 h0 m c0 =>
+              res.`3 = W64.zero /\
+              BArray32.to_list res.`2 = take 32 (flatten (map w32_be (SHA256.hash h0 m))) /\
+              forall i, 0 <= i < 112 => BArray112.get8 res.`1 i = W8.zero)] = 1%r.
+proof. by conseq sha256_ctx_final_ll (sha256_ctx_final_correct c0 tag0 h0 m d0). qed.
+
