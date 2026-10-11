@@ -81,4 +81,23 @@ abstract theory ArrayLanes.
   + by rewrite W128_bits32_bits8 // ifT 1:/#; congr; smt().
   by rewrite A.get32d_byte // ifF //; smt().
   qed.
+
+  (* ---------------------------------------------------------------- *)
+  (* 64-bit lanes of a 256-bit word                                   *)
+
+  lemma get256_bits64 (t : A.t) i j : 0 <= j < 4 =>
+    A.get256 t i \bits64 j = A.get64 t (4 * i + j).
+  proof.
+  move=> hj; apply W8u8.wordP => k hk.
+  rewrite W256_bits64_bits8 // A.get256d_byte 1:/# A.get64d_byte //.
+  by congr; ring.
+  qed.
+
+  lemma get128_bits64 (t : A.t) i j : 0 <= j < 2 =>
+    A.get128 t i \bits64 j = A.get64 t (2 * i + j).
+  proof.
+  move=> hj; apply W8u8.wordP => k hk.
+  rewrite W128_bits64_bits8 // A.get128d_byte 1:/# A.get64d_byte //.
+  by congr; ring.
+  qed.
 end ArrayLanes.
