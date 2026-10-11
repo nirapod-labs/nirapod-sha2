@@ -15,13 +15,17 @@
  *                      lane of the first
  *   ssig0_v, ssig1_v   the shift and XOR sequences of the kernel against
  *                      sigma0 and sigma1 of FIPS 180-4 section 4.1.3
+ *   vinserti128_64     VINSERTI128 into the upper half
+ *   vpshufb_bswap64    VPSHUFB with the mask that reverses the bytes of
+ *                      each 64-bit lane (the big-endian message words of
+ *                      FIPS 180-4 section 3.1)
  *
  * No model of the library is needed; this file is checked once.
  *)
 
 require import AllCore List IntDiv.
 from Jasmin require import JWord JUtils JModel_x86.
-require import Bytes FIPS180_SHA2 Bmi.
+require import Bytes FIPS180_SHA2 Bmi WordSpec.
 
 lemma bits128_bits64 (w : W256.t) i j : 0 <= j < 2 =>
   w \bits128 i \bits64 j = w \bits64 (2 * i + j).
@@ -132,3 +136,51 @@ move=> hk; rewrite /vsig1 /= ?vpxor64 // ?vpsrl64 // ?vpsll64 //.
 rewrite W64.shrw_add // W64.shlw_add // /SHA512.ssig1 !ror_xor64 //=.
 by apply W64.wordP => i hi; rewrite !W64.xorwE; smt().
 qed.
+
+(* ------------------------------------------------------------------ *)
+(* VPSHUFB with the mask that reverses the bytes of each 64-bit lane   *)
+
+(* As little-endian bytes, lane j of each 128-bit half selects source
+   bytes 8j+7, ..., 8j. *)
+op bswap_mask64 : W128.t =
+  W2u64.pack2 [W64.of_int 283686952306183; W64.of_int 579005069656919567].
+
+lemma vpshufb128_bswap64 (x : W128.t) :
+  VPSHUFB_128 x bswap_mask64
+  = W2u64.pack2 [WordSpec.bswap64 (x \bits64 0); WordSpec.bswap64 (x \bits64 1)].
+proof.
+apply W16u8.allP; rewrite /VPSHUFB_128 /bswap_mask64 /=.
+by rewrite /VPSHUFB_128_B !W8u8.of_int_bits8_div // /= !W8.of_uintK /= /WordSpec.bswap64.
+qed.
+
+
+lemma b64 (w : W256.t) k : 0 <= k < 4 => w \bits64 k = w \bits128 (k %/ 2) \bits64 (k %% 2).
+proof. by move=> hk; rewrite bits128_bits64 1:/#; congr; smt(). qed.
+
+(* The kernel's 256-bit mask holds bswap_mask64 in both halves. *)
+lemma vpshufb_bswap64 (w m : W256.t) k : 0 <= k < 4 =>
+  m \bits64 0 = W64.of_int 283686952306183 => m \bits64 1 = W64.of_int 579005069656919567 =>
+  m \bits64 2 = W64.of_int 283686952306183 => m \bits64 3 = W64.of_int 579005069656919567 =>
+  VPSHUFB_256 w m \bits64 k = WordSpec.bswap64 (w \bits64 k).
+proof.
+move=> hk h0 h1 h2 h3.
+have hm0 : m \bits128 0 = bswap_mask64.
++ apply W2u64.wordP => j hj; rewrite bits128_bits64 // /bswap_mask64.
+  by have [->|->] : j = 0 \/ j = 1 by smt(); rewrite /= ?h0 ?h1.
+have hm1 : m \bits128 1 = bswap_mask64.
++ apply W2u64.wordP => j hj; rewrite bits128_bits64 // /bswap_mask64.
+  by have [->|->] : j = 0 \/ j = 1 by smt(); rewrite /= ?h2 ?h3.
+have hmk : m \bits128 (k %/ 2) = bswap_mask64.
++ by have [->|->] : k %/ 2 = 0 \/ k %/ 2 = 1 by smt().
+rewrite (b64 (VPSHUFB_256 w m) k hk) (b64 w k hk) /VPSHUFB_256 W2u128.map2bE 1:/#.
+rewrite hmk vpshufb128_bswap64.
+by have [->|->] : k %% 2 = 0 \/ k %% 2 = 1 by smt().
+qed.
+
+lemma vinserti128_64 (w : W256.t) (x : W128.t) k : 0 <= k < 4 =>
+  VINSERTI128 w x (W8.of_int 1) \bits64 k = if k < 2 then w \bits64 k else x \bits64 (k - 2).
+proof.
+move=> hk; rewrite (b64 _ k hk) /VINSERTI128 W8.of_uintK /=.
+by have [->|[->|[->|->]]] : k = 0 \/ k = 1 \/ k = 2 \/ k = 3 by smt(); rewrite /= ?bits128_bits64.
+qed.
+
