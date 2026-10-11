@@ -49,6 +49,13 @@ abstract theory ArrayLanes.
   apply p4P; rewrite get128d_bits32 //; congr; ring.
   qed.
 
+  (* The same at a byte offset, the form the model's literal offsets
+     take after simplification. *)
+  lemma get128d_p4 (t : A.t) i :
+    A.get128d t i = p4 (A.get32d t i) (A.get32d t (i + 4))
+                       (A.get32d t (i + 8)) (A.get32d t (i + 12)).
+  proof. by apply p4P; rewrite get128d_bits32. qed.
+
   (* ---------------------------------------------------------------- *)
   (* A 32-bit read after a 128-bit write                              *)
 
@@ -62,5 +69,16 @@ abstract theory ArrayLanes.
   case: (4 * i <= k < 4 * i + 4) => hk.
   + rewrite W128_bits32_bits8 // ifT 1:/#; congr; ring.
   rewrite A.get32d_byte // ifF //; smt().
+  qed.
+  lemma get32d_set128d (t : A.t) i x k :
+    0 <= i => i + 16 <= A.size => (k - i) %% 4 = 0 =>
+    A.get32d (A.set128d t i x) k
+    = if i <= k < i + 16 then x \bits32 ((k - i) %/ 4) else A.get32d t k.
+  proof.
+  move=> hi hs hm; apply W4u8.wordP => j hj.
+  rewrite A.get32d_byte // A.get8_set128dE.
+  case: (i <= k < i + 16) => hk.
+  + by rewrite W128_bits32_bits8 // ifT 1:/#; congr; smt().
+  by rewrite A.get32d_byte // ifF //; smt().
   qed.
 end ArrayLanes.
