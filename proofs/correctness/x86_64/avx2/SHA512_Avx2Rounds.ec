@@ -2,13 +2,14 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA512_Avx2.ec
- * ==============
+ * SHA512_Avx2Rounds.ec
+ * ====================
  *
  * Functional correctness of the SHA-512 AVX2 kernel
  * (src/x86_64/avx2/sha512_compress.jinc) against FIPS 180-4 section
- * 6.4.2 as spec/FIPS180_SHA2.ec writes it. This file holds the round and
- * schedule layers:
+ * 6.4.2 as spec/FIPS180_SHA2.ec writes it, round and schedule layers.
+ * SHA512_Avx2.ec proves the driver and the entry points from them.
+ * This file holds:
  *
  *   round_rst      one call of __sha512_avx2_round, scalar part: round t of
  *                  section 6.4.2 step 3 on the rotating slots of v
@@ -17,6 +18,8 @@
  *   half0_win,     the two half-steps move the schedule window from group
  *   half1_win      j to group j + 1 (section 6.4.2 step 1)
  *   wk_set, wk_get the W_t + K_t table on the stack
+ *   xw, tctx,      the driver's loop invariants and their step lemmas
+ *   linv, fin_v
  *
  * Model. NirapodSha2 is the model of a unit whose Sha512Kernel root is
  * src/x86_64/avx2 (proofs/Makefile).
@@ -591,4 +594,148 @@ proof.
 case: (p0 = 0 \/ p0 = 1 \/ p0 = 2) => hp.
 + by conseq (round_full w st t0 x0 j0 p0 hp).
 by conseq (_: false ==> _) => //; proc; exfalso.
+qed.
+
+(* ------------------------------------------------------------------ *)
+(* The driver __sha512_avx2                                            *)
+
+op hwords (h : BArray64.t) : W64.t list = map (BArray64.get64 h) (iota_ 0 8).
+
+lemma nth_hwords h k : 0 <= k < 8 => nth W64.zero (hwords h) k = BArray64.get64 h k.
+proof. by move=> hk; rewrite /hwords (nth_map 0) 1:size_iota 1:/# nth_iota. qed.
+
+lemma size_hwords h : size (hwords h) = 8.
+proof. by rewrite /hwords size_map size_iota. qed.
+
+(* The table loop: groups 0 .. i - 1 written. *)
+op iinv (h0 : W64.t list) (nb0 : int) (m0 m1 : W64.t list) (h : BArray64.t) (nb : int)
+        (x : BArray256.t) (wk : BArray1280.t) (i : int) =
+  hwords h = h0 /\ nb = nb0 /\ (nb0 = 1 \/ nb0 = 2) /\ size m0 = 16 /\ size m1 = 16 /\
+  win x m0 m1 0 /\ 0 <= i <= 8 /\ wkinv wk m0 m1 i.
+
+lemma iinv_step kt h0 nb0 m0 m1 h nb x wk i :
+  (forall t, 0 <= t < 80 => BArray640.get64 kt t = nth W64.zero K512 t) =>
+  iinv h0 nb0 m0 m1 h nb x wk i => i < 8 =>
+  iinv h0 nb0 m0 m1 h nb x
+    (BArray1280.set256 wk i (VPADD_4u64 (VPBROADCAST_2u128 (BArray640.get128 kt i))
+                               (BArray256.get256 x i))) (i + 1).
+proof.
+rewrite /iinv => hK [#] hh hn hnb hs0 hs1 hw hi0 hi1 hk hi.
+have hb : 0 <= i < 8 by move: hi0 hi; clear hK hk hw; smt().
+rewrite hh hn hnb hs0 hs1 hw /=; split; 1: by move: hb; clear hK hk hw; smt().
+apply (wk_set _ _ _ _ _ _ hK hk); 1: by move: hb; clear hK hk hw; smt().
+move=> L c hL hc; rewrite (hw i L c hb hL hc).
+by rewrite (_: (i - 0) %% 8 = i) 1:pmod_small.
+qed.
+
+(* Before block l and around its round loop. *)
+op linv (h0 : W64.t list) (nb0 : int) (m0 m1 : W64.t list) (h v : BArray64.t)
+        (x : BArray256.t) (wk : BArray1280.t) (inc l : int) =
+  inc = nb0 /\ (nb0 = 1 \/ nb0 = 2) /\ size m0 = 16 /\ size m1 = 16 /\ 0 <= l <= nb0 /\
+  hwords h = foldl compress h0 (take l [m0; m1]) /\
+  (forall k, 0 <= k < 8 => BArray64.get64 v k = BArray64.get64 h k) /\
+  (l < nb0 => tctx x wk m0 m1 l 0).
+
+op oinv (h0 : W64.t list) (nb0 : int) (m0 m1 : W64.t list) (h : BArray64.t) (inc l : int) =
+  inc = nb0 /\ (nb0 = 1 \/ nb0 = 2) /\ 0 <= l < nb0 /\
+  hwords h = foldl compress h0 (take l [m0; m1]).
+
+(* The working variables of block l after t rounds. *)
+op sl (m0 m1 : W64.t list) (h : BArray64.t) (l t : int) : state =
+  rounds (schedule (lane l m0 m1)) (to_state (hwords h)) 0 t.
+
+lemma sl_next m0 m1 h l t : 0 <= t =>
+  round (schedule (lane l m0 m1)) (sl m0 m1 h l t) t = sl m0 m1 h l (t + 1).
+proof. by move=> ht; rewrite /sl roundsS. qed.
+
+lemma slot0 k : 0 <= k < 8 => ((k + 80) - 0) %% 8 = k.
+proof. by move=> hk; rewrite (_: k + 80 - 0 = k + 10 * 8) 1:/# modzMDr pmod_small. qed.
+
+lemma slot80 k : 0 <= k < 8 => ((k + 80) - 80) %% 8 = k.
+proof. by move=> hk; rewrite (_: k + 80 - 80 = k) 1:/# pmod_small. qed.
+
+lemma linv_init h0 nb0 m0 m1 h nb x wk v :
+  iinv h0 nb0 m0 m1 h nb x wk 8 =>
+  (forall k, 0 <= k < 8 => BArray64.get64 v k = BArray64.get64 h k) =>
+  linv h0 nb0 m0 m1 h v x wk nb 0.
+proof.
+rewrite /iinv /linv => [#] hh hn hnb hs0 hs1 hw _ _ hk hv.
+rewrite hn hnb hs0 hs1 take0 /= hh /=; split; 1: by move: hnb; clear hw hk hv; smt().
+split; 1: exact hv.
+move=> _; rewrite /tctx /xw /wkn hs0 hs1 /= ?div0z ?mod0z /=.
+by rewrite hk hw.
+qed.
+
+lemma tinv_init h0 nb0 m0 m1 h v x wk inc l (m : BArray16.t) :
+  linv h0 nb0 m0 m1 h v x wk inc l => l < inc =>
+  oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 l 0 /\
+  rst v (BArray16.set64 (BArray16.set64 m 0 (BArray64.get64 v 1)) 0
+           (BArray16.get64 (BArray16.set64 m 0 (BArray64.get64 v 1)) 0 `^` BArray64.get64 v 2))
+      (W64.of_int 0) (sl m0 m1 h l 0) 0.
+proof.
+rewrite /linv /oinv => [#] hi hnb hs0 hs1 hl0 hl1 hh hv hc hl.
+split; 1: by rewrite hi hnb hh /=; move: hl0 hl; clear hv hc; smt().
+split; 1: by apply hc; rewrite -hi.
+rewrite /sl rounds_nil // /rst /vis /to_state !slot0 // !nth_hwords // !hv //.
+by rewrite !subr0 /=.
+qed.
+
+lemma tpre_step h0 nb0 m0 m1 h v m s x wk inc l t :
+  oinv h0 nb0 m0 m1 h inc l => tctx x wk m0 m1 l t => rst v m s (sl m0 m1 h l t) t => t < 80 =>
+  rinw (BArray64.set64 v (((7 + 80) - t) %% 8)
+          (BArray64.get64 v (((7 + 80) - t) %% 8) + BArray1280.get64 wk (4 * (t %/ 2) + 2 * l + t %% 2)))
+       m s (schedule (lane l m0 m1)) (sl m0 m1 h l t) t.
+proof. by move=> _ hc hr ht; apply (rst_add _ _ _ _ _ _ _ hr); exact (wk_read _ _ _ _ _ _ hc ht). qed.
+
+lemma fin_v v m s (S : state) : rst v m s S 80 => forall k, 0 <= k < 8 =>
+  BArray64.get64 (BArray64.set64 v 0 (BArray64.get64 v 0 + s)) k = nth W64.zero (of_state S) k.
+proof.
+case: S => a b c d e f g h; rewrite /rst /vis !slot80 // => [#] h0 h1 h2 h3 h4 h5 h6 h7 _ k hk.
+rewrite BArray64.get_set64E //.
+move: h0 h1 h2 h3 h4 h5 h6 h7 => /= h0 h1 h2 h3 h4 h5 h6 h7.
+have : k = 0 \/ k = 1 \/ k = 2 \/ k = 3 \/ k = 4 \/ k = 5 \/ k = 6 \/ k = 7 by smt().
+case=> [->|]; 1: by rewrite /of_state /= h0; ring.
+by case=> [->|[->|[->|[->|[->|[->|->]]]]]]; rewrite /of_state /= ?h1 ?h2 ?h3 ?h4 ?h5 ?h6 ?h7.
+qed.
+
+lemma hwords_ffwd h hb (S : state) :
+  (forall k, 0 <= k < 8 => BArray64.get64 h k = nth W64.zero (of_state S) k + BArray64.get64 hb k) =>
+  hwords h = ffwd S (hwords hb).
+proof.
+move=> hk; apply (eq_from_nth W64.zero).
++ by rewrite size_hwords /ffwd size_map size_zip size_of_state size_hwords.
+move=> k; rewrite size_hwords => hk8; rewrite nth_hwords // /ffwd (nth_map (W64.zero, W64.zero)).
++ by rewrite size_zip size_of_state size_hwords.
+rewrite nth_zip; 1: by rewrite size_of_state size_hwords.
+by rewrite /= nth_hwords // hk.
+qed.
+
+lemma fold_next h0 m0 m1 l : 0 <= l < 2 =>
+  foldl compress h0 (take (l + 1) [m0; m1]) = compress (foldl compress h0 (take l [m0; m1])) (lane l m0 m1).
+proof.
+move=> hl; case: (l = 0) => hl0; 1: by rewrite hl0 /lane /=.
+have -> : l = 1 by smt().
+by rewrite /lane /=.
+qed.
+
+lemma linv_next h0 nb0 m0 m1 hb h v x wk inc l :
+  oinv h0 nb0 m0 m1 hb inc l => tctx x wk m0 m1 l 80 =>
+  (forall k, 0 <= k < 8 =>
+     BArray64.get64 h k = nth W64.zero (of_state (sl m0 m1 hb l 80)) k + BArray64.get64 hb k /\
+     BArray64.get64 v k = BArray64.get64 h k) =>
+  linv h0 nb0 m0 m1 h v x wk inc (l + 1).
+proof.
+rewrite /oinv /linv => [#] hi hnb hl0 hl1 hh hc hf.
+have hs := hc; move: hs => @/tctx [#] _ _ _ _ hs0 hs1 hx.
+have hff : hwords h = ffwd (sl m0 m1 hb l 80) (hwords hb).
++ by apply hwords_ffwd => k hk; case: (hf k hk).
+split; 1: exact hi. split; 1: exact hnb. split; 1: exact hs0. split; 1: exact hs1.
+split; 1: by move: hl0 hl1 hnb; clear hf hc hx hh hff; smt().
+split.
++ rewrite fold_next; 1: by move: hl0 hl1 hnb; clear hf hc hx hh hff; smt().
+  by rewrite -hh compress_rounds hff /sl.
+split; 1: by move=> k hk; case: (hf k hk).
+move=> hl'; have hl : l = 0 by move: hl' hnb hl0 hl1; clear hf hc hx hh hff; smt().
+move: hx; rewrite hl /= /xw /wkn /= => hk.
+by rewrite /= hs0 hs1 /=; exact hk.
 qed.
