@@ -169,3 +169,44 @@ proof.
 apply W16u8.allP; rewrite /VPSHUFB_128 /bswap_mask32 /p4 /=.
 by rewrite /VPSHUFB_128_B !W4u8.of_int_bits8_div // /= !W8.of_uintK /= /bswap32.
 qed.
+
+(* ------------------------------------------------------------------ *)
+(* The shuffles of the 8-way state transposition                      *)
+
+(* VPUNPCK{L,H}DQ: the low (high) two lanes of each operand, interleaved,
+   the first operand's lane first. *)
+lemma vpunpckl4_p4 (a0 a1 a2 a3 b0 b1 b2 b3 : W32.t) :
+  VPUNPCKL_4u32 (p4 a0 a1 a2 a3) (p4 b0 b1 b2 b3) = p4 a0 b0 a1 b1.
+proof. by apply W16u8.allP; rewrite /VPUNPCKL_4u32 /interleave_gen /get_lo_2u64 /p4 /=. qed.
+
+lemma vpunpckh4_p4 (a0 a1 a2 a3 b0 b1 b2 b3 : W32.t) :
+  VPUNPCKH_4u32 (p4 a0 a1 a2 a3) (p4 b0 b1 b2 b3) = p4 a2 b2 a3 b3.
+proof. by apply W16u8.allP; rewrite /VPUNPCKH_4u32 /interleave_gen /get_hi_2u64 /p4 /=. qed.
+
+(* VPUNPCK{L,H}QDQ: the low (high) halves of the two operands. *)
+lemma vpunpckl2_p4 (a0 a1 a2 a3 b0 b1 b2 b3 : W32.t) :
+  VPUNPCKL_2u64 (p4 a0 a1 a2 a3) (p4 b0 b1 b2 b3) = p4 a0 a1 b0 b1.
+proof. by apply W16u8.allP; rewrite /VPUNPCKL_2u64 /interleave_gen /get_lo_2u64 /p4 /=. qed.
+
+lemma vpunpckh2_p4 (a0 a1 a2 a3 b0 b1 b2 b3 : W32.t) :
+  VPUNPCKH_2u64 (p4 a0 a1 a2 a3) (p4 b0 b1 b2 b3) = p4 a2 a3 b2 b3.
+proof. by apply W16u8.allP; rewrite /VPUNPCKH_2u64 /interleave_gen /get_hi_2u64 /p4 /=. qed.
+
+(* 0xdd takes lanes 1, 3, 1, 3; 0x88 lanes 0, 2, 0, 2. *)
+lemma vpshufd_dd (x : W128.t) :
+  VPSHUFD_128 x (W8.of_int 221)
+  = p4 (x \bits32 1) (x \bits32 3) (x \bits32 1) (x \bits32 3).
+proof. by rewrite /VPSHUFD_128 /VPSHUFD_128_B. qed.
+
+lemma vpshufd_88 (x : W128.t) :
+  VPSHUFD_128 x (W8.of_int 136)
+  = p4 (x \bits32 0) (x \bits32 2) (x \bits32 0) (x \bits32 2).
+proof. by rewrite /VPSHUFD_128 /VPSHUFD_128_B. qed.
+
+(* VPBLENDW 0x0f: 16-bit words 0 to 3 from y, 4 to 7 from x. *)
+lemma vpblendw_0f (x y : W128.t) :
+  VPBLEND_8u16 x y (W8.of_int 15) = p4 (y \bits32 0) (y \bits32 1) (x \bits32 2) (x \bits32 3).
+proof.
+apply W16u8.allP; rewrite /VPBLENDW_128 /p4 /=.
+by rewrite !W8.of_intwE /int_bit.
+qed.

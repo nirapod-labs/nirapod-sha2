@@ -101,3 +101,86 @@ by move: hs; case: hv => [|h0 [|h1 [|h2 [|h3 [|h4 [|h5 [|h6 [|h7 [|h8 t]]]]]]]]]
 qed.
 
 end R256.
+
+theory R512.
+import SHA512.
+
+op sched_step (w : W64.t list) (t : int) : W64.t list =
+  rcons w (ssig1 (nth W64.zero w (t - 2)) + nth W64.zero w (t - 7)
+         + ssig0 (nth W64.zero w (t - 15)) + nth W64.zero w (t - 16)).
+
+op sched (m : W64.t list) (j : int) : W64.t list = foldl sched_step m (range 16 j).
+
+lemma schedE m : schedule m = sched m 80.
+proof. by rewrite /schedule /sched /sched_step. qed.
+
+lemma schedS m j : 16 <= j => sched m (j + 1) = sched_step (sched m j) j.
+proof. by move=> hj; rewrite /sched rangeSr 1:/# -cats1 foldl_cat. qed.
+
+lemma size_sched m j : size m = 16 => 16 <= j => size (sched m j) = j.
+proof.
+move=> hm; elim/natind: j => [j hj hb | j hj ih hb]; first by smt().
+case: (j = 15) => [->> /=|ne]; first by rewrite /sched range_geq.
+by rewrite schedS 1:/# /sched_step size_rcons ih /#.
+qed.
+
+lemma nth_sched_stable m i j k :
+  size m = 16 => 16 <= j <= k => 0 <= i < j =>
+  nth W64.zero (sched m k) i = nth W64.zero (sched m j) i.
+proof.
+move=> hm [hj hjk] hi.
+have h : forall d, 0 <= d => nth W64.zero (sched m (j + d)) i = nth W64.zero (sched m j) i.
++ elim/natind => [d hd hd' | d hd ih _]; first by have ->: d = 0 by smt().
+  rewrite addzA schedS 1:/# /sched_step nth_rcons size_sched // 1:/#.
+  by rewrite ifT 1:/# ih.
+have := h (k - j) _; first by smt().
+by have ->: j + (k - j) = k by ring.
+qed.
+
+lemma nth_schedule_lo m t :
+  size m = 16 => 0 <= t < 16 => nth W64.zero (schedule m) t = nth W64.zero m t.
+proof.
+move=> hm ht; rewrite schedE (nth_sched_stable _ _ 16) // /sched.
+by rewrite range_geq.
+qed.
+
+(* Section 6.4.2 step 1, the recurrence for W_t, 16 <= t < 80. *)
+lemma nth_schedule_hi m t :
+  size m = 16 => 16 <= t < 80 =>
+  nth W64.zero (schedule m) t
+  = ssig1 (nth W64.zero (schedule m) (t - 2)) + nth W64.zero (schedule m) (t - 7)
+  + ssig0 (nth W64.zero (schedule m) (t - 15)) + nth W64.zero (schedule m) (t - 16).
+proof.
+move=> hm ht; rewrite !schedE.
+have -> : nth W64.zero (sched m 80) t = nth W64.zero (sched m (t + 1)) t.
++ by rewrite (nth_sched_stable m t (t + 1) 80) // /#.
+rewrite schedS 1:/# /sched_step nth_rcons size_sched // 1:/# /=.
+rewrite -(nth_sched_stable m (t - 2) t 80) 1,2,3:/#.
+rewrite -(nth_sched_stable m (t - 7) t 80) 1,2,3:/#.
+rewrite -(nth_sched_stable m (t - 15) t 80) 1,2,3:/#.
+by rewrite -(nth_sched_stable m (t - 16) t 80) 1,2,3:/#.
+qed.
+
+(* Rounds t0 .. t1 - 1 then t1 .. t2 - 1. *)
+lemma rounds_cat (w : W64.t list) (s : state) t0 t1 t2 : t0 <= t1 <= t2 =>
+  foldl (round w) s (range t0 t2) = foldl (round w) (foldl (round w) s (range t0 t1)) (range t1 t2).
+proof. by move=> h; rewrite (range_cat t1) 1,2:/# foldl_cat. qed.
+
+lemma rounds1 (w : W64.t list) (s : state) t :
+  foldl (round w) s (range t (t + 1)) = round w s t.
+proof. by rewrite range_ltn 1:/# range_geq 1:/#. qed.
+
+(* Step 4: the feed-forward of the state after 80 rounds. *)
+lemma compressE (hv m : W64.t list) : size hv = 8 =>
+  let s = foldl (round (schedule m)) (to_state hv) (range 0 80) in
+  compress hv m = [s.`1 + nth W64.zero hv 0; s.`2 + nth W64.zero hv 1;
+                   s.`3 + nth W64.zero hv 2; s.`4 + nth W64.zero hv 3;
+                   s.`5 + nth W64.zero hv 4; s.`6 + nth W64.zero hv 5;
+                   s.`7 + nth W64.zero hv 6; s.`8 + nth W64.zero hv 7].
+proof.
+move=> hs /=; rewrite /compress /=.
+case: (foldl _ _ _) => a b c d e f g h /=.
+by move: hs; case: hv => [|h0 [|h1 [|h2 [|h3 [|h4 [|h5 [|h6 [|h7 [|h8 t]]]]]]]]] //=.
+qed.
+
+end R512.
