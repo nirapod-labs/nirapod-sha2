@@ -1,0 +1,741 @@
+(*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * SHA512_Avx2Rounds.ec
+ * ====================
+ *
+ * Functional correctness of the SHA-512 AVX2 kernel
+ * (src/x86_64/avx2/sha512_compress.jinc) against FIPS 180-4 section
+ * 6.4.2 as spec/FIPS180_SHA2.ec writes it, round and schedule layers.
+ * SHA512_Avx2.ec proves the driver and the entry points from them.
+ * This file holds:
+ *
+ *   round_rst      one call of __sha512_avx2_round, scalar part: round t of
+ *                  section 6.4.2 step 3 on the rotating slots of v
+ *   round_v0, v1   its schedule half-steps (ph = 0, 1) on x[j mod 8]
+ *   round_full     both, for ph in {0, 1, 2}
+ *   half0_win,     the two half-steps move the schedule window from group
+ *   half1_win      j to group j + 1 (section 6.4.2 step 1)
+ *   wk_set, wk_get the W_t + K_t table on the stack
+ *   xw, tctx,      the driver's loop invariants and their step lemmas
+ *   linv, fin_v
+ *
+ * Model. NirapodSha2 is the model of a unit whose Sha512Kernel root is
+ * src/x86_64/avx2 (proofs/Makefile).
+ *
+ * Invariants. Working variable k (a = 0 ... h = 7) of round t is in slot
+ * (k + 80 - t) mod 8 of v (vis). Between rounds the slot of a lacks the
+ * deferred Sigma0, held in s, and m[t mod 2] holds b XOR c (rst). Each
+ * 256-bit word of x and wk holds one group of two schedule words per
+ * 128-bit half, the low half for the first block and the high half for
+ * the second (lane). Before group g, x[r] holds group g + ((r - g) mod 8)
+ * (win).
+ *)
+
+require import AllCore List IntDiv.
+from Jasmin require import JWord JUtils JMemory JModel_x86.
+require import BArray16 BArray64 BArray256 BArray640 BArray1280.
+require import NirapodSha2.
+require import Bytes FIPS180_SHA2 WordSpec Vec Bmi Lanes64 Arrays Rounds512.
+import SHA512.
+
+clone Arrays.ArrayLanes as L640 with theory A <- BArray640.
+clone Arrays.ArrayLanes as L1280 with theory A <- BArray1280.
+
+(* ------------------------------------------------------------------ *)
+(* Rotating working variables                                          *)
+
+(* Working variable k (a = 0 ... h = 7) of round t is in slot
+   (k + 80 - t) mod 8 of v; the terms are written as the model writes
+   them so that hypotheses rewrite the model's reads directly. *)
+op vis (v : BArray64.t) (t : int) (a b c d e f g h : W64.t) =
+  BArray64.get64 v (((0 + 80) - t) %% 8) = a /\
+  BArray64.get64 v (((1 + 80) - t) %% 8) = b /\
+  BArray64.get64 v (((2 + 80) - t) %% 8) = c /\
+  BArray64.get64 v (((3 + 80) - t) %% 8) = d /\
+  BArray64.get64 v (((4 + 80) - t) %% 8) = e /\
+  BArray64.get64 v (((5 + 80) - t) %% 8) = f /\
+  BArray64.get64 v (((6 + 80) - t) %% 8) = g /\
+  BArray64.get64 v (((7 + 80) - t) %% 8) = h.
+
+lemma sl_get (v : BArray64.t) t k k' x : 0 <= k < 8 => 0 <= k' < 8 =>
+  BArray64.get64 (BArray64.set64 v (((k + 80) - t) %% 8) x) (((k' + 80) - t) %% 8)
+  = if k = k' then x else BArray64.get64 v (((k' + 80) - t) %% 8).
+proof.
+move=> hk hk'; rewrite BArray64.get_set64E 1,2:/#.
+by congr; apply eq_iff; smt().
+qed.
+
+lemma vis_set0 v t a b c d e f g h x : vis v t a b c d e f g h =>
+  vis (BArray64.set64 v (((0 + 80) - t) %% 8) x) t x b c d e f g h.
+proof. by rewrite /vis !sl_get. qed.
+
+lemma vis_set3 v t a b c d e f g h x : vis v t a b c d e f g h =>
+  vis (BArray64.set64 v (((3 + 80) - t) %% 8) x) t a b c x e f g h.
+proof. by rewrite /vis !sl_get. qed.
+
+lemma vis_set7 v t a b c d e f g h x : vis v t a b c d e f g h =>
+  vis (BArray64.set64 v (((7 + 80) - t) %% 8) x) t a b c d e f g x.
+proof. by rewrite /vis !sl_get. qed.
+
+(* The next round sees the same slots one name further on. *)
+lemma vis_next v t a b c d e f g h : vis v t a b c d e f g h =>
+  vis v (t + 1) h a b c d e f g.
+proof.
+rewrite /vis => [#] <- <- <- <- <- <- <- <-.
+by do !split; congr; smt().
+qed.
+
+lemma m_get (m : BArray16.t) t x :
+  BArray16.get64 (BArray16.set64 m (t %% 2) x) ((t + 1) %% 2) = BArray16.get64 m ((t + 1) %% 2).
+proof. by rewrite BArray16.get_set64E 1,2:/#; smt(). qed.
+
+lemma m_get' (m : BArray16.t) t x :
+  BArray16.get64 (BArray16.set64 m ((t + 1) %% 2) x) (t %% 2) = BArray16.get64 m (t %% 2).
+proof. by rewrite BArray16.get_set64E 1,2:/#; smt(). qed.
+
+lemma m_setp (m : BArray16.t) t x : BArray16.get64 (BArray16.set64 m (t %% 2) x) (t %% 2) = x.
+proof. by rewrite BArray16.get_set64E 1,2:/#. qed.
+
+lemma m_setq (m : BArray16.t) t x :
+  BArray16.get64 (BArray16.set64 m ((t + 1) %% 2) x) ((t + 1) %% 2) = x.
+proof. by rewrite BArray16.get_set64E 1,2:/#. qed.
+
+(* ------------------------------------------------------------------ *)
+(* Scalar round                                                        *)
+
+lemma round_scalar (a0 b c d e f g h0 s0 mp : W64.t) (t0 : int) :
+  hoare [M.__sha512_avx2_round :
+    t = t0 /\ s = s0 /\ vis v t a0 b c d e f g h0 /\ BArray16.get64 m (t %% 2) = mp ==>
+    let a = a0 + s0 in
+    let t1 = h0 + (f `&` e) + (ANDN_64 e g).`6
+             + (RORX_64 e (W8.of_int 41) +^ RORX_64 e (W8.of_int 18) +^ RORX_64 e (W8.of_int 14)) in
+    vis res.`1 t0 a b c (d + t1) e f g (t1 + ((mp `&` (a +^ b)) +^ b)) /\
+    res.`3 = RORX_64 a (W8.of_int 34) +^ RORX_64 a (W8.of_int 39) +^ RORX_64 a (W8.of_int 28) /\
+    BArray16.get64 res.`2 ((t0 + 1) %% 2) = a +^ b].
+proof.
+proc.
+seq 3 : (t = t0 /\ vis v t (a0 + s0) b c d e f g h0 /\ BArray16.get64 m (t %% 2) = mp).
++ wp; skip => &hr /= [#] -> -> hv hm.
+  have := vis_set0 _ _ _ _ _ _ _ _ _ _ (a0 + s0) hv.
+  have -> : BArray64.get64 v{hr} (((0 + 80) - t0) %% 8) = a0 by move: hv => @/vis [#].
+  smt().
+seq 7 : (t = t0 /\ vis v t (a0 + s0) b c d e f g (h0 + (f `&` e)) /\
+         z = RORX_64 e (W8.of_int 41) /\ w = RORX_64 e (W8.of_int 18) /\
+         BArray16.get64 m (t %% 2) = mp).
++ wp; skip => &hr /= [#] -> hv hm.
+  have := vis_set7 _ _ _ _ _ _ _ _ _ _ (h0 + (f `&` e)) hv.
+  move: hv => @/vis [#] _ _ _ _ -> -> _ ->.
+  smt().
+seq 8 : (t = t0 /\ vis v t (a0 + s0) b c d e f g (h0 + (f `&` e) + (ANDN_64 e g).`6) /\
+         z = RORX_64 e (W8.of_int 41) +^ RORX_64 e (W8.of_int 18) /\
+         w = RORX_64 e (W8.of_int 14) /\ BArray16.get64 m (t %% 2) = mp).
++ wp; skip => &hr /= [#] -> hv -> -> hm.
+  have := vis_set7 _ _ _ _ _ _ _ _ _ _ (h0 + (f `&` e) + (ANDN_64 e g).`6) hv.
+  move: hv => @/vis [#] _ _ _ _ -> _ -> ->.
+  smt().
+seq 6 : (t = t0 /\ vis v t (a0 + s0) b c d e f g (h0 + (f `&` e) + (ANDN_64 e g).`6 + (RORX_64 e (W8.of_int 41) +^ RORX_64 e (W8.of_int 18) +^ RORX_64 e (W8.of_int 14))) /\
+         BArray16.get64 m ((t + 1) %% 2) = (a0 + s0) /\ y = RORX_64 (a0 + s0) (W8.of_int 39) /\
+         BArray16.get64 m (t %% 2) = mp).
++ wp; skip => &hr /= [#] -> hv -> -> hm.
+  have := vis_set7 _ _ _ _ _ _ _ _ _ _ (h0 + (f `&` e) + (ANDN_64 e g).`6 + (RORX_64 e (W8.of_int 41) +^ RORX_64 e (W8.of_int 18) +^ RORX_64 e (W8.of_int 14))) hv.
+  move: hv => @/vis [#] -> _ _ _ _ _ _ ->.
+  rewrite m_setq m_get' hm; smt().
+seq 6 : (t = t0 /\ vis v t (a0 + s0) b c (d + (h0 + (f `&` e) + (ANDN_64 e g).`6 + (RORX_64 e (W8.of_int 41) +^ RORX_64 e (W8.of_int 18) +^ RORX_64 e (W8.of_int 14)))) e f g (h0 + (f `&` e) + (ANDN_64 e g).`6 + (RORX_64 e (W8.of_int 41) +^ RORX_64 e (W8.of_int 18) +^ RORX_64 e (W8.of_int 14))) /\
+         BArray16.get64 m ((t + 1) %% 2) = (a0 + s0) +^ b /\ y = RORX_64 (a0 + s0) (W8.of_int 39) /\
+         s = RORX_64 (a0 + s0) (W8.of_int 34) /\ z = RORX_64 (a0 + s0) (W8.of_int 28) /\
+         BArray16.get64 m (t %% 2) = mp).
++ wp; skip => &hr /= [#] -> hv hq -> hm.
+  have := vis_set3 _ _ _ _ _ _ _ _ _ _ (d + (h0 + (f `&` e) + (ANDN_64 e g).`6 + (RORX_64 e (W8.of_int 41) +^ RORX_64 e (W8.of_int 18) +^ RORX_64 e (W8.of_int 14)))) hv.
+  move: hv => @/vis [#] -> -> _ -> _ _ _ ->.
+  rewrite m_setq hq m_get' hm; smt().
+wp; skip => &hr /= [#] -> hv hq -> -> -> hm.
+have := vis_set7 _ _ _ _ _ _ _ _ _ _ ((h0 + (f `&` e) + (ANDN_64 e g).`6 + (RORX_64 e (W8.of_int 41) +^ RORX_64 e (W8.of_int 18) +^ RORX_64 e (W8.of_int 14))) + ((mp `&` ((a0 + s0) +^ b)) +^ b)) hv.
+move: hv => @/vis [#] _ -> _ _ _ _ _ ->.
+rewrite !m_setp !m_get hm hq; smt().
+qed.
+
+(* ------------------------------------------------------------------ *)
+(* The round against section 6.4.2, step 3                            *)
+
+(* Between rounds: the slot of a lacks the deferred Sigma0 s, and
+   m[t mod 2] holds b XOR c for the next Maj. *)
+op rst (v : BArray64.t) (m : BArray16.t) (s : W64.t) (st : state) (t : int) =
+  vis v t (st.`1 - s) st.`2 st.`3 st.`4 st.`5 st.`6 st.`7 st.`8 /\
+  BArray16.get64 m (t %% 2) = st.`2 +^ st.`3.
+
+(* The same after the driver's addition of W_t + K_t to the slot of h. *)
+op rinw (v : BArray64.t) (m : BArray16.t) (s : W64.t) (w : W64.t list) (st : state) (t : int) =
+  vis v t (st.`1 - s) st.`2 st.`3 st.`4 st.`5 st.`6 st.`7
+      (st.`8 + nth W64.zero K512 t + nth W64.zero w t) /\
+  BArray16.get64 m (t %% 2) = st.`2 +^ st.`3.
+
+lemma vis_eq v t a b c d e f g h a' e' : a = a' => e = e' =>
+  vis v t a b c d e f g h => vis v t a' b c d e' f g h.
+proof. by move=> -> ->. qed.
+
+lemma xor3r (a b c : W64.t) : a +^ b +^ c = c +^ b +^ a.
+proof. by rewrite W64.xorwC (W64.xorwC a) W64.xorwA. qed.
+
+lemma xor3l (a b c : W64.t) : a +^ b +^ c = c +^ a +^ b.
+proof. by rewrite W64.xorwC W64.xorwA. qed.
+
+lemma t1E (h e f g : W64.t) :
+  h + (f `&` e) + (ANDN_64 e g).`6
+  + (RORX_64 e (W8.of_int 41) +^ RORX_64 e (W8.of_int 18) +^ RORX_64 e (W8.of_int 14))
+  = h + bsig1 e + ch e f g.
+proof. by rewrite ANDN_64E !RORX_64E // /bsig1 xor3r -ch_bmi64; ring. qed.
+
+lemma s0E (a : W64.t) :
+  RORX_64 a (W8.of_int 34) +^ RORX_64 a (W8.of_int 39) +^ RORX_64 a (W8.of_int 28) = bsig0 a.
+proof. by rewrite !RORX_64E // /bsig0 xor3l. qed.
+
+lemma round_rst (w : W64.t list) (st : state) (t0 : int) :
+  hoare [M.__sha512_avx2_round :
+    t = t0 /\ rinw v m s w st t ==> rst res.`1 res.`2 res.`3 (round w st t0) (t0 + 1)].
+proof.
+case: st => a b c d e f g h.
+exlim s => s0.
+conseq (round_scalar (a - s0) b c d e f g (h + nth W64.zero K512 t0 + nth W64.zero w t0)
+          s0 (b +^ c) t0).
++ by move=> &hr; rewrite /rinw /=; smt().
+move=> &hr _ [v' m' s' x'] /=.
+have -> : a - s0 + s0 = a by ring.
+move=> [#] hv -> hq; rewrite /rst /round /=; split; last by rewrite hq.
+apply (vis_eq _ _ _ _ _ _ _ _ _ _ _ _ _ _ (vis_next _ _ _ _ _ _ _ _ _ _ hv)).
++ by rewrite maj_bmi64 t1E s0E; ring.
+by rewrite t1E; ring.
+qed.
+
+(* ------------------------------------------------------------------ *)
+(* Schedule half-steps                                                 *)
+
+lemma gs256 (x : BArray256.t) j a r :
+  BArray256.get256 (BArray256.set256 x (j %% 8) a) r
+  = if j %% 8 = r then a else BArray256.get256 x r.
+proof. by rewrite BArray256.get_set256E 1,2:/#. qed.
+
+lemma ss256 (x : BArray256.t) j a b :
+  BArray256.set256 (BArray256.set256 x (j %% 8) a) (j %% 8) b = BArray256.set256 x (j %% 8) b.
+proof. by apply BArray256.ext_eq => r hr; rewrite !BArray256.get8_set256dE; smt(). qed.
+
+(* ph = 0: x[j] gains W_{t-7} and sigma0 of W_{t-15}, two lanes per half. *)
+op half0 (x : BArray256.t) (j : int) : W256.t =
+  VPADD_4u64
+    (VPADD_4u64 (BArray256.get256 x (j %% 8))
+       (VPALIGNR_256 (BArray256.get256 x ((j + 5) %% 8)) (BArray256.get256 x ((j + 4) %% 8))
+          (W8.of_int 8)))
+    (vsig0 (VPALIGNR_256 (BArray256.get256 x ((j + 1) %% 8)) (BArray256.get256 x (j %% 8))
+          (W8.of_int 8))).
+
+(* ph = 1: x[j] gains sigma1 of x[j + 7]. *)
+op half1 (x : BArray256.t) (j : int) : W256.t =
+  VPADD_4u64 (BArray256.get256 x (j %% 8)) (vsig1 (BArray256.get256 x ((j + 7) %% 8))).
+
+lemma round_v0 (x0 : BArray256.t) (j0 : int) :
+  hoare [M.__sha512_avx2_round : ph = 0 /\ x = x0 /\ j = j0 ==>
+    res.`4 = BArray256.set256 x0 (j0 %% 8) (half0 x0 j0)].
+proof.
+proc.
+do 6!((rcondt ^if; first by auto); (rcondf ^if; first by auto)).
+rcondt ^if; first by auto.
+wp; skip => &hr /= [#] _ -> ->.
+by rewrite ss256 gs256 /= /half0 /vsig0.
+qed.
+
+lemma round_v1 (x0 : BArray256.t) (j0 : int) :
+  hoare [M.__sha512_avx2_round : ph = 1 /\ x = x0 /\ j = j0 ==>
+    res.`4 = BArray256.set256 x0 (j0 %% 8) (half1 x0 j0)].
+proof.
+proc.
+do 6!((rcondf ^if; first by auto); (rcondt ^if; first by auto)).
+rcondf ^if; first by auto.
+wp; skip => &hr /= [#] _ -> ->.
+by rewrite /half1 /vsig1.
+qed.
+
+lemma round_v2 (x0 : BArray256.t) :
+  hoare [M.__sha512_avx2_round : ph = 2 /\ x = x0 ==> res.`4 = x0].
+proof.
+proc.
+do 13!(rcondf ^if; first by auto).
+by wp; skip => &hr /= [#] _ ->.
+qed.
+
+op xnext (x : BArray256.t) (j ph : int) : BArray256.t =
+  if ph = 0 then BArray256.set256 x (j %% 8) (half0 x j)
+  else if ph = 1 then BArray256.set256 x (j %% 8) (half1 x j) else x.
+
+lemma round_full (w : W64.t list) (st : state) (t0 : int) (x0 : BArray256.t) (j0 p0 : int) :
+  p0 = 0 \/ p0 = 1 \/ p0 = 2 =>
+  hoare [M.__sha512_avx2_round :
+    t = t0 /\ rinw v m s w st t /\ x = x0 /\ j = j0 /\ ph = p0 ==>
+    rst res.`1 res.`2 res.`3 (round w st t0) (t0 + 1) /\ res.`4 = xnext x0 j0 p0].
+proof.
+move=> [hp|[hp|hp]].
++ proc*.
+  conseq (_: t = t0 /\ rinw v m s w st t ==> rst r.`1 r.`2 r.`3 (round w st t0) (t0 + 1))
+         (_: ph = 0 /\ x = x0 /\ j = j0 ==> r.`4 = BArray256.set256 x0 (j0 %% 8) (half0 x0 j0)).
+  + by move=> &hr /= [#] -> hr -> hj hph; rewrite hph hp /= hr ?hj.
+  + by move=> &hr _ rr [h1 h2]; split; [exact h1 | rewrite /xnext hp /= h2].
+  + by call (round_v0 x0 j0); auto.
+  by call (round_rst w st t0); auto.
++ proc*.
+  conseq (_: t = t0 /\ rinw v m s w st t ==> rst r.`1 r.`2 r.`3 (round w st t0) (t0 + 1))
+         (_: ph = 1 /\ x = x0 /\ j = j0 ==> r.`4 = BArray256.set256 x0 (j0 %% 8) (half1 x0 j0)).
+  + by move=> &hr /= [#] -> hr -> hj hph; rewrite hph hp /= hr ?hj.
+  + by move=> &hr _ rr [h1 h2]; split; [exact h1 | rewrite /xnext hp /= h2].
+  + by call (round_v1 x0 j0); auto.
+  by call (round_rst w st t0); auto.
+proc*.
+conseq (_: t = t0 /\ rinw v m s w st t ==> rst r.`1 r.`2 r.`3 (round w st t0) (t0 + 1))
+       (_: ph = 2 /\ x = x0 ==> r.`4 = x0).
++ by move=> &hr /= [#] -> hr -> hj hph; rewrite hph hp /= hr ?hj.
++ by move=> &hr _ rr [h1 h2]; split; [exact h1 | rewrite /xnext hp /= h2].
++ by call (round_v2 x0); auto.
+by call (round_rst w st t0); auto.
+qed.
+
+(* ------------------------------------------------------------------ *)
+(* The schedule window and the W + K table                             *)
+
+op W (m : W64.t list) (t : int) : W64.t = nth W64.zero (schedule m) t.
+
+(* 128-bit half L of every vector belongs to block L. *)
+op lane (L : int) (m0 m1 : W64.t list) : W64.t list = if L = 0 then m0 else m1.
+
+lemma Wrec m t : size m = 16 => 16 <= t < 80 =>
+  W m t = ssig1 (W m (t - 2)) + W m (t - 7) + ssig0 (W m (t - 15)) + W m (t - 16).
+proof. by move=> hm ht; rewrite /W nth_schedule_hi. qed.
+
+(* Before group g: x[r] holds group g + ((r - g) mod 8), the pair
+   W_{2i}, W_{2i+1} of that group i in each half. *)
+op win (x : BArray256.t) (m0 m1 : W64.t list) (g : int) =
+  forall r L c, 0 <= r < 8 => 0 <= L < 2 => 0 <= c < 2 =>
+    BArray256.get256 x r \bits64 (2 * L + c) = W (lane L m0 m1) (2 * (g + (r - g) %% 8) + c).
+
+(* After the first half-step of group j + 8, in x[j mod 8]. *)
+op winp (x : BArray256.t) (m0 m1 : W64.t list) (j : int) =
+  (forall r L c, 0 <= r < 8 => r <> j %% 8 => 0 <= L < 2 => 0 <= c < 2 =>
+     BArray256.get256 x r \bits64 (2 * L + c) = W (lane L m0 m1) (2 * (j + (r - j) %% 8) + c)) /\
+  (forall L c, 0 <= L < 2 => 0 <= c < 2 =>
+     BArray256.get256 x (j %% 8) \bits64 (2 * L + c)
+     = W (lane L m0 m1) (2 * j + c) + W (lane L m0 m1) (2 * j + 9 + c)
+       + ssig0 (W (lane L m0 m1) (2 * j + 1 + c))).
+
+lemma winE x m0 m1 g r k : win x m0 m1 g => 0 <= r < 8 => 0 <= k < 4 =>
+  BArray256.get256 x r \bits64 k = W (lane (k %/ 2) m0 m1) (2 * (g + (r - g) %% 8) + k %% 2).
+proof.
+move=> hw hr hk; have := hw r (k %/ 2) (k %% 2) hr _ _; 1,2: smt().
+by rewrite (_: 2 * (k %/ 2) + k %% 2 = k) 1:/#.
+qed.
+
+lemma half0_win x m0 m1 j : win x m0 m1 j =>
+  winp (BArray256.set256 x (j %% 8) (half0 x j)) m0 m1 j.
+proof.
+move=> hw; split.
++ move=> r L c hr hne hL hc; rewrite gs256 ifF 1:/#; exact hw.
+move=> L c hL hc; rewrite gs256 /= /half0 vpadd64 1:/# vpadd64 1:/# ssig0_v 1:/#.
+rewrite !vpalignr8_64 1,2:/# (_: (2 * L + c) %% 2 = c) 1:/#.
+rewrite (winE _ _ _ _ (j %% 8) (2 * L + c) hw) 1,2:/#.
+case: (c = 0) => hc0 /=.
++ rewrite (winE _ _ _ _ ((j + 4) %% 8) (2 * L + c + 1) hw) 1,2:/#.
+  rewrite (winE _ _ _ _ (j %% 8) (2 * L + c + 1) hw) 1,2:/#.
+  rewrite (_: (2 * L + c + 1) %/ 2 = L) 1:/# (_: (2 * L + c) %/ 2 = L) 1:/#.
+  rewrite (_: 2 * (j + (j %% 8 - j) %% 8) + (2 * L + c) %% 2 = 2 * j + c) 1:/#.
+  rewrite (_: 2 * (j + ((j + 4) %% 8 - j) %% 8) + (2 * L + c + 1) %% 2 = 2 * j + 9 + c) 1:/#.
+  by rewrite (_: 2 * (j + (j %% 8 - j) %% 8) + (2 * L + c + 1) %% 2 = 2 * j + 1 + c) 1:/#.
+rewrite (winE _ _ _ _ ((j + 5) %% 8) (2 * L + c - 1) hw) 1,2:/#.
+rewrite (winE _ _ _ _ ((j + 1) %% 8) (2 * L + c - 1) hw) 1,2:/#.
+rewrite (_: (2 * L + c - 1) %/ 2 = L) 1:/# (_: (2 * L + c) %/ 2 = L) 1:/#.
+rewrite (_: 2 * (j + (j %% 8 - j) %% 8) + (2 * L + c) %% 2 = 2 * j + c) 1:/#.
+rewrite (_: 2 * (j + ((j + 5) %% 8 - j) %% 8) + (2 * L + c - 1) %% 2 = 2 * j + 9 + c) 1:/#.
+by rewrite (_: 2 * (j + ((j + 1) %% 8 - j) %% 8) + (2 * L + c - 1) %% 2 = 2 * j + 1 + c) 1:/#.
+qed.
+
+lemma size_lane L m0 m1 : size m0 = 16 => size m1 = 16 => size (lane L m0 m1) = 16.
+proof. by rewrite /lane; case: (L = 0). qed.
+
+(* Every slot but j mod 8 keeps its group when the window moves on. *)
+lemma grpS j r : 0 <= r < 8 => r <> j %% 8 =>
+  j + 1 + (r - (j + 1)) %% 8 = j + (r - j) %% 8.
+proof.
+move=> hr hne.
+have := divz_eq (r - j) 8; have := divz_eq (r - (j + 1)) 8; have := divz_eq j 8.
+have : 0 <= (r - j) %% 8 < 8 by smt(modz_ge0 ltz_pmod).
+have : 0 <= (r - (j + 1)) %% 8 < 8 by smt(modz_ge0 ltz_pmod).
+have : 0 <= j %% 8 < 8 by smt(modz_ge0 ltz_pmod).
+smt().
+qed.
+
+(* Index facts mod 8, proved from IntDiv so that no smt call has to
+   reason about mod. *)
+lemma m8 j : 0 <= j %% 8 < 8.
+proof. by apply modz_cmp. qed.
+
+lemma m8p7 j : ((j + 7) %% 8 - j) %% 8 = 7.
+proof. by rewrite modzDml (_: j + 7 - j = 7) 1:/# pmod_small. qed.
+
+lemma m8m1 j : (j %% 8 - (j + 1)) %% 8 = 7.
+proof. rewrite modzDml (_: j - (j + 1) = -1) 1:/#; smt(). qed.
+
+lemma m8ne7 j : (j + 7) %% 8 <> j %% 8.
+proof. by apply/negP => heq; have := m8p7 j; rewrite heq modzDml subrr mod0z. qed.
+
+lemma lc4 L c : 0 <= L < 2 => 0 <= c < 2 => 0 <= 2 * L + c < 4.
+proof. smt(). qed.
+
+lemma lc2 L c : 0 <= c < 2 => (2 * L + c) %% 2 = c.
+proof. by move=> hc; rewrite mulzC modzMDl pmod_small. qed.
+
+lemma half1_win x m0 m1 j : winp x m0 m1 j => 0 <= j < 32 => size m0 = 16 => size m1 = 16 =>
+  win (BArray256.set256 x (j %% 8) (half1 x j)) m0 m1 (j + 1).
+proof.
+move=> [ho hp] hj hs0 hs1 r L c hr hL hc.
+rewrite gs256; case: (j %% 8 = r) => hjr; last first.
++ have hne : r <> j %% 8 by smt().
+  by rewrite grpS //; apply ho.
+rewrite -hjr m8m1 /half1 (vpadd64 _ _ _ (lc4 _ _ hL hc)) (ssig1_v _ _ (lc4 _ _ hL hc)) hp //.
+rewrite (ho ((j + 7) %% 8) L c (m8 _) (m8ne7 j) hL hc) m8p7.
+have hsl : size (lane L m0 m1) = 16 by apply size_lane.
+have ht : 16 <= 2 * (j + 1 + 7) + c < 80 by move: hj hc; clear ho hp; smt().
+rewrite (Wrec _ _ hsl ht).
+have -> : 2 * (j + 1 + 7) + c - 2 = 2 * (j + 7) + c by ring.
+have -> : 2 * (j + 1 + 7) + c - 7 = 2 * j + 9 + c by ring.
+have -> : 2 * (j + 1 + 7) + c - 15 = 2 * j + 1 + c by ring.
+have -> : 2 * (j + 1 + 7) + c - 16 = 2 * j + c by ring.
+by ring.
+qed.
+
+(* Group i of the stack table: W_{2i+c} + K_{2i+c} in each half. *)
+op wkinv (wk : BArray1280.t) (m0 m1 : W64.t list) (n : int) =
+  forall i L c, 0 <= i < n => 0 <= L < 2 => 0 <= c < 2 =>
+    BArray1280.get256 wk i \bits64 (2 * L + c)
+    = W (lane L m0 m1) (2 * i + c) + nth W64.zero K512 (2 * i + c).
+
+lemma K512_kernel t : 0 <= t < 80 =>
+  BArray640.get64 sHA512_K t = nth W64.zero K512 t.
+proof.
+move=> ht; rewrite BArray640.get64_of_list64 1://.
+by congr; rewrite /K512 /=.
+qed.
+
+(* The table is a parameter kt rather than the model's sHA512_K: that
+   constant is an abbreviation of an 80-entry literal, and simplifying a
+   goal that holds it costs about a minute. Callers instantiate kt with
+   sHA512_K and discharge hK by K512_kernel. *)
+lemma wk_set wk (kt : BArray640.t) (y : W256.t) m0 m1 n :
+  (forall t, 0 <= t < 80 => BArray640.get64 kt t = nth W64.zero K512 t) =>
+  wkinv wk m0 m1 n => 0 <= n < 40 =>
+  (forall L c, 0 <= L < 2 => 0 <= c < 2 => y \bits64 (2 * L + c) = W (lane L m0 m1) (2 * n + c)) =>
+  wkinv (BArray1280.set256 wk n (VPADD_4u64 (VPBROADCAST_2u128 (BArray640.get128 kt n)) y))
+        m0 m1 (n + 1).
+proof.
+move=> hK hk hn hy i L c hi hL hc.
+rewrite BArray1280.get_set256E 1,2:/#.
+case: (n = i) => hni.
++ rewrite (vpadd64 _ _ _ (lc4 _ _ hL hc)) (vpbroadcast64 _ _ (lc4 _ _ hL hc)) (lc2 _ _ hc).
+  rewrite (L640.get128_bits64 _ _ _ hc).
+  rewrite (hy _ _ hL hc).
+  have h80 : 0 <= 2 * n + c < 80 by move: hn hc; clear hk hy hK; smt().
+  rewrite (hK _ h80).
+  by rewrite -hni addrC.
+have hin : 0 <= i < n by move: hi hni; clear hk hy hK; smt().
+by apply hk.
+qed.
+
+lemma wk_get wk m0 m1 n i L c : wkinv wk m0 m1 n => 0 <= i < n => 0 <= L < 2 => 0 <= c < 2 =>
+  BArray1280.get64 wk (4 * i + 2 * L + c)
+  = W (lane L m0 m1) (2 * i + c) + nth W64.zero K512 (2 * i + c).
+proof. by move=> hk hi hL hc; rewrite -addzA -L1280.get256_bits64 1:/#; exact hk. qed.
+
+(* ------------------------------------------------------------------ *)
+(* One iteration of the round loop                                     *)
+
+lemma d2e t : t %% 2 = 0 => (t + 1) %/ 2 = t %/ 2 /\ (t + 1) %% 2 = 1.
+proof.
+move=> he; have := divz_eq t 2; have := divz_eq (t + 1) 2.
+have := modz_cmp (t + 1) 2; smt().
+qed.
+
+lemma d2o t : t %% 2 = 1 => (t + 1) %/ 2 = t %/ 2 + 1 /\ (t + 1) %% 2 = 0.
+proof.
+move=> ho; have := divz_eq t 2; have := divz_eq (t + 1) 2.
+have := modz_cmp (t + 1) 2; smt().
+qed.
+
+lemma d2b t : 0 <= t => 0 <= t %/ 2 /\ 2 * (t %/ 2) <= t /\ 2 * (t %/ 2) + t %% 2 = t /\ 0 <= t %% 2 < 2.
+proof. move=> ht; have := divz_eq t 2; have := modz_cmp t 2; smt(). qed.
+
+(* Number of table groups written before round t of the first block. *)
+op wkn (t : int) : int = if t <= 64 then 8 + t %/ 2 else 40.
+
+(* Window and table state before round t of the first block. *)
+op xw (x : BArray256.t) (wk : BArray1280.t) (m0 m1 : W64.t list) (t : int) =
+  wkinv wk m0 m1 (wkn t) /\
+  (t < 64 => if t %% 2 = 0 then win x m0 m1 (t %/ 2) else winp x m0 m1 (t %/ 2)).
+
+lemma xw_even x wk m0 m1 t : xw x wk m0 m1 t => 0 <= t < 64 => t %% 2 = 0 =>
+  xw (xnext x (t %/ 2) (t %% 2)) wk m0 m1 (t + 1).
+proof.
+move=> [hk hw] ht he; have [hd hm] := d2e t he.
+rewrite /xnext he /=; split.
++ by move: hk; rewrite /wkn !ifT 1,2:/# hd.
+move=> _; rewrite hm /= hd; apply half0_win.
+by move: (hw _); [smt() | rewrite he].
+qed.
+
+(* The table entry written after round t: group 8 + t / 2. *)
+op wknext (kt : BArray640.t) (x : BArray256.t) (wk : BArray1280.t) (t : int) : BArray1280.t =
+  BArray1280.set256 wk (8 + t %/ 2)
+    (VPADD_4u64 (VPBROADCAST_2u128 (BArray640.get128 kt (8 + t %/ 2)))
+       (BArray256.get256 x ((t %/ 2) %% 8))).
+
+lemma xw_odd kt x wk m0 m1 t :
+  (forall t, 0 <= t < 80 => BArray640.get64 kt t = nth W64.zero K512 t) =>
+  size m0 = 16 => size m1 = 16 =>
+  xw x wk m0 m1 t => 0 <= t < 64 => t %% 2 = 1 =>
+  xw (xnext x (t %/ 2) (t %% 2)) (wknext kt (xnext x (t %/ 2) (t %% 2)) wk t) m0 m1 (t + 1).
+proof.
+move=> hK hs0 hs1 [hk hw] ht ho; have [hd hm] := d2o t ho.
+have [hj0 [hj1 _]] := d2b t _; 1: smt().
+have hwp : winp x m0 m1 (t %/ 2) by move: (hw _); [smt() | rewrite ho].
+have hwn := half1_win x m0 m1 (t %/ 2) hwp _ hs0 hs1; 1: smt().
+rewrite /xnext ho /=; split; last first.
++ by move=> _; rewrite hm /= hd.
+rewrite /wkn ifT 1:/# hd.
+have -> : 8 + (t %/ 2 + 1) = 8 + t %/ 2 + 1 by ring.
+rewrite /wknext.
+have := wk_set wk kt (BArray256.get256 (BArray256.set256 x (t %/ 2 %% 8) (half1 x (t %/ 2))) (t %/ 2 %% 8)) m0 m1 (8 + t %/ 2) hK.
+move=> H; apply H; 2: by move: ht hj0 hj1; clear hK hk hw hwp hwn H; smt().
++ by move: hk; rewrite /wkn ifT 1:/#.
+move=> L c hL hc; rewrite (hwn ((t %/ 2) %% 8) L c (m8 _) hL hc) m8m1.
+by have -> : 2 * (t %/ 2 + 1 + 7) + c = 2 * (8 + t %/ 2) + c by ring.
+qed.
+
+lemma xw_late x wk m0 m1 t : xw x wk m0 m1 t => 64 <= t < 80 => xw (xnext x 0 2) wk m0 m1 (t + 1).
+proof.
+move=> [hk _] ht; rewrite /xnext /=; split; last by rewrite (_: (t + 1 < 64) = false) 1:/#.
+have e0 : wkn t = 40 by rewrite /wkn; case: (t <= 64) => h; [have -> : t = 64 by smt() | ].
+have e1 : wkn (t + 1) = 40 by rewrite /wkn ifF 1:/#.
+by move: hk; rewrite e0 e1.
+qed.
+
+(* Loop state of the round loop of block l, apart from the working
+   variables. *)
+op tctx (x : BArray256.t) (wk : BArray1280.t) (m0 m1 : W64.t list) (l t : int) =
+  0 <= t <= 80 /\ 0 <= l < 2 /\ size m0 = 16 /\ size m1 = 16 /\
+  (if l = 0 then xw x wk m0 m1 t else wkinv wk m0 m1 40).
+
+lemma wk_read x wk m0 m1 l t : tctx x wk m0 m1 l t => t < 80 =>
+  BArray1280.get64 wk (4 * (t %/ 2) + 2 * l + t %% 2)
+  = nth W64.zero K512 t + nth W64.zero (schedule (lane l m0 m1)) t.
+proof.
+rewrite /tctx => [#] ht0 ht1 hl0 hl1 _ _ hc ht.
+have [hq0 [hq1 [hq2 hr]]] := d2b t ht0.
+have hb : 0 <= t %/ 2 < (if l = 0 then wkn t else 40).
++ by rewrite /wkn; move: hq0 hq1 ht; clear hc; smt().
+have hk : wkinv wk m0 m1 (if l = 0 then wkn t else 40).
++ by move: hc; case: (l = 0) => _ /=; [case | ].
+rewrite (wk_get _ _ _ _ (t %/ 2) l (t %% 2) hk hb _ hr); 1: smt().
+by rewrite hq2 /W addrC.
+qed.
+
+lemma rst_add v m s w st t (y : W64.t) :
+  rst v m s st t => y = nth W64.zero K512 t + nth W64.zero w t =>
+  rinw (BArray64.set64 v (((7 + 80) - t) %% 8) (BArray64.get64 v (((7 + 80) - t) %% 8) + y)) m s w st t.
+proof.
+rewrite /rst /rinw => [#] hv hm ->; split; last exact hm.
+have := vis_set7 _ _ _ _ _ _ _ _ _ _ (st.`8 + (nth W64.zero K512 t + nth W64.zero w t)) hv.
+move: hv => @/vis [#] _ _ _ _ _ _ _ ->.
+by rewrite addrA.
+qed.
+
+lemma tctx_odd kt x wk m0 m1 l t :
+  (forall t, 0 <= t < 80 => BArray640.get64 kt t = nth W64.zero K512 t) =>
+  tctx x wk m0 m1 l t => l = 0 => t < 64 => t %% 2 = 1 =>
+  tctx (xnext x (t %/ 2) (t %% 2)) (wknext kt (xnext x (t %/ 2) (t %% 2)) wk t) m0 m1 l (t + 1).
+proof.
+rewrite /tctx => hK [#] ht0 ht1 hl0 hl1 hs0 hs1 hc hl ht ho; subst l.
+move: hc => /= hc.
+have hx := xw_odd kt x wk m0 m1 t hK hs0 hs1 hc _ ho; 1: smt().
+by rewrite /= hs0 hs1 hx /=; move: ht0 ht; clear hK hc hx; smt().
+qed.
+
+lemma tctx_even x wk m0 m1 l t :
+  tctx x wk m0 m1 l t => l = 0 => t < 64 => t %% 2 <> 1 =>
+  tctx (xnext x (t %/ 2) (t %% 2)) wk m0 m1 l (t + 1).
+proof.
+rewrite /tctx => [#] ht0 ht1 hl0 hl1 hs0 hs1 hc hl ht ho; subst l.
+move: hc => /= hc.
+have hx := xw_even x wk m0 m1 t hc _ _; 1,2: smt().
+by rewrite /= hs0 hs1 hx /=; move: ht0 ht; clear hc hx; smt().
+qed.
+
+lemma tctx_late x wk m0 m1 l t :
+  tctx x wk m0 m1 l t => !(l = 0 /\ t < 64) => t < 80 =>
+  tctx (xnext x 0 2) wk m0 m1 l (t + 1).
+proof.
+rewrite /tctx => [#] ht0 ht1 hl0 hl1 hs0 hs1 hc hn ht.
+rewrite hs0 hs1 /=; split; 1: by move: ht0 ht; clear hc; smt().
+split; 1: by move: hl0 hl1; clear hc; smt().
+case: (l = 0) => hl; last by move: hc; rewrite hl.
+move: hc; rewrite hl /= => hc; apply (xw_late x wk m0 m1 t hc).
+by move: hn ht hl; clear hc; smt().
+qed.
+
+(* __sha512_avx2_round with its phase in the precondition, for ecall. *)
+lemma round_call (w : W64.t list) (st : state) (t0 : int) (x0 : BArray256.t) (j0 p0 : int) :
+  hoare [M.__sha512_avx2_round :
+    (p0 = 0 \/ p0 = 1 \/ p0 = 2) /\ t = t0 /\ rinw v m s w st t /\ x = x0 /\ j = j0 /\ ph = p0 ==>
+    rst res.`1 res.`2 res.`3 (round w st t0) (t0 + 1) /\ res.`4 = xnext x0 j0 p0].
+proof.
+case: (p0 = 0 \/ p0 = 1 \/ p0 = 2) => hp.
++ by conseq (round_full w st t0 x0 j0 p0 hp).
+by conseq (_: false ==> _) => //; proc; exfalso.
+qed.
+
+(* ------------------------------------------------------------------ *)
+(* The driver __sha512_avx2                                            *)
+
+op hwords (h : BArray64.t) : W64.t list = map (BArray64.get64 h) (iota_ 0 8).
+
+lemma nth_hwords h k : 0 <= k < 8 => nth W64.zero (hwords h) k = BArray64.get64 h k.
+proof. by move=> hk; rewrite /hwords (nth_map 0) 1:size_iota 1:/# nth_iota. qed.
+
+lemma size_hwords h : size (hwords h) = 8.
+proof. by rewrite /hwords size_map size_iota. qed.
+
+(* The table loop: groups 0 .. i - 1 written. *)
+op iinv (h0 : W64.t list) (nb0 : int) (m0 m1 : W64.t list) (h : BArray64.t) (nb : int)
+        (x : BArray256.t) (wk : BArray1280.t) (i : int) =
+  hwords h = h0 /\ nb = nb0 /\ (nb0 = 1 \/ nb0 = 2) /\ size m0 = 16 /\ size m1 = 16 /\
+  win x m0 m1 0 /\ 0 <= i <= 8 /\ wkinv wk m0 m1 i.
+
+lemma iinv_step kt h0 nb0 m0 m1 h nb x wk i :
+  (forall t, 0 <= t < 80 => BArray640.get64 kt t = nth W64.zero K512 t) =>
+  iinv h0 nb0 m0 m1 h nb x wk i => i < 8 =>
+  iinv h0 nb0 m0 m1 h nb x
+    (BArray1280.set256 wk i (VPADD_4u64 (VPBROADCAST_2u128 (BArray640.get128 kt i))
+                               (BArray256.get256 x i))) (i + 1).
+proof.
+rewrite /iinv => hK [#] hh hn hnb hs0 hs1 hw hi0 hi1 hk hi.
+have hb : 0 <= i < 8 by move: hi0 hi; clear hK hk hw; smt().
+rewrite hh hn hnb hs0 hs1 hw /=; split; 1: by move: hb; clear hK hk hw; smt().
+apply (wk_set _ _ _ _ _ _ hK hk); 1: by move: hb; clear hK hk hw; smt().
+move=> L c hL hc; rewrite (hw i L c hb hL hc).
+by rewrite (_: (i - 0) %% 8 = i) 1:pmod_small.
+qed.
+
+(* Before block l and around its round loop. *)
+op linv (h0 : W64.t list) (nb0 : int) (m0 m1 : W64.t list) (h v : BArray64.t)
+        (x : BArray256.t) (wk : BArray1280.t) (inc l : int) =
+  inc = nb0 /\ (nb0 = 1 \/ nb0 = 2) /\ size m0 = 16 /\ size m1 = 16 /\ 0 <= l <= nb0 /\
+  hwords h = foldl compress h0 (take l [m0; m1]) /\
+  (forall k, 0 <= k < 8 => BArray64.get64 v k = BArray64.get64 h k) /\
+  (l < nb0 => tctx x wk m0 m1 l 0).
+
+op oinv (h0 : W64.t list) (nb0 : int) (m0 m1 : W64.t list) (h : BArray64.t) (inc l : int) =
+  inc = nb0 /\ (nb0 = 1 \/ nb0 = 2) /\ 0 <= l < nb0 /\
+  hwords h = foldl compress h0 (take l [m0; m1]).
+
+(* The working variables of block l after t rounds. *)
+op sl (m0 m1 : W64.t list) (h : BArray64.t) (l t : int) : state =
+  rounds (schedule (lane l m0 m1)) (to_state (hwords h)) 0 t.
+
+lemma sl_next m0 m1 h l t : 0 <= t =>
+  round (schedule (lane l m0 m1)) (sl m0 m1 h l t) t = sl m0 m1 h l (t + 1).
+proof. by move=> ht; rewrite /sl roundsS. qed.
+
+lemma slot0 k : 0 <= k < 8 => ((k + 80) - 0) %% 8 = k.
+proof. by move=> hk; rewrite (_: k + 80 - 0 = k + 10 * 8) 1:/# modzMDr pmod_small. qed.
+
+lemma slot80 k : 0 <= k < 8 => ((k + 80) - 80) %% 8 = k.
+proof. by move=> hk; rewrite (_: k + 80 - 80 = k) 1:/# pmod_small. qed.
+
+lemma linv_init h0 nb0 m0 m1 h nb x wk v :
+  iinv h0 nb0 m0 m1 h nb x wk 8 =>
+  (forall k, 0 <= k < 8 => BArray64.get64 v k = BArray64.get64 h k) =>
+  linv h0 nb0 m0 m1 h v x wk nb 0.
+proof.
+rewrite /iinv /linv => [#] hh hn hnb hs0 hs1 hw _ _ hk hv.
+rewrite hn hnb hs0 hs1 take0 /= hh /=; split; 1: by move: hnb; clear hw hk hv; smt().
+split; 1: exact hv.
+move=> _; rewrite /tctx /xw /wkn hs0 hs1 /= ?div0z ?mod0z /=.
+by rewrite hk hw.
+qed.
+
+lemma tinv_init h0 nb0 m0 m1 h v x wk inc l (m : BArray16.t) :
+  linv h0 nb0 m0 m1 h v x wk inc l => l < inc =>
+  oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 l 0 /\
+  rst v (BArray16.set64 (BArray16.set64 m 0 (BArray64.get64 v 1)) 0
+           (BArray16.get64 (BArray16.set64 m 0 (BArray64.get64 v 1)) 0 `^` BArray64.get64 v 2))
+      (W64.of_int 0) (sl m0 m1 h l 0) 0.
+proof.
+rewrite /linv /oinv => [#] hi hnb hs0 hs1 hl0 hl1 hh hv hc hl.
+split; 1: by rewrite hi hnb hh /=; move: hl0 hl; clear hv hc; smt().
+split; 1: by apply hc; rewrite -hi.
+rewrite /sl rounds_nil // /rst /vis /to_state !slot0 // !nth_hwords // !hv //.
+by rewrite !subr0 /=.
+qed.
+
+lemma tpre_step h0 nb0 m0 m1 h v m s x wk inc l t :
+  oinv h0 nb0 m0 m1 h inc l => tctx x wk m0 m1 l t => rst v m s (sl m0 m1 h l t) t => t < 80 =>
+  rinw (BArray64.set64 v (((7 + 80) - t) %% 8)
+          (BArray64.get64 v (((7 + 80) - t) %% 8) + BArray1280.get64 wk (4 * (t %/ 2) + 2 * l + t %% 2)))
+       m s (schedule (lane l m0 m1)) (sl m0 m1 h l t) t.
+proof. by move=> _ hc hr ht; apply (rst_add _ _ _ _ _ _ _ hr); exact (wk_read _ _ _ _ _ _ hc ht). qed.
+
+lemma fin_v v m s (S : state) : rst v m s S 80 => forall k, 0 <= k < 8 =>
+  BArray64.get64 (BArray64.set64 v 0 (BArray64.get64 v 0 + s)) k = nth W64.zero (of_state S) k.
+proof.
+case: S => a b c d e f g h; rewrite /rst /vis !slot80 // => [#] h0 h1 h2 h3 h4 h5 h6 h7 _ k hk.
+rewrite BArray64.get_set64E //.
+move: h0 h1 h2 h3 h4 h5 h6 h7 => /= h0 h1 h2 h3 h4 h5 h6 h7.
+have : k = 0 \/ k = 1 \/ k = 2 \/ k = 3 \/ k = 4 \/ k = 5 \/ k = 6 \/ k = 7 by smt().
+case=> [->|]; 1: by rewrite /of_state /= h0; ring.
+by case=> [->|[->|[->|[->|[->|[->|->]]]]]]; rewrite /of_state /= ?h1 ?h2 ?h3 ?h4 ?h5 ?h6 ?h7.
+qed.
+
+lemma hwords_ffwd h hb (S : state) :
+  (forall k, 0 <= k < 8 => BArray64.get64 h k = nth W64.zero (of_state S) k + BArray64.get64 hb k) =>
+  hwords h = ffwd S (hwords hb).
+proof.
+move=> hk; apply (eq_from_nth W64.zero).
++ by rewrite size_hwords /ffwd size_map size_zip size_of_state size_hwords.
+move=> k; rewrite size_hwords => hk8; rewrite nth_hwords // /ffwd (nth_map (W64.zero, W64.zero)).
++ by rewrite size_zip size_of_state size_hwords.
+rewrite nth_zip; 1: by rewrite size_of_state size_hwords.
+by rewrite /= nth_hwords // hk.
+qed.
+
+lemma fold_next h0 m0 m1 l : 0 <= l < 2 =>
+  foldl compress h0 (take (l + 1) [m0; m1]) = compress (foldl compress h0 (take l [m0; m1])) (lane l m0 m1).
+proof.
+move=> hl; case: (l = 0) => hl0; 1: by rewrite hl0 /lane /=.
+have -> : l = 1 by smt().
+by rewrite /lane /=.
+qed.
+
+lemma linv_next h0 nb0 m0 m1 hb h v x wk inc l :
+  oinv h0 nb0 m0 m1 hb inc l => tctx x wk m0 m1 l 80 =>
+  (forall k, 0 <= k < 8 =>
+     BArray64.get64 h k = nth W64.zero (of_state (sl m0 m1 hb l 80)) k + BArray64.get64 hb k /\
+     BArray64.get64 v k = BArray64.get64 h k) =>
+  linv h0 nb0 m0 m1 h v x wk inc (l + 1).
+proof.
+rewrite /oinv /linv => [#] hi hnb hl0 hl1 hh hc hf.
+have hs := hc; move: hs => @/tctx [#] _ _ _ _ hs0 hs1 hx.
+have hff : hwords h = ffwd (sl m0 m1 hb l 80) (hwords hb).
++ by apply hwords_ffwd => k hk; case: (hf k hk).
+split; 1: exact hi. split; 1: exact hnb. split; 1: exact hs0. split; 1: exact hs1.
+split; 1: by move: hl0 hl1 hnb; clear hf hc hx hh hff; smt().
+split.
++ rewrite fold_next; 1: by move: hl0 hl1 hnb; clear hf hc hx hh hff; smt().
+  by rewrite -hh compress_rounds hff /sl.
+split; 1: by move=> k hk; case: (hf k hk).
+move=> hl'; have hl : l = 0 by move: hl' hnb hl0 hl1; clear hf hc hx hh hff; smt().
+move: hx; rewrite hl /= /xw /wkn /= => hk.
+by rewrite /= hs0 hs1 /=; exact hk.
+qed.

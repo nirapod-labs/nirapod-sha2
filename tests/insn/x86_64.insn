@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# tests/insn/x86_64.insn
+# ======================
+#
+# The x86-64 instructions whose EasyCrypt models the proofs of the SHA-NI
+# kernel (src/x86_64/shani) rest on, in the form tests/insn/insn.py reads:
+# a name, one Jasmin statement over the operands a to h and the results
+# r to u, and the mnemonic it must compile to. Operands appear in the
+# order of the Jasmin intrinsic, which is the order of the arguments of
+# the EasyCrypt operator (JModel_x86.ec).
+#
+# SHA256RNDS2 takes its third operand in XMM0; the register allocator
+# places c there.
+
+sha256rnds2  r = #SHA256RNDS2(a, b, c);  sha256rnds2
+sha256msg1   r = #SHA256MSG1(a, b);      sha256msg1
+sha256msg2   r = #SHA256MSG2(a, b);      sha256msg2
