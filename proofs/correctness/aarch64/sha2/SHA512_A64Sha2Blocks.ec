@@ -185,6 +185,11 @@ qed.
 (* ------------------------------------------------------------------ *)
 (* n blocks from memory                                               *)
 
+(* The counters after one more block. *)
+lemma blk_step (n n0 p p0 : int) : 0 < n => n <= n0 => p = p0 + 128 * (n0 - n) =>
+  (0 <= n - 1 /\ (0 <= n - 1 => n - 1 <= n0)) /\ p + 128 = p0 + 128 * (n0 - (n - 1)).
+proof. smt(). qed.
+
 lemma sha512_compress_blocks_correct (h0 : W64.t list) (p0 n0 : W64.t) :
   hoare [M._sha512_compress_blocks :
            hwords h = h0 /\ p = p0 /\ n = n0 /\
@@ -264,7 +269,8 @@ while (0 <= W64.to_uint n <= W64.to_uint n0 /\ more = (n <> W64.zero) /\
                 (blockwords (JWordList.memread Glob.mem{hr} (W64.to_uint p{hr}) 128)))) i.
   + by move=> i hi; rewrite hr // st_step // /#.
   rewrite hsub hadd hpar /=.
-  by move: (nz_pos n{hr} hnz) hnn hp hS; smt().
+  have [h1 h2] := blk_step _ _ _ _ (nz_pos n{hr} hnz) hnn hp.
+  by split; [exact h1 | split; [exact h2 | move=> i hi0 hi4; apply hS]].
 wp.
 while (0 <= j <= 4 /\ hwords h = h0 /\ p = p0 /\ n = n0 /\
        W64.to_uint p0 + 128 * W64.to_uint n0 < W64.modulus /\
