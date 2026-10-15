@@ -256,25 +256,25 @@ op R (H : BArray256.t) (B : BArray512.t) (k : int) : W32.t list =
   compress (lane8 (BArray256.get32 H) k) (bwk B k).
 
 (* The half state after pairs 0 .. r - 1. *)
-op rinv (st : BArray128.t) (H : BArray256.t) (B : BArray512.t) (f r : int) =
+op rinv (st : BArray128.t) (H : BArray256.t) (Rf : int -> W32.t list) (f r : int) =
   forall l q, 0 <= l < 4 => 0 <= q < 2 =>
     BArray128.get128 st (2 * l + q)
-    = q4 (if l %/ 2 < r then R H B (4 * f + l) else lane8 (BArray256.get32 H) (4 * f + l)) q.
+    = q4 (if l %/ 2 < r then Rf (4 * f + l) else lane8 (BArray256.get32 H) (4 * f + l)) q.
 
 (* The eight-way state after halves 0 .. f - 1. *)
-op hfin (h H : BArray256.t) (B : BArray512.t) (f : int) =
+op hfin (h H : BArray256.t) (Rf : int -> W32.t list) (f : int) =
   forall w f', 0 <= w < 8 => 0 <= f' < 2 =>
     BArray256.get128 h (2 * w + f')
     = if f' < f
-      then p4 (nth W32.zero (R H B (4 * f')) w) (nth W32.zero (R H B (4 * f' + 1)) w)
-              (nth W32.zero (R H B (4 * f' + 2)) w) (nth W32.zero (R H B (4 * f' + 3)) w)
+      then p4 (nth W32.zero (Rf (4 * f')) w) (nth W32.zero (Rf (4 * f' + 1)) w)
+              (nth W32.zero (Rf (4 * f' + 2)) w) (nth W32.zero (Rf (4 * f' + 3)) w)
       else BArray256.get128 H (2 * w + f').
 
 lemma size_lane8 (h : BArray256.t) k : size (lane8 (BArray256.get32 h) k) = 8.
 proof. exact size_lane. qed.
 
 (* Pair r of the half: its two lanes' states before the block. *)
-lemma rinv_pre st H B f r : 0 <= f < 2 => 0 <= r < 2 => rinv st H B f r =>
+lemma rinv_pre st H B f r : 0 <= f < 2 => 0 <= r < 2 => rinv st H (R H B) f r =>
   forall l, 0 <= l < 2 => lane_st (Sx H f r) (Wx B f r) st r l 0.
 proof.
 move=> hf hr hst l hl; rewrite /lane_st /Sx /= !rounds_nil //.
@@ -286,9 +286,9 @@ by rewrite (_ : 2 * (2 * r + l) = 4 * r + 2 * l) 1:/# => -> ->.
 qed.
 
 (* After the block: pair r is done, the other pairs are unchanged. *)
-lemma rinv_step st st' H B f r : 0 <= f < 2 => 0 <= r < 2 => rinv st H B f r =>
+lemma rinv_step st st' H B f r : 0 <= f < 2 => 0 <= r < 2 => rinv st H (R H B) f r =>
   (forall l, 0 <= l < 2 => lane_fin (Sx H f r) (Wx B f r) st' r l) =>
-  frame st st' r => rinv st' H B f (r + 1).
+  frame st st' r => rinv st' H (R H B) f (r + 1).
 proof.
 move=> hf hr hst hfin hfr l q hl hq.
 case: (l %/ 2 = r) => hlr.
@@ -352,7 +352,7 @@ qed.
 (* ------------------------------------------------------------------ *)
 (* The halves                                                         *)
 
-lemma hfin0 H B : hfin H H B 0.
+lemma hfin0 H Rf : hfin H H Rf 0.
 proof. by move=> w f' hw hf'; rewrite ifF 1:/#. qed.
 
 lemma hq_lanes (h : BArray256.t) f q : 0 <= f < 2 => 0 <= q < 2 =>
@@ -379,10 +379,10 @@ by rewrite (h8_slot h (4 * q + 2) f) 1,2:/# (h8_slot h (4 * q + 3) f) 1,2:/#.
 qed.
 
 (* Half f of the state, transposed: lane 4f + l in st[2l], st[2l + 1]. *)
-lemma rinv0 st H B f : 0 <= f < 2 =>
+lemma rinv0 st H Rf f : 0 <= f < 2 =>
   (forall q, 0 <= q < 2 =>
      tq st q = tr4 (hq H f q).`1 (hq H f q).`2 (hq H f q).`3 (hq H f q).`4) =>
-  rinv st H B f 0.
+  rinv st H Rf f 0.
 proof.
 move=> hf h l q hl hq; rewrite ifF 1:/#.
 have := h q hq; rewrite hq_lanes // /= tr4_p4 /tq /= => [#] e0 e1 e2 e3.
@@ -390,7 +390,7 @@ have := range4i l hl.
 by case=> [->>|[->>|[->>|->>]]] /=; rewrite /q4 ?e0 ?e1 ?e2 ?e3.
 qed.
 
-lemma hfin_half h H B f : 0 <= f < 2 => hfin h H B f =>
+lemma hfin_half h H Rf f : 0 <= f < 2 => hfin h H Rf f =>
   forall q, 0 <= q < 2 => hq h f q = hq H f q.
 proof.
 move=> hf hh q hq; rewrite /hq.
@@ -399,12 +399,12 @@ by rewrite (hh (4 * q + 2) f) 1,2:/# (hh (4 * q + 3) f) 1,2:/# !ltzz.
 qed.
 
 (* After the store: half f holds the results of its four lanes. *)
-lemma hfin_step h h' H B f : 0 <= f < 2 => hfin h H B f =>
+lemma hfin_step h h' H Rf f : 0 <= f < 2 => hfin h H Rf f =>
   (forall q, 0 <= q < 2 =>
-     hq h' f q = tr4 (q4 (R H B (4 * f)) q) (q4 (R H B (4 * f + 1)) q)
-                     (q4 (R H B (4 * f + 2)) q) (q4 (R H B (4 * f + 3)) q)) =>
+     hq h' f q = tr4 (q4 (Rf (4 * f)) q) (q4 (Rf (4 * f + 1)) q)
+                     (q4 (Rf (4 * f + 2)) q) (q4 (Rf (4 * f + 3)) q)) =>
   (forall s, s %% 2 <> f => BArray256.get128 h' s = BArray256.get128 h s) =>
-  hfin h' H B (f + 1).
+  hfin h' H Rf (f + 1).
 proof.
 move=> hf hh hn ho w f' hw hf'.
 case: (f' = f) => [->>|ne].
@@ -418,11 +418,11 @@ rewrite ho 1:/# hh //.
 by rewrite (_ : (f' < f + 1) = (f' < f)) 1:/#.
 qed.
 
-lemma hfin_lanes h H B : hfin h H B 2 =>
-  forall k, 0 <= k < 8 => lane8 (BArray256.get32 h) k = R H B k.
+lemma hfin_lanes h H Rf : (forall k, 0 <= k < 8 => size (Rf k) = 8) => hfin h H Rf 2 =>
+  forall k, 0 <= k < 8 => lane8 (BArray256.get32 h) k = Rf k.
 proof.
-move=> hh k hk.
-apply (eq_from_nth W32.zero); first by rewrite size_lane /R size_compress // size_lane.
+move=> hs hh k hk.
+apply (eq_from_nth W32.zero); first by rewrite size_lane hs.
 move=> j; rewrite size_lane => hj; rewrite nth_lane //.
 have [f l [hf [hl ->>]]] : exists f l, 0 <= f < 2 /\ 0 <= l < 4 /\ k = 4 * f + l.
 + by exists (k %/ 4) (k %% 4); smt().
@@ -444,13 +444,13 @@ lemma sha256_x8_compress_correct (H : BArray256.t) (B : BArray512.t) :
 proof.
 proc.
 wp.
-while (0 <= f <= 2 /\ k = sHA256_K /\ blocks = B /\ hfin h8 H B f).
+while (0 <= f <= 2 /\ k = sHA256_K /\ blocks = B /\ hfin h8 H (R H B) f).
 + wp; ecall (sha256_x8_store_half_correct h8 st f).
   while (0 <= r <= 2 /\ 0 <= f < 2 /\ k = sHA256_K /\ blocks = B /\
-         hfin h8 H B f /\ rinv st H B f r).
+         hfin h8 H (R H B) f /\ rinv st H (R H B) f r).
   + wp; ecall (sha256_x8_block2_blocks H B f st r).
     while (0 <= i <= 4 /\ 0 <= r < 2 /\ 0 <= f < 2 /\ k = sHA256_K /\ blocks = B /\
-           hfin h8 H B f /\ rinv st H B f r /\
+           hfin h8 H (R H B) f /\ rinv st H (R H B) f r /\
            forall i', 0 <= i' < i =>
              BArray128.get128 m i'
              = VREV32_16u8 (BArray512.get128 B (4 * (4 * f + 2 * r) + i')) /\
@@ -483,12 +483,12 @@ while (0 <= f <= 2 /\ k = sHA256_K /\ blocks = B /\ hfin h8 H B f).
   move=> &hr hf0 hf2 hh hf st1 hst1.
   have hfr : 0 <= f{hr} < 2 by smt().
   split.
-  + apply (rinv0 st1 H B f{hr} hfr) => q hq.
-    by rewrite hst1 // (hfin_half h8{hr} H B f{hr} hfr hh q hq).
+  + apply (rinv0 st1 H (R H B) f{hr} hfr) => q hq.
+    by rewrite hst1 // (hfin_half h8{hr} H (R H B) f{hr} hfr hh q hq).
   move=> r0 st0 hr hr0 hr2 hrv h' hn ho.
   have ->> : r0 = 2 by smt().
   split; first smt().
-  apply (hfin_step h8{hr} h' H B f{hr} hfr hh _ ho) => q hq.
+  apply (hfin_step h8{hr} h' H (R H B) f{hr} hfr hh _ ho) => q hq.
   have e0 := hrv 0 q _ hq; 1: done.
   have e1 := hrv 1 q _ hq; 1: done.
   have e2 := hrv 2 q _ hq; 1: done.
@@ -499,7 +499,9 @@ wp; skip => />.
 split; first exact hfin0.
 move=> f0 h80 hf hf0 hf2 hh k0 hk0 hk8.
 have ->> : f0 = 2 by smt().
-by rewrite (hfin_lanes h80 H B hh k0 _) 1:/# /R bwkE.
+have hs : forall k, 0 <= k < 8 => size (R H B k) = 8.
++ by move=> k hk; rewrite /R size_compress // size_lane.
+by rewrite (hfin_lanes h80 H (R H B) hs hh k0 _) 1:/# /R bwkE.
 qed.
 
 (* ------------------------------------------------------------------ *)
