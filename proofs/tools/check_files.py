@@ -39,7 +39,7 @@ import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-GATE = "\n(* gate: end of file *)\nlemma end_of_file_gate : true by trivial.\n"
+EOF_LEMMA = "\n(* end of file reached *)\nlemma end_of_file_reached : true by trivial.\n"
 
 
 def check_one(path, easycrypt, flags):
@@ -49,7 +49,7 @@ def check_one(path, easycrypt, flags):
         copy = os.path.join(tmp, os.path.basename(path))
         shutil.copyfile(path, copy)
         with open(copy, "a", encoding="utf-8") as f:
-            f.write(GATE)
+            f.write(EOF_LEMMA)
         cmd = [easycrypt, "compile", *flags, "-I", os.path.dirname(path) or ".", copy]
         start = time.monotonic()
         try:

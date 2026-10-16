@@ -20,7 +20,7 @@
 # of the pinned tree is checked against it by `toolchain/build.sh test`.
 
 EASYCRYPT_URL=https://github.com/easycrypt/easycrypt.git
-EASYCRYPT_COMMIT=311ba5d17dc9d4bd8c138cbbfa04e4101c51c7fd
+EASYCRYPT_COMMIT=e7eff05dcef179fbd0b428e987632278e526b862
 
 # EasyCrypt accepts why3 >= 1.8.0, < 1.9.
 EASYCRYPT_OPAM_PACKAGES="why3.1.8.2"
