@@ -20,6 +20,11 @@
  *     VSRI_4u32 after SHL    rotation right of each 32-bit lane
  *     VBIT, VBSL, AND/BIC    Ch and Maj of FIPS 180-4 section 4.1.2, lane
  *                            by lane
+ *     VTRN1, VTRN2           even and odd lanes of two registers
+ *                            interleaved; the 4x4 transpose of four
+ *                            registers (tr4) and the 2x2 transpose of two
+ *                            pairs, which turn word-major lane state into
+ *                            the per-lane state of the SHA instructions
  *
  * The model-free statements here are checked once (proofs/Makefile,
  * check-lib).
@@ -148,6 +153,78 @@ have e : forall j, 0 <= j < 8 =>
   (8 * i + j) %/ 8 * 8 + (7 - (8 * i + j) %% 8) = 8 * i + (7 - j) by smt().
 have e0 : 8 * i %/ 8 * 8 + (7 - 8 * i %% 8) = 8 * i + 7 by smt().
 by rewrite e0 !e //.
+qed.
+
+(* ------------------------------------------------------------------ *)
+(* Transposes                                                         *)
+
+lemma vtrn1_4u32_p4 (a0 a1 a2 a3 b0 b1 b2 b3 : W32.t) :
+  VTRN1_4u32 (p4 a0 a1 a2 a3) (p4 b0 b1 b2 b3) = p4 a0 b0 a2 b2.
+proof.
+apply W4u32.wordP => i hi.
+rewrite /VTRN1_4u32 W4u32.pack4bE // W4u32.Pack.initiE //=.
+have: i = 0 \/ i = 1 \/ i = 2 \/ i = 3 by smt().
+by case=> [->|[->|[->|->]]] /=; rewrite !p4_lane.
+qed.
+
+lemma vtrn2_4u32_p4 (a0 a1 a2 a3 b0 b1 b2 b3 : W32.t) :
+  VTRN2_4u32 (p4 a0 a1 a2 a3) (p4 b0 b1 b2 b3) = p4 a1 b1 a3 b3.
+proof.
+apply W4u32.wordP => i hi.
+rewrite /VTRN2_4u32 W4u32.pack4bE // W4u32.Pack.initiE //=.
+have: i = 0 \/ i = 1 \/ i = 2 \/ i = 3 by smt().
+by case=> [->|[->|[->|->]]] /=; rewrite !p4_lane.
+qed.
+
+lemma vtrn1_2u64_p4 (a0 a1 a2 a3 b0 b1 b2 b3 : W32.t) :
+  VTRN1_2u64 (p4 a0 a1 a2 a3) (p4 b0 b1 b2 b3) = p4 a0 a1 b0 b1.
+proof.
+apply W4u32.wordP => i hi.
+rewrite /VTRN1_2u64 bits32_W2u64_red // W2u64.Pack.initiE 1:/# /=.
+have: i = 0 \/ i = 1 \/ i = 2 \/ i = 3 by smt().
+by case=> [->|[->|[->|->]]] /=; rewrite !p4_lane.
+qed.
+
+lemma vtrn2_2u64_p4 (a0 a1 a2 a3 b0 b1 b2 b3 : W32.t) :
+  VTRN2_2u64 (p4 a0 a1 a2 a3) (p4 b0 b1 b2 b3) = p4 a2 a3 b2 b3.
+proof.
+apply W4u32.wordP => i hi.
+rewrite /VTRN2_2u64 bits32_W2u64_red // W2u64.Pack.initiE 1:/# /=.
+have: i = 0 \/ i = 1 \/ i = 2 \/ i = 3 by smt().
+by case=> [->|[->|[->|->]]] /=; rewrite !p4_lane.
+qed.
+
+lemma vtrn1_2u64_p2 (a0 a1 b0 b1 : W64.t) :
+  VTRN1_2u64 (p2 a0 a1) (p2 b0 b1) = p2 a0 b0.
+proof.
+apply W2u64.wordP => i hi.
+rewrite /VTRN1_2u64 W2u64.pack2bE // W2u64.Pack.initiE //=.
+have: i = 0 \/ i = 1 by smt().
+by case=> [->|->] /=; rewrite !p2_lane.
+qed.
+
+lemma vtrn2_2u64_p2 (a0 a1 b0 b1 : W64.t) :
+  VTRN2_2u64 (p2 a0 a1) (p2 b0 b1) = p2 a1 b1.
+proof.
+apply W2u64.wordP => i hi.
+rewrite /VTRN2_2u64 W2u64.pack2bE // W2u64.Pack.initiE //=.
+have: i = 0 \/ i = 1 by smt().
+by case=> [->|->] /=; rewrite !p2_lane.
+qed.
+
+(* The four registers of rows a, b, c, d become the four columns: register
+   j of the result holds lane j of a, b, c, d (the instruction sequence of
+   __sha256_x8_tr4). *)
+op tr4 (a b c d : W128.t) : W128.t * W128.t * W128.t * W128.t =
+  let t0 = VTRN1_4u32 a b in let t1 = VTRN2_4u32 a b in
+  let t2 = VTRN1_4u32 c d in let t3 = VTRN2_4u32 c d in
+  (VTRN1_2u64 t0 t2, VTRN1_2u64 t1 t3, VTRN2_2u64 t0 t2, VTRN2_2u64 t1 t3).
+
+lemma tr4_p4 (a0 a1 a2 a3 b0 b1 b2 b3 c0 c1 c2 c3 d0 d1 d2 d3 : W32.t) :
+  tr4 (p4 a0 a1 a2 a3) (p4 b0 b1 b2 b3) (p4 c0 c1 c2 c3) (p4 d0 d1 d2 d3)
+  = (p4 a0 b0 c0 d0, p4 a1 b1 c1 d1, p4 a2 b2 c2 d2, p4 a3 b3 c3 d3).
+proof.
+by rewrite /tr4 /= !vtrn1_4u32_p4 !vtrn2_4u32_p4 !vtrn1_2u64_p4 !vtrn2_2u64_p4.
 qed.
 
 (* ------------------------------------------------------------------ *)
