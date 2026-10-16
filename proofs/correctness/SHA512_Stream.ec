@@ -794,12 +794,50 @@ proof dsize_ok by done.
 clone Final512 as Finsha512_256 with op dsize <= 32, theory BArrayD <= BArray32
 proof dsize_ok by done.
 
-equiv fin_sha512_eq : M._sha512___sha512_finalize ~ Finsha512.F.finalize : ={arg} ==> ={res}.
-proof. by proc; sim. qed.
+(* The instances against the theory, as for SHA-256 (SHA256_Stream.ec):
+   the compress calls are related through their result alone, and the
+   equivalences relate the outputs, not the returned flag. *)
 
-equiv mf_sha512_eq : M._sha512____sha512_mem_from ~ Finsha512.F.mem_from :
-  ={arg, Glob.mem} ==> ={res, Glob.mem}.
-proof. by proc; call fin_sha512_eq; call (: ={Glob.mem}); [sim | auto]. qed.
+lemma h512_inj (a b : BArray64.t) : h512 a = h512 b => a = b.
+proof.
+move=> heq; apply BArray64.tP => i hi.
+have hw : BArray64.get64 a (i %/ 8) = BArray64.get64 b (i %/ 8).
++ by rewrite -!nth_h512 1,2:/# heq.
+have -> : i = 8 * (i %/ 8) + i %% 8 by smt(divz_eq).
+by rewrite -!BArray64.get64d_byte 1,2:/# hw.
+qed.
+
+equiv compress512_eq : M._sha512_compress ~ M._sha512_compress : ={h, block} ==> res{1}.`1 = res{2}.`1.
+proof.
+proc*; exists* h{1}, block{1}; elim* => h1 b1.
+call{1} (K512.compress_total (h512 h1) b1); call{2} (K512.compress_total (h512 h1) b1).
+by auto => /> r1 hr1 r2 hr2; apply h512_inj; rewrite hr1 hr2.
+qed.
+
+equiv zero128_eq : M.__zero128 ~ M.__zero128 :
+  ={buf, lo_, hi} /\ to_uint lo_{1} <= to_uint hi{1} <= 128 ==> res{1}.`1 = res{2}.`1.
+proof.
+proc*; exists* buf{1}, lo_{1}, hi{1}; elim* => b1 l1 u1.
+call{1} (zero128_total b1 l1 u1); call{2} (zero128_total b1 l1 u1).
+auto => /> hl hu r1 hr1 r2 hr2; apply BArray128.tP => i hi.
+by rewrite hr1 // hr2.
+qed.
+
+equiv fin_sha512_eq : M._sha512___sha512_finalize ~ Finsha512.F.finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
+proof.
+proc.
+seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 128 /\
+           two_blocks{1} = (W64.of_int 112 \ult fill{1})).
++ by auto => /> &2; rewrite W64.to_uintD_small and127 /=; smt(modz_cmp W64.to_uint_cmp).
+seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 112).
++ if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
+  by wp; call compress512_eq; call zero128_eq; auto => /> &2 h64 h56.
+wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, inc, out, h}); first by wp; call bswap64_eq; auto.
+wp; call compress512_eq; wp; call bswap64_eq; wp; call bswap64_eq; wp; call zero128_eq.
+by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
+qed.
 
 lemma sha512_finalize_ll : islossless M._sha512___sha512_finalize.
 proof. by conseq fin_sha512_eq Finsha512.finalize_ll => /#. qed.
@@ -817,7 +855,7 @@ lemma sha512_finalize_total (h0 : W64.t list) (m : bytes) :
 proof. by conseq sha512_finalize_ll (sha512_finalize_correct h0 m). qed.
 
 lemma sha512_mem_from_ll : islossless M._sha512____sha512_mem_from.
-proof. by conseq mf_sha512_eq Finsha512.mem_from_ll => /#. qed.
+proof. by proc; call sha512_finalize_ll; call sha512_absorb_mem_ll; auto. qed.
 
 lemma sha512_mem_from_correct (h0 : W64.t list) (p0 l0 : W64.t) :
   hoare [M._sha512____sha512_mem_from :
@@ -827,8 +865,13 @@ lemma sha512_mem_from_correct (h0 : W64.t list) (p0 l0 : W64.t) :
            = take 64 (flatten (map w64_be
                 (SHA512.hash h0 (memread Glob.mem (to_uint p0) (to_uint l0)))))].
 proof.
-conseq mf_sha512_eq (Finsha512.mem_from_correct h0 p0 l0) => [&1 h | /#].
-by exists Glob.mem{1} arg{1}.
+proc.
+ecall (sha512_finalize_correct h0 (memread Glob.mem (to_uint p0) (to_uint l0))).
+ecall (sha512_absorb_mem_correct h0 [] p0 l0); auto => /> &hr hpl hl.
+have := stream512_nil (h512 h{hr}) h{hr} witness<:BArray128.t> _ => //.
+rewrite /stream512 /= => [#] h1 h2.
+split; first by rewrite h1 h2 /=; smt(W64.to_uint_cmp).
+by move=> _ _ _ r _ _ _; rewrite JWordList.size_memread; smt(W64.to_uint_cmp).
 qed.
 
 lemma sha512_mem_from_total (h0 : W64.t list) (p0 l0 : W64.t) :
@@ -840,12 +883,21 @@ lemma sha512_mem_from_total (h0 : W64.t list) (p0 l0 : W64.t) :
                 (SHA512.hash h0 (memread Glob.mem (to_uint p0) (to_uint l0)))))] = 1%r.
 proof. by conseq sha512_mem_from_ll (sha512_mem_from_correct h0 p0 l0). qed.
 
-equiv fin_sha384_eq : M._sha384___sha512_finalize ~ Finsha384.F.finalize : ={arg} ==> ={res}.
-proof. by proc; sim. qed.
-
-equiv mf_sha384_eq : M._sha384____sha512_mem_from ~ Finsha384.F.mem_from :
-  ={arg, Glob.mem} ==> ={res, Glob.mem}.
-proof. by proc; call fin_sha384_eq; call (: ={Glob.mem}); [sim | auto]. qed.
+equiv fin_sha384_eq : M._sha384___sha512_finalize ~ Finsha384.F.finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
+proof.
+proc.
+seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 128 /\
+           two_blocks{1} = (W64.of_int 112 \ult fill{1})).
++ by auto => /> &2; rewrite W64.to_uintD_small and127 /=; smt(modz_cmp W64.to_uint_cmp).
+seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 112).
++ if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
+  by wp; call compress512_eq; call zero128_eq; auto => /> &2 h64 h56.
+wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, inc, out, h}); first by wp; call bswap64_eq; auto.
+wp; call compress512_eq; wp; call bswap64_eq; wp; call bswap64_eq; wp; call zero128_eq.
+by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
+qed.
 
 lemma sha384_finalize_ll : islossless M._sha384___sha512_finalize.
 proof. by conseq fin_sha384_eq Finsha384.finalize_ll => /#. qed.
@@ -863,7 +915,7 @@ lemma sha384_finalize_total (h0 : W64.t list) (m : bytes) :
 proof. by conseq sha384_finalize_ll (sha384_finalize_correct h0 m). qed.
 
 lemma sha384_mem_from_ll : islossless M._sha384____sha512_mem_from.
-proof. by conseq mf_sha384_eq Finsha384.mem_from_ll => /#. qed.
+proof. by proc; call sha384_finalize_ll; call sha512_absorb_mem_ll; auto. qed.
 
 lemma sha384_mem_from_correct (h0 : W64.t list) (p0 l0 : W64.t) :
   hoare [M._sha384____sha512_mem_from :
@@ -873,8 +925,13 @@ lemma sha384_mem_from_correct (h0 : W64.t list) (p0 l0 : W64.t) :
            = take 48 (flatten (map w64_be
                 (SHA512.hash h0 (memread Glob.mem (to_uint p0) (to_uint l0)))))].
 proof.
-conseq mf_sha384_eq (Finsha384.mem_from_correct h0 p0 l0) => [&1 h | /#].
-by exists Glob.mem{1} arg{1}.
+proc.
+ecall (sha384_finalize_correct h0 (memread Glob.mem (to_uint p0) (to_uint l0))).
+ecall (sha512_absorb_mem_correct h0 [] p0 l0); auto => /> &hr hpl hl.
+have := stream512_nil (h512 h{hr}) h{hr} witness<:BArray128.t> _ => //.
+rewrite /stream512 /= => [#] h1 h2.
+split; first by rewrite h1 h2 /=; smt(W64.to_uint_cmp).
+by move=> _ _ _ r _ _ _; rewrite JWordList.size_memread; smt(W64.to_uint_cmp).
 qed.
 
 lemma sha384_mem_from_total (h0 : W64.t list) (p0 l0 : W64.t) :
@@ -886,12 +943,21 @@ lemma sha384_mem_from_total (h0 : W64.t list) (p0 l0 : W64.t) :
                 (SHA512.hash h0 (memread Glob.mem (to_uint p0) (to_uint l0)))))] = 1%r.
 proof. by conseq sha384_mem_from_ll (sha384_mem_from_correct h0 p0 l0). qed.
 
-equiv fin_sha512_224_eq : M._sha512_224___sha512_finalize ~ Finsha512_224.F.finalize : ={arg} ==> ={res}.
-proof. by proc; sim. qed.
-
-equiv mf_sha512_224_eq : M._sha512_224____sha512_mem_from ~ Finsha512_224.F.mem_from :
-  ={arg, Glob.mem} ==> ={res, Glob.mem}.
-proof. by proc; call fin_sha512_224_eq; call (: ={Glob.mem}); [sim | auto]. qed.
+equiv fin_sha512_224_eq : M._sha512_224___sha512_finalize ~ Finsha512_224.F.finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
+proof.
+proc.
+seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 128 /\
+           two_blocks{1} = (W64.of_int 112 \ult fill{1})).
++ by auto => /> &2; rewrite W64.to_uintD_small and127 /=; smt(modz_cmp W64.to_uint_cmp).
+seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 112).
++ if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
+  by wp; call compress512_eq; call zero128_eq; auto => /> &2 h64 h56.
+wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, inc, out, h}); first by wp; call bswap64_eq; auto.
+wp; call compress512_eq; wp; call bswap64_eq; wp; call bswap64_eq; wp; call zero128_eq.
+by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
+qed.
 
 lemma sha512_224_finalize_ll : islossless M._sha512_224___sha512_finalize.
 proof. by conseq fin_sha512_224_eq Finsha512_224.finalize_ll => /#. qed.
@@ -909,7 +975,7 @@ lemma sha512_224_finalize_total (h0 : W64.t list) (m : bytes) :
 proof. by conseq sha512_224_finalize_ll (sha512_224_finalize_correct h0 m). qed.
 
 lemma sha512_224_mem_from_ll : islossless M._sha512_224____sha512_mem_from.
-proof. by conseq mf_sha512_224_eq Finsha512_224.mem_from_ll => /#. qed.
+proof. by proc; call sha512_224_finalize_ll; call sha512_absorb_mem_ll; auto. qed.
 
 lemma sha512_224_mem_from_correct (h0 : W64.t list) (p0 l0 : W64.t) :
   hoare [M._sha512_224____sha512_mem_from :
@@ -919,8 +985,13 @@ lemma sha512_224_mem_from_correct (h0 : W64.t list) (p0 l0 : W64.t) :
            = take 28 (flatten (map w64_be
                 (SHA512.hash h0 (memread Glob.mem (to_uint p0) (to_uint l0)))))].
 proof.
-conseq mf_sha512_224_eq (Finsha512_224.mem_from_correct h0 p0 l0) => [&1 h | /#].
-by exists Glob.mem{1} arg{1}.
+proc.
+ecall (sha512_224_finalize_correct h0 (memread Glob.mem (to_uint p0) (to_uint l0))).
+ecall (sha512_absorb_mem_correct h0 [] p0 l0); auto => /> &hr hpl hl.
+have := stream512_nil (h512 h{hr}) h{hr} witness<:BArray128.t> _ => //.
+rewrite /stream512 /= => [#] h1 h2.
+split; first by rewrite h1 h2 /=; smt(W64.to_uint_cmp).
+by move=> _ _ _ r _ _ _; rewrite JWordList.size_memread; smt(W64.to_uint_cmp).
 qed.
 
 lemma sha512_224_mem_from_total (h0 : W64.t list) (p0 l0 : W64.t) :
@@ -932,12 +1003,21 @@ lemma sha512_224_mem_from_total (h0 : W64.t list) (p0 l0 : W64.t) :
                 (SHA512.hash h0 (memread Glob.mem (to_uint p0) (to_uint l0)))))] = 1%r.
 proof. by conseq sha512_224_mem_from_ll (sha512_224_mem_from_correct h0 p0 l0). qed.
 
-equiv fin_sha512_256_eq : M._sha512_256___sha512_finalize ~ Finsha512_256.F.finalize : ={arg} ==> ={res}.
-proof. by proc; sim. qed.
-
-equiv mf_sha512_256_eq : M._sha512_256____sha512_mem_from ~ Finsha512_256.F.mem_from :
-  ={arg, Glob.mem} ==> ={res, Glob.mem}.
-proof. by proc; call fin_sha512_256_eq; call (: ={Glob.mem}); [sim | auto]. qed.
+equiv fin_sha512_256_eq : M._sha512_256___sha512_finalize ~ Finsha512_256.F.finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
+proof.
+proc.
+seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 128 /\
+           two_blocks{1} = (W64.of_int 112 \ult fill{1})).
++ by auto => /> &2; rewrite W64.to_uintD_small and127 /=; smt(modz_cmp W64.to_uint_cmp).
+seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 112).
++ if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
+  by wp; call compress512_eq; call zero128_eq; auto => /> &2 h64 h56.
+wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, inc, out, h}); first by wp; call bswap64_eq; auto.
+wp; call compress512_eq; wp; call bswap64_eq; wp; call bswap64_eq; wp; call zero128_eq.
+by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
+qed.
 
 lemma sha512_256_finalize_ll : islossless M._sha512_256___sha512_finalize.
 proof. by conseq fin_sha512_256_eq Finsha512_256.finalize_ll => /#. qed.
@@ -955,7 +1035,7 @@ lemma sha512_256_finalize_total (h0 : W64.t list) (m : bytes) :
 proof. by conseq sha512_256_finalize_ll (sha512_256_finalize_correct h0 m). qed.
 
 lemma sha512_256_mem_from_ll : islossless M._sha512_256____sha512_mem_from.
-proof. by conseq mf_sha512_256_eq Finsha512_256.mem_from_ll => /#. qed.
+proof. by proc; call sha512_256_finalize_ll; call sha512_absorb_mem_ll; auto. qed.
 
 lemma sha512_256_mem_from_correct (h0 : W64.t list) (p0 l0 : W64.t) :
   hoare [M._sha512_256____sha512_mem_from :
@@ -965,8 +1045,13 @@ lemma sha512_256_mem_from_correct (h0 : W64.t list) (p0 l0 : W64.t) :
            = take 32 (flatten (map w64_be
                 (SHA512.hash h0 (memread Glob.mem (to_uint p0) (to_uint l0)))))].
 proof.
-conseq mf_sha512_256_eq (Finsha512_256.mem_from_correct h0 p0 l0) => [&1 h | /#].
-by exists Glob.mem{1} arg{1}.
+proc.
+ecall (sha512_256_finalize_correct h0 (memread Glob.mem (to_uint p0) (to_uint l0))).
+ecall (sha512_absorb_mem_correct h0 [] p0 l0); auto => /> &hr hpl hl.
+have := stream512_nil (h512 h{hr}) h{hr} witness<:BArray128.t> _ => //.
+rewrite /stream512 /= => [#] h1 h2.
+split; first by rewrite h1 h2 /=; smt(W64.to_uint_cmp).
+by move=> _ _ _ r _ _ _; rewrite JWordList.size_memread; smt(W64.to_uint_cmp).
 qed.
 
 lemma sha512_256_mem_from_total (h0 : W64.t list) (p0 l0 : W64.t) :
