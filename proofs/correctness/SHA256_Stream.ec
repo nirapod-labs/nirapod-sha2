@@ -445,9 +445,10 @@ qed.
    SHA-256 (32 bytes) and SHA-224 (28 bytes). The theory below is that
    text with the size abstract: the module F repeats the instance body
    with BArrayD for the output array and dsize for _DSIZE, and the proofs
-   are stated over dsize. Each instance is a clone; `sim` then checks that
-   the extracted instance and the clone's F are the same program, so a
-   wrong copy fails to check instead of proving something else. *)
+   are stated over dsize. Each instance is a clone, and an equivalence
+   proved statement by statement relates the extracted instance to the
+   clone's F, so a wrong copy fails to check instead of proving something
+   else. *)
 abstract theory Final256.
 
 op dsize : int.
@@ -675,19 +676,74 @@ proof dsize_ok by done.
 clone Final256 as Fin224 with op dsize <= 28, theory BArrayD <= BArray28
 proof dsize_ok by done.
 
-equiv fin256_eq : M._sha256___sha256_finalize ~ Fin256.F.finalize : ={arg} ==> ={res}.
-proof. by proc; sim. qed.
+(* The instances against the theory. The extracted instance and the
+   clone's F are the same program text; the equivalences below check that
+   step by step. They do not ask the kernel for more than K256 states:
+   a kernel may leave the misspeculation flag in any state and may read
+   locals that only some of its branches write, so the compress calls are
+   related through their result alone (compress256_eq), and the
+   equivalences relate the outputs, not the returned flag. *)
 
-equiv fin224_eq : M._sha224___sha256_finalize ~ Fin224.F.finalize : ={arg} ==> ={res}.
-proof. by proc; sim. qed.
+lemma h256_inj (a b : BArray32.t) : h256 a = h256 b => a = b.
+proof.
+move=> heq; apply BArray32.tP => i hi.
+have hw : BArray32.get32 a (i %/ 4) = BArray32.get32 b (i %/ 4).
++ by rewrite -!nth_h256 1,2:/# heq.
+have -> : i = 4 * (i %/ 4) + i %% 4 by smt(divz_eq).
+by rewrite -!BArray32.get32d_byte 1,2:/# hw.
+qed.
 
-equiv mf256_eq : M._sha256____sha256_mem_from ~ Fin256.F.mem_from :
-  ={arg, Glob.mem} ==> ={res, Glob.mem}.
-proof. by proc; call fin256_eq; call (: ={Glob.mem}); [sim | auto]. qed.
+equiv compress256_eq : M._sha256_compress ~ M._sha256_compress : ={h, block} ==> res{1}.`1 = res{2}.`1.
+proof.
+proc*; exists* h{1}, block{1}; elim* => h1 b1.
+call{1} (K256.compress_total (h256 h1) b1); call{2} (K256.compress_total (h256 h1) b1).
+by auto => /> r1 hr1 r2 hr2; apply h256_inj; rewrite hr1 hr2.
+qed.
 
-equiv mf224_eq : M._sha224____sha256_mem_from ~ Fin224.F.mem_from :
-  ={arg, Glob.mem} ==> ={res, Glob.mem}.
-proof. by proc; call fin224_eq; call (: ={Glob.mem}); [sim | auto]. qed.
+equiv zero64_eq : M.__zero64 ~ M.__zero64 :
+  ={buf, lo_, hi} /\ to_uint lo_{1} <= to_uint hi{1} <= 64 ==> res{1}.`1 = res{2}.`1.
+proof.
+proc*; exists* buf{1}, lo_{1}, hi{1}; elim* => b1 l1 u1.
+call{1} (zero64_total b1 l1 u1); call{2} (zero64_total b1 l1 u1).
+auto => /> hl hu r1 hr1 r2 hr2; apply BArray64.tP => i hi.
+by rewrite hr1 // hr2.
+qed.
+
+equiv bswap32_eq : M.__bswap32 ~ M.__bswap32 : ={x} ==> ={res}.
+proof. by proc; auto. qed.
+
+equiv bswap64_eq : M.__bswap64 ~ M.__bswap64 : ={x} ==> ={res}.
+proof. by proc; auto. qed.
+
+equiv fin256_eq : M._sha256___sha256_finalize ~ Fin256.F.finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
+proof.
+proc.
+seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 64 /\
+           two_blocks{1} = (W64.of_int 56 \ult fill{1})).
++ by auto => /> &2; rewrite W64.to_uintD_small and63 /=; smt(modz_cmp W64.to_uint_cmp).
+seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 56).
++ if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
+  by wp; call compress256_eq; call zero64_eq; auto => /> &2 h64 h56.
+wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; call compress256_eq; wp; call bswap64_eq; wp; call zero64_eq.
+by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
+qed.
+
+equiv fin224_eq : M._sha224___sha256_finalize ~ Fin224.F.finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
+proof.
+proc.
+seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 64 /\
+           two_blocks{1} = (W64.of_int 56 \ult fill{1})).
++ by auto => /> &2; rewrite W64.to_uintD_small and63 /=; smt(modz_cmp W64.to_uint_cmp).
+seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 56).
++ if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
+  by wp; call compress256_eq; call zero64_eq; auto => /> &2 h64 h56.
+wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; call compress256_eq; wp; call bswap64_eq; wp; call zero64_eq.
+by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
+qed.
 
 (* The instances, moved across the equivalences. *)
 
@@ -722,10 +778,10 @@ lemma sha224_finalize_total (h0 : W32.t list) (m : bytes) :
 proof. by conseq sha224_finalize_ll (sha224_finalize_correct h0 m). qed.
 
 lemma sha256_mem_from_ll : islossless M._sha256____sha256_mem_from.
-proof. by conseq mf256_eq Fin256.mem_from_ll => /#. qed.
+proof. by proc; call sha256_finalize_ll; call sha256_absorb_mem_ll; auto. qed.
 
 lemma sha224_mem_from_ll : islossless M._sha224____sha256_mem_from.
-proof. by conseq mf224_eq Fin224.mem_from_ll => /#. qed.
+proof. by proc; call sha224_finalize_ll; call sha256_absorb_mem_ll; auto. qed.
 
 lemma sha256_mem_from_correct (h0 : W32.t list) (p0 l0 : W64.t) :
   hoare [M._sha256____sha256_mem_from :
@@ -735,8 +791,13 @@ lemma sha256_mem_from_correct (h0 : W32.t list) (p0 l0 : W64.t) :
            = take 32 (flatten (map w32_be
                 (SHA256.hash h0 (memread Glob.mem (to_uint p0) (to_uint l0)))))].
 proof.
-conseq mf256_eq (Fin256.mem_from_correct h0 p0 l0) => [&1 h | /#].
-by exists Glob.mem{1} arg{1}.
+proc.
+ecall (sha256_finalize_correct h0 (memread Glob.mem (to_uint p0) (to_uint l0))).
+ecall (sha256_absorb_mem_correct h0 [] p0 l0); auto => /> &hr hpl hl.
+have := stream256_nil (h256 h{hr}) h{hr} witness<:BArray64.t> _ => //.
+rewrite /stream256 /= => [#] h1 h2.
+split; first by rewrite h1 h2 /=; smt(W64.to_uint_cmp).
+by move=> _ _ _ r _ _ _; rewrite JWordList.size_memread; smt(W64.to_uint_cmp).
 qed.
 
 lemma sha224_mem_from_correct (h0 : W32.t list) (p0 l0 : W64.t) :
@@ -747,8 +808,13 @@ lemma sha224_mem_from_correct (h0 : W32.t list) (p0 l0 : W64.t) :
            = take 28 (flatten (map w32_be
                 (SHA256.hash h0 (memread Glob.mem (to_uint p0) (to_uint l0)))))].
 proof.
-conseq mf224_eq (Fin224.mem_from_correct h0 p0 l0) => [&1 h | /#].
-by exists Glob.mem{1} arg{1}.
+proc.
+ecall (sha224_finalize_correct h0 (memread Glob.mem (to_uint p0) (to_uint l0))).
+ecall (sha256_absorb_mem_correct h0 [] p0 l0); auto => /> &hr hpl hl.
+have := stream256_nil (h256 h{hr}) h{hr} witness<:BArray64.t> _ => //.
+rewrite /stream256 /= => [#] h1 h2.
+split; first by rewrite h1 h2 /=; smt(W64.to_uint_cmp).
+by move=> _ _ _ r _ _ _; rewrite JWordList.size_memread; smt(W64.to_uint_cmp).
 qed.
 
 lemma sha256_mem_from_total (h0 : W32.t list) (p0 l0 : W64.t) :

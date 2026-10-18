@@ -286,7 +286,7 @@ proof. by conseq sha256_ctx_update_ll (sha256_ctx_update_correct c0 tag0 h0 m p0
    src/sha256.jinc does for __sha256_finalize (SHA256_Stream.ec); the
    theory below repeats it with the size abstract, over the finalize of
    Final256 at the same size, and each instance is a clone checked
-   against the extracted text by sim. *)
+   against the extracted text by an equivalence. *)
 abstract theory CtxFinal256.
 
 op dsize : int.
@@ -398,13 +398,27 @@ proof dsize_ok by done.
 clone CtxFinal256 as CF224 with op dsize <= 28, theory BArrayD <= BArray28
 proof dsize_ok by done.
 
-equiv cf224_fin_eq : M._sha224___sha256_finalize ~ CF224.FD.F.finalize : ={arg} ==> ={res}.
-proof. by proc; sim. qed.
+equiv cf224_fin_eq : M._sha224___sha256_finalize ~ CF224.FD.F.finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
+proof.
+proc.
+seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 64 /\
+           two_blocks{1} = (W64.of_int 56 \ult fill{1})).
++ by auto => /> &2; rewrite W64.to_uintD_small and63 /=; smt(modz_cmp W64.to_uint_cmp).
+seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 56).
++ if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
+  by wp; call compress256_eq; call zero64_eq; auto => /> &2 h64 h56.
+wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; call compress256_eq; wp; call bswap64_eq; wp; call zero64_eq.
+by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
+qed.
 
-equiv cf224_fz_eq : M._sha224_ctx____ctx_finalize ~ CF224.C.ctx_finalize : ={arg} ==> ={res}.
-proof. by proc; wp; call cf224_fin_eq; auto. qed.
+equiv cf224_fz_eq : M._sha224_ctx____ctx_finalize ~ CF224.C.ctx_finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2.
+proof. by proc; wp; call cf224_fin_eq; auto => /> &2 [a b c d] [a2 b2 c2 d2] /= *; subst. qed.
 
-equiv cf224_eq : M._sha224_ctx___sha2_ctx_final ~ CF224.C.ctx_final : ={arg} ==> ={res}.
+equiv cf224_eq : M._sha224_ctx___sha2_ctx_final ~ CF224.C.ctx_final : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
 proof.
 proc; seq 3 3 : (={ctx, digest, expect_0, ms, tag, total, status, ok}); first by sim.
 if => //; last by auto.
@@ -437,13 +451,27 @@ lemma sha224_ctx_final_total (c0 : BArray112.t) (tag0 : W64.t) (h0 : W32.t list)
               forall i, 0 <= i < 112 => BArray112.get8 res.`1 i = W8.zero)] = 1%r.
 proof. by conseq sha224_ctx_final_ll (sha224_ctx_final_correct c0 tag0 h0 m d0). qed.
 
-equiv cf256_fin_eq : M._sha256___sha256_finalize ~ CF256.FD.F.finalize : ={arg} ==> ={res}.
-proof. by proc; sim. qed.
+equiv cf256_fin_eq : M._sha256___sha256_finalize ~ CF256.FD.F.finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
+proof.
+proc.
+seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 64 /\
+           two_blocks{1} = (W64.of_int 56 \ult fill{1})).
++ by auto => /> &2; rewrite W64.to_uintD_small and63 /=; smt(modz_cmp W64.to_uint_cmp).
+seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 56).
++ if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
+  by wp; call compress256_eq; call zero64_eq; auto => /> &2 h64 h56.
+wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; call compress256_eq; wp; call bswap64_eq; wp; call zero64_eq.
+by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
+qed.
 
-equiv cf256_fz_eq : M._sha256_ctx____ctx_finalize ~ CF256.C.ctx_finalize : ={arg} ==> ={res}.
-proof. by proc; wp; call cf256_fin_eq; auto. qed.
+equiv cf256_fz_eq : M._sha256_ctx____ctx_finalize ~ CF256.C.ctx_finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2.
+proof. by proc; wp; call cf256_fin_eq; auto => /> &2 [a b c d] [a2 b2 c2 d2] /= *; subst. qed.
 
-equiv cf256_eq : M._sha256_ctx___sha2_ctx_final ~ CF256.C.ctx_final : ={arg} ==> ={res}.
+equiv cf256_eq : M._sha256_ctx___sha2_ctx_final ~ CF256.C.ctx_final : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
 proof.
 proc; seq 3 3 : (={ctx, digest, expect_0, ms, tag, total, status, ok}); first by sim.
 if => //; last by auto.

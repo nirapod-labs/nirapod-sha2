@@ -242,7 +242,7 @@ proof. by conseq sha512_ctx_update_ll (sha512_ctx_update_correct c0 tag0 h0 m p0
    src/sha512.jinc does for __sha512_finalize (SHA512_Stream.ec); the
    theory below repeats it with the size abstract, over the finalize of
    Final512 at the same size, and each instance is a clone checked
-   against the extracted text by sim. *)
+   against the extracted text by an equivalence. *)
 abstract theory CtxFinal512.
 
 op dsize : int.
@@ -360,13 +360,28 @@ proof dsize_ok by done.
 clone CtxFinal512 as CFsha512_256 with op dsize <= 32, theory BArrayD <= BArray32
 proof dsize_ok by done.
 
-equiv cfsha512_fin_eq : M._sha512___sha512_finalize ~ CFsha512.FD.F.finalize : ={arg} ==> ={res}.
-proof. by proc; sim. qed.
+equiv cfsha512_fin_eq : M._sha512___sha512_finalize ~ CFsha512.FD.F.finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
+proof.
+proc.
+seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 128 /\
+           two_blocks{1} = (W64.of_int 112 \ult fill{1})).
++ by auto => /> &2; rewrite W64.to_uintD_small and127 /=; smt(modz_cmp W64.to_uint_cmp).
+seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 112).
++ if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
+  by wp; call compress512_eq; call zero128_eq; auto => /> &2 h64 h56.
+wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, inc, out, h}); first by wp; call bswap64_eq; auto.
+wp; call compress512_eq; wp; call bswap64_eq; wp; call bswap64_eq; wp; call zero128_eq.
+by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
+qed.
 
-equiv cfsha512_fz_eq : M._sha512_ctx____ctx_finalize ~ CFsha512.C.ctx_finalize : ={arg} ==> ={res}.
-proof. by proc; wp; call cfsha512_fin_eq; auto. qed.
+equiv cfsha512_fz_eq : M._sha512_ctx____ctx_finalize ~ CFsha512.C.ctx_finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2.
+proof. by proc; wp; call cfsha512_fin_eq; auto => /> &2 [a b c d] [a2 b2 c2 d2] /= *; subst. qed.
 
-equiv cfsha512_eq : M._sha512_ctx___sha2_ctx_final ~ CFsha512.C.ctx_final : ={arg} ==> ={res}.
+equiv cfsha512_eq : M._sha512_ctx___sha2_ctx_final ~ CFsha512.C.ctx_final : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
 proof.
 proc; seq 3 3 : (={ctx, digest, expect_0, ms, tag, total, status, ok}); first by sim.
 if => //; last by auto.
@@ -399,13 +414,28 @@ lemma sha512_ctx_final_total (c0 : BArray208.t) (tag0 : W64.t) (h0 : W64.t list)
               forall i, 0 <= i < 208 => BArray208.get8 res.`1 i = W8.zero)] = 1%r.
 proof. by conseq sha512_ctx_final_ll (sha512_ctx_final_correct c0 tag0 h0 m d0). qed.
 
-equiv cfsha384_fin_eq : M._sha384___sha512_finalize ~ CFsha384.FD.F.finalize : ={arg} ==> ={res}.
-proof. by proc; sim. qed.
+equiv cfsha384_fin_eq : M._sha384___sha512_finalize ~ CFsha384.FD.F.finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
+proof.
+proc.
+seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 128 /\
+           two_blocks{1} = (W64.of_int 112 \ult fill{1})).
++ by auto => /> &2; rewrite W64.to_uintD_small and127 /=; smt(modz_cmp W64.to_uint_cmp).
+seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 112).
++ if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
+  by wp; call compress512_eq; call zero128_eq; auto => /> &2 h64 h56.
+wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, inc, out, h}); first by wp; call bswap64_eq; auto.
+wp; call compress512_eq; wp; call bswap64_eq; wp; call bswap64_eq; wp; call zero128_eq.
+by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
+qed.
 
-equiv cfsha384_fz_eq : M._sha384_ctx____ctx_finalize ~ CFsha384.C.ctx_finalize : ={arg} ==> ={res}.
-proof. by proc; wp; call cfsha384_fin_eq; auto. qed.
+equiv cfsha384_fz_eq : M._sha384_ctx____ctx_finalize ~ CFsha384.C.ctx_finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2.
+proof. by proc; wp; call cfsha384_fin_eq; auto => /> &2 [a b c d] [a2 b2 c2 d2] /= *; subst. qed.
 
-equiv cfsha384_eq : M._sha384_ctx___sha2_ctx_final ~ CFsha384.C.ctx_final : ={arg} ==> ={res}.
+equiv cfsha384_eq : M._sha384_ctx___sha2_ctx_final ~ CFsha384.C.ctx_final : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
 proof.
 proc; seq 3 3 : (={ctx, digest, expect_0, ms, tag, total, status, ok}); first by sim.
 if => //; last by auto.
@@ -438,13 +468,28 @@ lemma sha384_ctx_final_total (c0 : BArray208.t) (tag0 : W64.t) (h0 : W64.t list)
               forall i, 0 <= i < 208 => BArray208.get8 res.`1 i = W8.zero)] = 1%r.
 proof. by conseq sha384_ctx_final_ll (sha384_ctx_final_correct c0 tag0 h0 m d0). qed.
 
-equiv cfsha512_224_fin_eq : M._sha512_224___sha512_finalize ~ CFsha512_224.FD.F.finalize : ={arg} ==> ={res}.
-proof. by proc; sim. qed.
+equiv cfsha512_224_fin_eq : M._sha512_224___sha512_finalize ~ CFsha512_224.FD.F.finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
+proof.
+proc.
+seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 128 /\
+           two_blocks{1} = (W64.of_int 112 \ult fill{1})).
++ by auto => /> &2; rewrite W64.to_uintD_small and127 /=; smt(modz_cmp W64.to_uint_cmp).
+seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 112).
++ if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
+  by wp; call compress512_eq; call zero128_eq; auto => /> &2 h64 h56.
+wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, inc, out, h}); first by wp; call bswap64_eq; auto.
+wp; call compress512_eq; wp; call bswap64_eq; wp; call bswap64_eq; wp; call zero128_eq.
+by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
+qed.
 
-equiv cfsha512_224_fz_eq : M._sha512_224_ctx____ctx_finalize ~ CFsha512_224.C.ctx_finalize : ={arg} ==> ={res}.
-proof. by proc; wp; call cfsha512_224_fin_eq; auto. qed.
+equiv cfsha512_224_fz_eq : M._sha512_224_ctx____ctx_finalize ~ CFsha512_224.C.ctx_finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2.
+proof. by proc; wp; call cfsha512_224_fin_eq; auto => /> &2 [a b c d] [a2 b2 c2 d2] /= *; subst. qed.
 
-equiv cfsha512_224_eq : M._sha512_224_ctx___sha2_ctx_final ~ CFsha512_224.C.ctx_final : ={arg} ==> ={res}.
+equiv cfsha512_224_eq : M._sha512_224_ctx___sha2_ctx_final ~ CFsha512_224.C.ctx_final : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
 proof.
 proc; seq 3 3 : (={ctx, digest, expect_0, ms, tag, total, status, ok}); first by sim.
 if => //; last by auto.
@@ -477,13 +522,28 @@ lemma sha512_224_ctx_final_total (c0 : BArray208.t) (tag0 : W64.t) (h0 : W64.t l
               forall i, 0 <= i < 208 => BArray208.get8 res.`1 i = W8.zero)] = 1%r.
 proof. by conseq sha512_224_ctx_final_ll (sha512_224_ctx_final_correct c0 tag0 h0 m d0). qed.
 
-equiv cfsha512_256_fin_eq : M._sha512_256___sha512_finalize ~ CFsha512_256.FD.F.finalize : ={arg} ==> ={res}.
-proof. by proc; sim. qed.
+equiv cfsha512_256_fin_eq : M._sha512_256___sha512_finalize ~ CFsha512_256.FD.F.finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
+proof.
+proc.
+seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 128 /\
+           two_blocks{1} = (W64.of_int 112 \ult fill{1})).
++ by auto => /> &2; rewrite W64.to_uintD_small and127 /=; smt(modz_cmp W64.to_uint_cmp).
+seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 112).
++ if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
+  by wp; call compress512_eq; call zero128_eq; auto => /> &2 h64 h56.
+wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, inc, out, h}); first by wp; call bswap64_eq; auto.
+wp; call compress512_eq; wp; call bswap64_eq; wp; call bswap64_eq; wp; call zero128_eq.
+by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
+qed.
 
-equiv cfsha512_256_fz_eq : M._sha512_256_ctx____ctx_finalize ~ CFsha512_256.C.ctx_finalize : ={arg} ==> ={res}.
-proof. by proc; wp; call cfsha512_256_fin_eq; auto. qed.
+equiv cfsha512_256_fz_eq : M._sha512_256_ctx____ctx_finalize ~ CFsha512_256.C.ctx_finalize : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2.
+proof. by proc; wp; call cfsha512_256_fin_eq; auto => /> &2 [a b c d] [a2 b2 c2 d2] /= *; subst. qed.
 
-equiv cfsha512_256_eq : M._sha512_256_ctx___sha2_ctx_final ~ CFsha512_256.C.ctx_final : ={arg} ==> ={res}.
+equiv cfsha512_256_eq : M._sha512_256_ctx___sha2_ctx_final ~ CFsha512_256.C.ctx_final : ={arg} ==>
+  res{1}.`1 = res{2}.`1 /\ res{1}.`2 = res{2}.`2 /\ res{1}.`3 = res{2}.`3.
 proof.
 proc; seq 3 3 : (={ctx, digest, expect_0, ms, tag, total, status, ok}); first by sim.
 if => //; last by auto.
