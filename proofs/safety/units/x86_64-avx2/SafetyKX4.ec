@@ -10,4 +10,4 @@
  * unit.
  *)
 
-require export SHA512_Avx2X4_Safety.
+require export SHA512_X4_Avx2_Safety.

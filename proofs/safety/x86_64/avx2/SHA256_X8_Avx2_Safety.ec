@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA256_Avx2X8_Safety.ec
+ * SHA256_X8_Avx2_Safety.ec
  * =======================
  *
  * Safety of the 8-way SHA-256 AVX2 kernel

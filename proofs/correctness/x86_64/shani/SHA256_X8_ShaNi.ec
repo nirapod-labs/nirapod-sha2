@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA256_ShaNiX8.ec
+ * SHA256_X8_ShaNi.ec
  * =================
  *
  * Functional correctness of the 8-way SHA-256 kernel on the x86 SHA
@@ -20,8 +20,8 @@
  * total correctness, from a hoare proof and a losslessness proof.
  *
  * Structure. The kernel runs the four pairs of lanes (4f + 2r,
- * 4f + 2r + 1) in turn: load the pair (SHA256_ShaNiX8Pair.load_pair_spec),
- * its blocks (SHA256_ShaNiX8Block.block2_correct), store the pair
+ * 4f + 2r + 1) in turn: load the pair (SHA256_X8_ShaNiPair.load_pair_spec),
+ * its blocks (SHA256_X8_ShaNiBlock.block2_correct), store the pair
  * (store_pair_spec). Before pair p = 2f + r, lanes below 2p hold their
  * result and the others their input.
  *)
@@ -33,7 +33,7 @@ from Jasmin require import JWord JUtils JMemory JModel_x86.
 require import BArray16 BArray64 BArray128 BArray256 BArray512.
 require import NirapodSha2.
 require import Bytes FIPS180_SHA2 WordSpec Vec Arrays SpecRounds ShaNi Mem Lanes.
-require import SHA256_ShaNiX8Pair SHA256_ShaNiX8Block.
+require import SHA256_X8_ShaNiPair SHA256_X8_ShaNiBlock.
 require JWordList SHA256_ShaNi.
 import SHA256 R256.
 

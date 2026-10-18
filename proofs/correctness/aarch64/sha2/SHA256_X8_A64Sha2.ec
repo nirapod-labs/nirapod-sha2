@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA256_A64Sha2X8.ec (aarch64/sha2)
+ * SHA256_X8_A64Sha2.ec (aarch64/sha2)
  * ==================================
  *
  * Functional correctness, lane by lane, of the eight-way entry point
@@ -10,7 +10,7 @@
  * (src/aarch64/sha2/sha256_x8_compress.jinc, FEAT_SHA256) against FIPS
  * 180-4 section 6.2.2: every lane k ends with compress applied to its own
  * chaining value and its own block. The entry point that reads the blocks
- * from memory is proven in SHA256_A64Sha2X8Lanes.ec.
+ * from memory is proven in SHA256_X8_A64Sha2Lanes.ec.
  *
  * Representation. The eight chaining values are u32[64], word-major:
  * word w of lane k is u32 8w + k (lane8 of lib/Lanes.ec), so the 128-bit
@@ -19,7 +19,7 @@
  * f = 0, 1 (lanes 4f .. 4f + 3) at a time: __sha256_x8_load_half
  * transposes its 4x4 blocks of words (tr4 of Vec.ec) so that st[2l + q]
  * holds words 4q .. 4q + 3 of lane 4f + l, the state layout of the one-way
- * kernel; __sha256_x8_block2 (SHA256_A64Sha2X8Block.ec) runs pairs r = 0,
+ * kernel; __sha256_x8_block2 (SHA256_X8_A64Sha2Block.ec) runs pairs r = 0,
  * 1 of that half; __sha256_x8_store_half transposes back.
  *
  * Theorems:
@@ -39,7 +39,7 @@ from Jasmin require import JWord JUtils JModel_armv8a.
 require import BArray32 BArray64 BArray128 BArray256 BArray512.
 require import NirapodSha2 WordSpec.
 require import Bytes FIPS180_SHA2 Rounds256 Vec Sha2Insn Lanes.
-require import SHA256_A64Sha2 SHA256_A64Sha2Blocks SHA256_A64Sha2X8Block.
+require import SHA256_A64Sha2 SHA256_A64Sha2Blocks SHA256_X8_A64Sha2Block.
 require Arrays.
 import SHA256 A256.
 

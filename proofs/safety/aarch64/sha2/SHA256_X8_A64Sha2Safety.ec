@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA256_A64Sha2X8Safety.ec (aarch64/sha2)
+ * SHA256_X8_A64Sha2Safety.ec (aarch64/sha2)
  * ========================================
  *
  * Safety of the AArch64 8-way SHA-256 instruction kernel

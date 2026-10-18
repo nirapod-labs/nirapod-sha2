@@ -10,4 +10,4 @@
  * unit.
  *)
 
-require export SHA256_Avx2X8_Safety.
+require export SHA256_X8_Avx2_Safety.

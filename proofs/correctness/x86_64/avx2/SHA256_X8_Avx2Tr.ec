@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA256_Avx2X8Tr.ec (x86_64, avx2)
+ * SHA256_X8_Avx2Tr.ec (x86_64, avx2)
  * =================================
  *
  * The transpose of the 8-way SHA-256 AVX2 kernel
@@ -18,7 +18,7 @@ require import AllCore List IntDiv.
 from Jasmin require import JWord JUtils JMemory JModel_x86.
 require import BArray256.
 require import NirapodSha2.
-require import WordSpec SHA256_Avx2X8Vec SHA256_Avx2X8Rounds.
+require import WordSpec SHA256_X8_Avx2Vec SHA256_X8_Avx2Rounds.
 
 (* ------------------------------------------------------------------ *)
 (* __sha256_x8_transpose                                              *)

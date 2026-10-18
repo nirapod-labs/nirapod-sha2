@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA256_A64Sha2X8Lanes.ec (aarch64/sha2)
+ * SHA256_X8_A64Sha2Lanes.ec (aarch64/sha2)
  * =======================================
  *
  * Functional correctness, lane by lane, of _sha256_x8_compress_lanes of
@@ -12,7 +12,7 @@
  * over them.
  *
  * The halves and the transposes are those of _sha256_x8_compress
- * (SHA256_A64Sha2X8.ec). Inside a half, pair r runs its n blocks to the
+ * (SHA256_X8_A64Sha2.ec). Inside a half, pair r runs its n blocks to the
  * end before pair r + 1 starts; after j of them the two lanes of the pair
  * hold the fold over their first j blocks (pairat), and the other pairs
  * are untouched (others).
@@ -35,7 +35,7 @@ from Jasmin require import JWord JUtils JModel_armv8a.
 require import BArray32 BArray64 BArray128 BArray256 BArray512.
 require import NirapodSha2 WordSpec.
 require import Bytes FIPS180_SHA2 Rounds256 Vec Sha2Insn Lanes.
-require import SHA256_A64Sha2 SHA256_A64Sha2Blocks SHA256_A64Sha2X8Block SHA256_A64Sha2X8.
+require import SHA256_A64Sha2 SHA256_A64Sha2Blocks SHA256_X8_A64Sha2Block SHA256_X8_A64Sha2.
 require JWordList.
 import SHA256 A256.
 

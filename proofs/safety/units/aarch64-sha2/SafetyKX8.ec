@@ -9,4 +9,4 @@
  * it: its safety lemmas, re-exported under one theory name on every unit.
  *)
 
-require export SHA256_A64Sha2X8Safety.
+require export SHA256_X8_A64Sha2Safety.

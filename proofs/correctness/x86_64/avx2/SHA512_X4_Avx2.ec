@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA512_Avx2X4.ec (x86_64, avx2)
+ * SHA512_X4_Avx2.ec (x86_64, avx2)
  * ===============================
  *
  * Functional correctness and termination of the entry points of the
@@ -30,11 +30,11 @@ from Jasmin require import JWord JUtils JMemory JModel_x86.
 require import BArray32 BArray256 BArray512 BArray2560.
 require import NirapodSha2.
 require import Bytes FIPS180_SHA2 WordSpec Lanes64 Mem512 Rounds512 Lanes.
-require import SHA512_Avx2X4Vec SHA512_Avx2X4Rounds SHA512_Avx2X4Sched SHA512_Avx2X4Block.
+require import SHA512_X4_Avx2Vec SHA512_X4_Avx2Rounds SHA512_X4_Avx2Sched SHA512_X4_Avx2Block.
 import SHA512.
 
-clone SHA512_Avx2X4Vec.X4Lanes as B32 with theory A <- BArray32.
-clone SHA512_Avx2X4Vec.X4Lanes as B512 with theory A <- BArray512.
+clone SHA512_X4_Avx2Vec.X4Lanes as B32 with theory A <- BArray32.
+clone SHA512_X4_Avx2Vec.X4Lanes as B512 with theory A <- BArray512.
 
 (* ------------------------------------------------------------------ *)
 (* __sha512_x4_transpose                                              *)

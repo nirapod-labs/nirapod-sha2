@@ -18,8 +18,8 @@
  *
  * A lane is lane4 of lib/Lanes.ec over the interleaved state. Here the
  * kernel is the FEAT_SHA512 one (src/aarch64/sha2/sha512_x4_compress.jinc),
- * proven in correctness/aarch64/sha2/SHA512_A64Sha2X4.ec and
- * SHA512_A64Sha2X4Lanes.ec. The precondition on in[k] + off here, without
+ * proven in correctness/aarch64/sha2/SHA512_X4_A64Sha2.ec and
+ * SHA512_X4_A64Sha2Lanes.ec. The precondition on in[k] + off here, without
  * wrap-around, gives the one of those files.
  *)
 
@@ -28,28 +28,28 @@ require BitEncoding.
 import BitEncoding.BitChunking.
 from Jasmin require import JWord JUtils JMemory.
 require import BArray32 BArray256 BArray512 NirapodSha2 FIPS180_SHA2 Lanes.
-require JWordList SHA512_A64Sha2X4 SHA512_A64Sha2X4Lanes.
+require JWordList SHA512_X4_A64Sha2 SHA512_X4_A64Sha2Lanes.
 import SHA512.
 
 lemma compress_ll : islossless M._sha512_x4_compress.
-proof. exact SHA512_A64Sha2X4.sha512_x4_compress_ll. qed.
+proof. exact SHA512_X4_A64Sha2.sha512_x4_compress_ll. qed.
 
 lemma compress_lanes_ll : islossless M._sha512_x4_compress_lanes.
-proof. exact SHA512_A64Sha2X4Lanes.sha512_x4_compress_lanes_ll. qed.
+proof. exact SHA512_X4_A64Sha2Lanes.sha512_x4_compress_lanes_ll. qed.
 
 lemma compress_correct (h0 : BArray256.t) (blk : BArray512.t) :
   hoare [M._sha512_x4_compress :
            h4 = h0 /\ blocks = blk ==>
            forall k, 0 <= k < 4 =>
              lane4 (BArray256.get64 res.`1) k = compress (lane4 (BArray256.get64 h0) k) (map be64 (chunk 8 (lane_block 128 (BArray512.to_list blk) k)))].
-proof. exact (SHA512_A64Sha2X4.sha512_x4_compress_correct h0 blk). qed.
+proof. exact (SHA512_X4_A64Sha2.sha512_x4_compress_correct h0 blk). qed.
 
 lemma compress_total (h0 : BArray256.t) (blk : BArray512.t) :
   phoare [M._sha512_x4_compress :
            h4 = h0 /\ blocks = blk ==>
            forall k, 0 <= k < 4 =>
              lane4 (BArray256.get64 res.`1) k = compress (lane4 (BArray256.get64 h0) k) (map be64 (chunk 8 (lane_block 128 (BArray512.to_list blk) k)))] = 1%r.
-proof. exact (SHA512_A64Sha2X4.sha512_x4_compress_total h0 blk). qed.
+proof. exact (SHA512_X4_A64Sha2.sha512_x4_compress_total h0 blk). qed.
 
 lemma compress_lanes_correct (h0 : BArray256.t) (in0 : BArray32.t) (off0 n0 : W64.t) :
   hoare [M._sha512_x4_compress_lanes :
@@ -68,9 +68,9 @@ case: (forall q, 0 <= q < 4 =>
     to_uint (BArray32.get64 in0 k + off0) = to_uint (BArray32.get64 in0 k) + to_uint off0.
   + move=> k hk; rewrite W64.to_uintD_small //.
     by have := hb k hk; smt(W64.to_uint_cmp).
-  have hbnd : SHA512_A64Sha2X4Lanes.bnd4 in0 off0 n0.
+  have hbnd : SHA512_X4_A64Sha2Lanes.bnd4 in0 off0 n0.
   + by move=> k hk; rewrite /addr4 ha // hb.
-  conseq (SHA512_A64Sha2X4Lanes.sha512_x4_compress_lanes_correct h0 in0 off0 n0) => //.
+  conseq (SHA512_X4_A64Sha2Lanes.sha512_x4_compress_lanes_correct h0 in0 off0 n0) => //.
   by move=> &m _ r h k hk; rewrite -ha // h.
 by exfalso.
 qed.

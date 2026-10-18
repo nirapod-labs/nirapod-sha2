@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA512_Avx2X4Vec.ec (x86_64, avx2)
+ * SHA512_X4_Avx2Vec.ec (x86_64, avx2)
  * ==================================
  *
  * The AVX2 instructions of the 4-way SHA-512 kernel
