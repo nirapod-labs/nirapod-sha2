@@ -184,6 +184,9 @@ op rs (S : int -> state) (WS : int -> W32.t list) (g i : int) : W128.t =
   if i %% 2 = 0 then st4a (rounds (WS (i %/ 2)) (S (i %/ 2)) 0 (4 * g))
   else st4e (rounds (WS (i %/ 2)) (S (i %/ 2)) 0 (4 * g)).
 
+lemma cases4 (i : int) : 0 <= i < 4 => i = 0 \/ i = 1 \/ i = 2 \/ i = 3.
+proof. smt(). qed.
+
 lemma rs_lane S WS st r g :
   (forall l, 0 <= l < 2 => lane_st S WS st r l g) =>
   forall i, 0 <= i < 4 => BArray128.get128 st (4 * r + i) = rs S WS g i.
@@ -191,7 +194,7 @@ proof.
 move=> h i hi; have [h0 h1] := h 0 _; 1: done.
 have [h2 h3] := h 1 _; 1: done.
 move: h0 h1 h2 h3; rewrite /rs /= => h0 h1 h2 h3.
-have : i = 0 \/ i = 1 \/ i = 2 \/ i = 3 by smt().
+have := cases4 i hi.
 by case=> [->|[->|[->|->]]] /=; rewrite ?h0 ?h1 ?h2 ?h3.
 qed.
 
