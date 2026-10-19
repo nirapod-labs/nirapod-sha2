@@ -540,6 +540,12 @@ rewrite -bswap32_bits8 1:/# -(hk (j %/ 4)) 1:/# BArrayD.get32d_byte 1:/#.
 by congr; smt(divz_eq).
 qed.
 
+(* The buffered tail and its padding fill one block. Stated alone so that
+   the solver sees only these facts. *)
+lemma size_tail_pad256 (m : bytes) :
+  size (tail 64 m) + size ([W8.of_int 128] ++ zeros (63 - size m %% 64)) = 64.
+proof. by rewrite size_tail // size_cat size_zeros /=; smt(modz_cmp). qed.
+
 lemma finalize_correct (h0 : W32.t list) (m : bytes) :
   hoare [F.finalize :
            stream256 h0 m h buf total /\ size m < 2^61 ==>
@@ -576,7 +582,7 @@ seq 1 : (to_uint fill = size (mfin 64 8 m) %% 64 /\ size (mfin 64 8 m) %% 64 <= 
                = tail 64 m ++ y.
     + by rewrite hsr -cats1 -catA /y /#.
     have hsy : size (tail 64 m ++ y) = 64.
-    + by rewrite size_cat size_tail // /y size_cat size_zeros /=; smt().
+    + by rewrite size_cat /y size_tail_pad256.
     have hl := pending_full b1 _ hsy _; first by rewrite -hty.
     have [hc ht0] := parse_close m y hsy.
     have hmf : mfin 64 8 m = m ++ y by rewrite /mfin ifF 1:/# -catA.

@@ -10,4 +10,4 @@
  * unit.
  *)
 
-require export SHA256_ShaNiX8_Safety.
+require export SHA256_X8_ShaNi_Safety.

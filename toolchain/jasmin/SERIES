@@ -11,3 +11,39 @@
 #
 # PATCHES.md explains each patch.
 
+patches/0001-arch-architecture-specific-conditions-on-memory-argu.patch 23f57722e14b276359d870b718c2c8ffd3a9a663f31beaf5ed7825c94b71e8c0
+patches/0002-armv8a-add-the-LDP-and-STP-instructions.patch cac19b50cabb20517c6ab06dba6bbfeba05bad28da4635af6c0b2860bc2e04a1
+patches/0003-armv8a-changelog-entry-for-LDP-and-STP.patch 650f3593a0083038d5a9bc660ab1ba97502c422769fbb5e41f08d17d79984bcc
+patches/0004-lower_glob_load-use-the-first-destination-of-a-load-.patch 49e21a2c75ff4d71530c276536bf866fad4990a5af0ade5b46da78a881a72c66
+patches/0005-armv8a-check-the-LDP-STP-offset-range-on-the-scaled-.patch b652178c7dcdec8b8441a2ea062f83f0355744de82d9f05633aa5a15dc464399
+patches/0006-armv8a-remove-the-printer-check-for-LDP-with-equal-d.patch b6fdae36339b11a73703977f1b7ec66ce27c740f9d392db14931ad5dbda3b6de
+patches/0007-armv8a-print-Mach-O-relocation-operators-on-macOS.patch d2c0f1ff1a66df9d6002e65672919370badcb63e2244beb3f9fc7c973c227a47
+patches/0008-armv8a-changelog-entry-for-the-Mach-O-relocation-fix.patch 589277b0e497eec458f59720eacb3b6304ee7ea6c592d9f6e03ae60821fafa4b
+patches/0009-safetylib-make-the-CallTopHeuristic-call-policy-usab.patch 5af9d86af3660e0db6fc7902817389e78fca30fdd1f45694f64b6b2189c7952b
+patches/0010-safetylib-analyze-CallTop-callees-with-pointer-argum.patch d73fbfb2201fd65883c893d1535f48ca091054d4aacee9afe4cecf9aa5166475
+patches/0011-safetylib-loop-stability-also-compares-initializatio.patch 8863a653e6482381408fdf91be917612b9c78b06e40a141bdeb2ef596b66a0f8
+patches/0012-safetylib-initialization-of-slice-copies-at-unknown-.patch 067d5048b61c1038876b8ff9d8554ea0c0d3787f8f2469edd5aae17457d75c64
+patches/0013-safetylib-report-unbounded-memory-ranges.patch 63560471e48a02f9619cba0392fc2b596997ee8fc00bee66d3555eef08bf404c
+patches/0014-safetylib-for-loop-counters-point-to-no-memory-regio.patch ee6f95c2073311b4001cf4a260e98caa7bef090eb90c6daa60096e91419bffe3
+patches/0015-safetylib-faster-start-up-with-large-global-tables.patch 4b21ea91016f3a821e1c8a092e28adc397f4f3f52095a9a9e3fd642b549757ac
+patches/0016-changes-changelog-entry-for-the-safety-checker-fixes.patch d37766fb90253f1cb0731c3d9655620d8971ae1cafafe4015af5f7b385cb04f2
+patches/0017-armv8a-add-EXTR-and-the-bit-field-instructions.patch 27156156c5f3d74dd6446575223be4a760ccc8f0bf13f73eea3ad986a97952f0
+patches/0018-safetylib-implement-the-safety-checker-for-ARMv8-A.patch 1a3b3a4599e7f1004442a3614706fc2472f7119a6c28fab26957e08388b02b46
+patches/0019-linearization-report-invalid-operands-as-errors.patch 9c077581297540776f7ff8a7d4c80b12efbe80019466c0a666f41930f9921c4f
+patches/0020-linearization-changelog-entry-for-invalid-operands.patch 7cbbd5c3d8b28266bee0f7b1f158afea3e24cf716fd30b9b643f0e21c5cd2a6f
+patches/0021-Lowering-lower-to-BIC-on-arm-m4-and-armv8a.patch 147791946667964a5985e3644a5fdac26036123c0e5d578b6155b9dbc1d24c74
+patches/0022-armv8a-store-an-immediate-through-a-scratch-register.patch 09a3f9f436ebbe3ba41fc8d0d736eb2a0fb47e02d815f90f693bc864b7574724
+patches/0023-armv8a-load-a-32-bit-word-zero-extended-to-64-bits.patch 22befa078209331096cf3bec066f493019f5dd45f79cf5ba77dde55f729921f9
+patches/0024-safetylib-reuse-abstract-values-and-environments-tha.patch fc19aac7ef0c29ea5d6719c47e93d113d0c73c9643e6584052fe0b50939f5d18
+patches/0025-safetylib-option-to-leave-large-arrays-out-of-the-nu.patch fb4968c35cdf4de1d10fff7274da9b8f097d574fe6cd8a36e04a476f3746fd02
+patches/0026-safetylib-option-to-pass-on-congruences-for-written-.patch 6d2885d82ffd108585a0b6fc24af532317844090fe5f4dfd175bb44aefa1c166
+patches/0027-armv8a-keep-x29-the-frame-pointer-out-of-register-al.patch 00670f9631126939f9a0899d90fd0abba096ad0b189f8699fa7f1691d9a7ead6
+patches/0028-safetylib-options-to-keep-fewer-loop-variables-relat.patch 90c5d9f5ba380fb9c121953b3507b65c8d2bb055f51d86c92edb6a0cdcea5612
+patches/0029-armv8a-fix-saved-registers-out-of-the-reach-of-LDR-a.patch ee5ec39dcc1b1a5c0da0af9abbcc34697c779e30897706117893a37a6564dde4
+patches-simd/0001-Do-not-assume-that-system-calls-preserve-the-vector-.patch 669796625123f15fc4b0ebf0c8ae4bf1f76fabc3ece6845e0a8e9629b5062602
+patches-simd/0002-armv8a-add-the-SIMD-FP-registers.patch 10c618c918cd135af9f33767018465f9572ca4cbbf214e40730fb317972d9b6a
+patches-simd/0003-armv8a-add-the-basic-Advanced-SIMD-instructions.patch d4d9672db0ff5067ef60bce4fff1dadf3ad52f359a988c598f07144a182b4dc0
+patches-simd/0004-armv8a-add-Advanced-SIMD-permutations-and-element-mo.patch c774072e6063de95662262ccebfe1c59224aa2f3ef36877841ad5a1c8518d059
+patches-simd/0005-armv8a-add-the-SHA-256-and-SHA-512-instructions.patch 4ae1f6c6f52def050d02d14c65e45cd7d0bd88c048244339c858f924c77bb73c
+patches-simd/0006-armv8a-add-the-SHA-3-instructions.patch 4f96946872e11aacca1f9bbe248e8a265bd78e66c5750c13c77764b7a067b01b
+patches-simd/0007-armv8a-changelog-entries-for-the-vector-registers-an.patch 67caaf9ff73508d9331c04f8be547c595296ba88fb097eedade0af7e00809ad5

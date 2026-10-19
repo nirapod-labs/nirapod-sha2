@@ -88,6 +88,8 @@ def models(args, command, extra, specs, cwd=None):
     cmd = [sys.executable, "-I", MODELS_PY, command,
            "--jasmin2ec", args.jasmin2ec, "--entry", args.entry,
            "--units", args.units] + extra
+    if args.array_entry:
+        cmd += ["--array-entry", args.array_entry]
     for s in specs:
         cmd += ["--unit", s]
     p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd)
@@ -115,7 +117,7 @@ def altered_tree(args):
     tree = os.path.join(args.work, "tree")
     copy = os.path.join(tree, args.src)
     shutil.copytree(args.src, copy)
-    for p in (args.entry, args.units):
+    for p in (args.entry, args.units) + ((args.array_entry,) if args.array_entry else ()):
         if os.path.isabs(p):
             continue
         dest = os.path.join(tree, p)
@@ -241,6 +243,7 @@ def main(argv):
     p = argparse.ArgumentParser(prog="control.py")
     p.add_argument("--jasmin2ec", default="jasmin2ec")
     p.add_argument("--entry", required=True)
+    p.add_argument("--array-entry")
     p.add_argument("--units", required=True)
     p.add_argument("--models", required=True)
     p.add_argument("--work", required=True)

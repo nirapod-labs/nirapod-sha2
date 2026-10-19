@@ -16,7 +16,8 @@
 # and its include roots as `make print-roots-NAME` prints them. Every
 # command also takes --jasmin2ec, --entry (the extraction entry: the root
 # file required with no namespace) and --units (the directory of the
-# namespaced unit files the library is compiled from).
+# namespaced unit files the library is compiled from), and optionally
+# --array-entry (the array test unit, extracted for the portable units).
 #
 # Models
 # ------
@@ -27,7 +28,11 @@
 #     NirapodSha2Safety.ec  jasmin2ec -m safety, the safety model
 #     BArray*.ec, SBArray*.ec
 #                           the array theories both models require
-#     COMMANDS              the two commands, as run from the repository root
+#     ArraySha2.ec          portable units only: jasmin2ec of the array
+#                           test unit (--array-entry, tests/array/array.jazz),
+#                           the instances of src/*_ASIZE.jinc it compiles,
+#                           for the proofs of the array forms
+#     COMMANDS              the commands, as run from the repository root
 #
 # The entry is the root file with no namespace, so a procedure has the same
 # name in every unit; the identity command shows that it is the namespaced
@@ -133,6 +138,11 @@ MODES = (
     ("safety", "NirapodSha2Safety.ec", ["-m", "safety"]),
 )
 
+# The array test unit is built with the portable kernels only, so its
+# model is extracted into the portable units' directories.
+ARRAY_MAIN = "ArraySha2.ec"
+ARRAY_VARIANT = "portable"
+
 SHARED_ROOTS = ("Hash", "HashWord")
 KERNEL_KINDS = ("proc", "abbrev", "op")
 ARRAY_FILE = re.compile(r"^S?BArray[0-9]+(_[0-9]+)?\.ec$")
@@ -226,14 +236,18 @@ def text(path):
     return read(path).decode("utf-8")
 
 
-def extract_unit(jasmin2ec, unit, entry, dest):
-    """Both models of one unit into dest, which must not exist."""
+def extract_unit(jasmin2ec, unit, entry, dest, array_entry=None):
+    """Both models of one unit into dest, which must not exist; for a
+    portable unit, also the model of the array test unit."""
     os.makedirs(dest)
     commands = []
-    for mode, main, flags in MODES:
+    runs = [(main, flags, entry) for _, main, flags in MODES]
+    if array_entry and unit.variant == ARRAY_VARIANT:
+        runs.append((ARRAY_MAIN, [], array_entry))
+    for main, flags, src in runs:
         tmp = tempfile.mkdtemp(prefix="extract-")
         try:
-            cmd = run_jasmin2ec(jasmin2ec, unit, flags, entry,
+            cmd = run_jasmin2ec(jasmin2ec, unit, flags, src,
                                 os.path.join(tmp, main))
             shown = cmd[:]
             shown[0] = "jasmin2ec"
@@ -247,7 +261,7 @@ def extract_unit(jasmin2ec, unit, entry, dest):
                 target = os.path.join(dest, name)
                 if os.path.exists(target):
                     if read(target) != read(src):
-                        raise ToolError("%s differs between the two modes of %s"
+                        raise ToolError("%s differs between the models of %s"
                                         % (name, unit.name))
                     continue
                 shutil.copyfile(src, target)
@@ -257,18 +271,20 @@ def extract_unit(jasmin2ec, unit, entry, dest):
         f.write("# The models of unit %s, extracted from the repository root by\n"
                 "# `make extract`. The entry requires src/nirapod_sha2.jinc\n"
                 "# through the Hash root, with no namespace.\n" % unit.name)
+        if len(runs) > len(MODES):
+            f.write("# %s is the model of the array test unit.\n" % ARRAY_MAIN)
         for c in commands:
             f.write(c + "\n")
 
 
-def extract_all(jasmin2ec, units, entry, out):
+def extract_all(jasmin2ec, units, entry, out, array_entry=None):
     """Every unit's models into out, replacing it as a whole."""
     parent = os.path.dirname(os.path.abspath(out))
     os.makedirs(parent, exist_ok=True)
     tmp = tempfile.mkdtemp(prefix=".models-", dir=parent)
     try:
         for u in units:
-            extract_unit(jasmin2ec, u, entry, os.path.join(tmp, u.dir))
+            extract_unit(jasmin2ec, u, entry, os.path.join(tmp, u.dir), array_entry)
         if os.path.exists(out):
             shutil.rmtree(out)
         os.rename(tmp, out)
@@ -709,6 +725,7 @@ def main(argv):
     p.add_argument("command", choices=("extract", "check", "identity"))
     p.add_argument("--jasmin2ec", default="jasmin2ec")
     p.add_argument("--entry", required=True)
+    p.add_argument("--array-entry")
     p.add_argument("--units", required=True)
     p.add_argument("--out")
     p.add_argument("--models")
@@ -720,11 +737,13 @@ def main(argv):
     ensure_unique(units)
     if not os.path.isfile(args.entry):
         raise ToolError("entry %s is missing" % args.entry)
+    if args.array_entry and not os.path.isfile(args.array_entry):
+        raise ToolError("array entry %s is missing" % args.array_entry)
 
     if args.command == "extract":
         if not args.out:
             raise ToolError("extract needs --out")
-        extract_all(args.jasmin2ec, units, args.entry, args.out)
+        extract_all(args.jasmin2ec, units, args.entry, args.out, args.array_entry)
         print("extract: %d units, %d models each, in %s"
               % (len(units), len(MODES), args.out))
         return 0
@@ -738,7 +757,7 @@ def main(argv):
         tmp = tempfile.mkdtemp(prefix="check-")
         try:
             fresh = os.path.join(tmp, "models")
-            extract_all(args.jasmin2ec, units, args.entry, fresh)
+            extract_all(args.jasmin2ec, units, args.entry, fresh, args.array_entry)
             problems = compare_trees(fresh, args.models, units)
         finally:
             shutil.rmtree(tmp)

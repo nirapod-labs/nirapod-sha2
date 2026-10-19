@@ -429,7 +429,9 @@ $(BUILD)/ct/array-%.ok: $(ARRAY_JAZZ) $(JASMIN_DEPS)
 #     make extract              both models of every unit into EXTRACT
 #                               (default build/extract/models), as
 #                               <arch>/<variant>/NirapodSha2.ec,
-#                               NirapodSha2Safety.ec and the array theories
+#                               NirapodSha2Safety.ec and the array theories,
+#                               and for the portable units ArraySha2.ec,
+#                               the model of tests/array/array.jazz
 #     make check-extraction     extract again and require MODELS (default
 #                               proofs/extracted) to hold the same files,
 #                               byte for byte: a stale, hand-edited or
@@ -458,7 +460,8 @@ MODELS    ?= proofs/extracted
 EXTRACT_ENTRY := $(BUILD)/extract/nirapod_sha2.jazz
 EXTRACT_UNITS := $(foreach u,$(ALL_UNITS),--unit '$(u):$(call unit_jarch,$(u)):$(call unit_roots,$(u))')
 MODELS_PY     := $(PYTHON) -I $(TESTS)/extraction/models.py --jasmin2ec $(JASMIN2EC) \
-                 --entry $(EXTRACT_ENTRY) --units $(BUILD)/units
+                 --entry $(EXTRACT_ENTRY) --units $(BUILD)/units \
+                 --array-entry $(TESTS)/array/array.jazz
 
 $(EXTRACT_ENTRY): Makefile
 	@mkdir -p $(@D)
@@ -478,6 +481,7 @@ extraction-identity: extract
 extraction-control: extract
 	$(PYTHON) -I $(TESTS)/extraction/control.py --jasmin2ec $(JASMIN2EC) \
 	  --entry $(EXTRACT_ENTRY) --units $(BUILD)/units --src $(SRC) \
+	  --array-entry $(TESTS)/array/array.jazz \
 	  --models $(EXTRACT) --work $(BUILD)/extract/control $(EXTRACT_UNITS)
 
 # --------------------------------------------------------------------
