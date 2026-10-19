@@ -50,6 +50,20 @@ lemma compress_total (h0 : BArray256.t) (blk : BArray512.t) :
              lane8 (BArray256.get32 res.`1) k = compress (lane8 (BArray256.get32 h0) k) (map be32 (chunk 4 (lane_block 64 (BArray512.to_list blk) k)))] = 1%r.
 proof. exact (SHA256_X8_Avx2.sha256_x8_compress_total h0 blk). qed.
 
+lemma sum_lt (a b c m : int) : 0 <= c => a + b + 64 * c < m => a + b < m.
+proof. smt(). qed.
+
+(* The AVX2 proof states lane k's input address as one word sum and its
+   domain over that sum; with the sum below 2^64 it is the integer sum
+   these statements use. *)
+lemma pL_add (in0 : BArray64.t) (off0 n0 : W64.t) (k : int) :
+  to_uint (BArray64.get64 in0 k) + to_uint off0 + 64 * to_uint n0 < W64.modulus =>
+  SHA256_X8_Avx2.pL in0 off0 k = to_uint (BArray64.get64 in0 k) + to_uint off0.
+proof.
+move=> h; rewrite /SHA256_X8_Avx2.pL W64.to_uintD_small //.
+by have [hn _] := W64.to_uint_cmp n0; exact (sum_lt _ _ _ _ hn h).
+qed.
+
 lemma compress_lanes_correct (h0 : BArray256.t) (in0 : BArray64.t) (off0 n0 : W64.t) :
   hoare [M._sha256_x8_compress_lanes :
            h8 = h0 /\ in_0 = in0 /\ off = off0 /\ n = n0 /\
@@ -60,7 +74,13 @@ lemma compress_lanes_correct (h0 : BArray256.t) (in0 : BArray64.t) (off0 n0 : W6
              = foldl compress (lane8 (BArray256.get32 h0) k)
                  (parse (JWordList.memread Glob.mem (to_uint (BArray64.get64 in0 k) + to_uint off0)
                            (64 * to_uint n0)))].
-proof. exact (SHA256_X8_Avx2.sha256_x8_compress_lanes_correct h0 in0 off0 n0). qed.
+proof.
+conseq (SHA256_X8_Avx2.sha256_x8_compress_lanes_correct h0 in0 off0 n0).
++ move=> &m [#] 4!-> hd /=; rewrite /SHA256_X8_Avx2.ldom => k hk.
+  by rewrite (pL_add _ _ n0 k (hd k hk)); exact (hd k hk).
+move=> &m [#] _ _ _ _ hd r hr k hk; have := hr k hk.
+by rewrite /SHA256_X8_Avx2Block.hl (pL_add _ _ n0 k (hd k hk)).
+qed.
 
 lemma compress_lanes_total (h0 : BArray256.t) (in0 : BArray64.t) (off0 n0 : W64.t) :
   phoare [M._sha256_x8_compress_lanes :
@@ -72,4 +92,10 @@ lemma compress_lanes_total (h0 : BArray256.t) (in0 : BArray64.t) (off0 n0 : W64.
              = foldl compress (lane8 (BArray256.get32 h0) k)
                  (parse (JWordList.memread Glob.mem (to_uint (BArray64.get64 in0 k) + to_uint off0)
                            (64 * to_uint n0)))] = 1%r.
-proof. exact (SHA256_X8_Avx2.sha256_x8_compress_lanes_total h0 in0 off0 n0). qed.
+proof.
+conseq (SHA256_X8_Avx2.sha256_x8_compress_lanes_total h0 in0 off0 n0).
++ move=> &m [#] 4!-> hd /=; rewrite /SHA256_X8_Avx2.ldom => k hk.
+  by rewrite (pL_add _ _ n0 k (hd k hk)); exact (hd k hk).
+move=> &m [#] _ _ _ _ hd r.
+by split=> h k hk; have := h k hk; rewrite /SHA256_X8_Avx2Block.hl (pL_add _ _ n0 k (hd k hk)).
+qed.
