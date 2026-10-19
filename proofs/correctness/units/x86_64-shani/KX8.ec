@@ -19,7 +19,7 @@
  * A lane is lane8 of lib/Lanes.ec over the interleaved state. Here the
  * kernel is the one on the x86 SHA extensions
  * (src/x86_64/shani/sha256_x8_compress.jinc), which runs two lanes at a time
- * in one instruction stream, proved in x86_64/shani/SHA256_ShaNiX8.ec.
+ * in one instruction stream, proved in x86_64/shani/SHA256_X8_ShaNi.ec.
  *)
 
 require import AllCore List IntDiv.
@@ -27,28 +27,28 @@ require BitEncoding.
 import BitEncoding.BitChunking.
 from Jasmin require import JWord JUtils JMemory.
 require import BArray64 BArray256 BArray512 NirapodSha2 FIPS180_SHA2 Lanes.
-require JWordList SHA256_ShaNiX8.
+require JWordList SHA256_X8_ShaNi.
 import SHA256.
 
 lemma compress_ll : islossless M._sha256_x8_compress.
-proof. exact SHA256_ShaNiX8.x8_compress_ll. qed.
+proof. exact SHA256_X8_ShaNi.x8_compress_ll. qed.
 
 lemma compress_lanes_ll : islossless M._sha256_x8_compress_lanes.
-proof. exact SHA256_ShaNiX8.x8_compress_lanes_ll. qed.
+proof. exact SHA256_X8_ShaNi.x8_compress_lanes_ll. qed.
 
 lemma compress_correct (h0 : BArray256.t) (blk : BArray512.t) :
   hoare [M._sha256_x8_compress :
            h8 = h0 /\ blocks = blk ==>
            forall k, 0 <= k < 8 =>
              lane8 (BArray256.get32 res.`1) k = compress (lane8 (BArray256.get32 h0) k) (map be32 (chunk 4 (lane_block 64 (BArray512.to_list blk) k)))].
-proof. exact (SHA256_ShaNiX8.x8_compress_correct h0 blk). qed.
+proof. exact (SHA256_X8_ShaNi.x8_compress_correct h0 blk). qed.
 
 lemma compress_total (h0 : BArray256.t) (blk : BArray512.t) :
   phoare [M._sha256_x8_compress :
            h8 = h0 /\ blocks = blk ==>
            forall k, 0 <= k < 8 =>
              lane8 (BArray256.get32 res.`1) k = compress (lane8 (BArray256.get32 h0) k) (map be32 (chunk 4 (lane_block 64 (BArray512.to_list blk) k)))] = 1%r.
-proof. exact (SHA256_ShaNiX8.x8_compress_total h0 blk). qed.
+proof. exact (SHA256_X8_ShaNi.x8_compress_total h0 blk). qed.
 
 lemma compress_lanes_correct (h0 : BArray256.t) (in0 : BArray64.t) (off0 n0 : W64.t) :
   hoare [M._sha256_x8_compress_lanes :
@@ -60,7 +60,7 @@ lemma compress_lanes_correct (h0 : BArray256.t) (in0 : BArray64.t) (off0 n0 : W6
              = foldl compress (lane8 (BArray256.get32 h0) k)
                  (parse (JWordList.memread Glob.mem (to_uint (BArray64.get64 in0 k) + to_uint off0)
                            (64 * to_uint n0)))].
-proof. exact (SHA256_ShaNiX8.x8_compress_lanes_correct h0 in0 off0 n0). qed.
+proof. exact (SHA256_X8_ShaNi.x8_compress_lanes_correct h0 in0 off0 n0). qed.
 
 lemma compress_lanes_total (h0 : BArray256.t) (in0 : BArray64.t) (off0 n0 : W64.t) :
   phoare [M._sha256_x8_compress_lanes :
@@ -72,4 +72,4 @@ lemma compress_lanes_total (h0 : BArray256.t) (in0 : BArray64.t) (off0 n0 : W64.
              = foldl compress (lane8 (BArray256.get32 h0) k)
                  (parse (JWordList.memread Glob.mem (to_uint (BArray64.get64 in0 k) + to_uint off0)
                            (64 * to_uint n0)))] = 1%r.
-proof. exact (SHA256_ShaNiX8.x8_compress_lanes_total h0 in0 off0 n0). qed.
+proof. exact (SHA256_X8_ShaNi.x8_compress_lanes_total h0 in0 off0 n0). qed.

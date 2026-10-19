@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA512_A64Sha2X4Lanes.ec (aarch64/sha2)
+ * SHA512_X4_A64Sha2Lanes.ec (aarch64/sha2)
  * =======================================
  *
  * Functional correctness, lane by lane, of _sha512_x4_compress_lanes of
@@ -11,7 +11,7 @@
  * start at in[k] + off in memory, so it ends with the fold of compress
  * over them.
  *
- * The transposes are those of _sha512_x4_compress (SHA512_A64Sha2X4.ec).
+ * The transposes are those of _sha512_x4_compress (SHA512_X4_A64Sha2.ec).
  * Pair i runs its n blocks to the end before pair i + 1 starts; after j of
  * them its two lanes hold the fold over their first j blocks.
  *
@@ -33,7 +33,7 @@ from Jasmin require import JWord JUtils JModel_armv8a.
 require import BArray32 BArray128 BArray160 BArray256 BArray512 BArray640.
 require import NirapodSha2 WordSpec.
 require import Bytes FIPS180_SHA2 Rounds512 Vec Sha2Insn Lanes.
-require import SHA512_A64Sha2 SHA512_A64Sha2Blocks SHA512_A64Sha2X4Block SHA512_A64Sha2X4.
+require import SHA512_A64Sha2 SHA512_A64Sha2Blocks SHA512_X4_A64Sha2Block SHA512_X4_A64Sha2.
 require JWordList.
 import SHA512 A512.
 

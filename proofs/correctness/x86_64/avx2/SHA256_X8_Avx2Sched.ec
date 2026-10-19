@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA256_Avx2X8Sched.ec (x86_64, avx2)
+ * SHA256_X8_Avx2Sched.ec (x86_64, avx2)
  * ====================================
  *
  * Functional correctness of the 8-way SHA-256 AVX2 kernel
@@ -24,10 +24,10 @@ require import AllCore List IntDiv.
 from Jasmin require import JWord JUtils JMemory JModel_x86.
 require import BArray512 BArray2048.
 require import NirapodSha2.
-require import FIPS180_SHA2 WordSpec Rounds256 SHA256_Avx2X8Vec SHA256_Avx2X8Rounds.
+require import FIPS180_SHA2 WordSpec Rounds256 SHA256_X8_Avx2Vec SHA256_X8_Avx2Rounds.
 import SHA256.
 
-clone SHA256_Avx2X8Vec.X8Lanes as A2048 with theory A <- BArray2048.
+clone SHA256_X8_Avx2Vec.X8Lanes as A2048 with theory A <- BArray2048.
 
 (* ------------------------------------------------------------------ *)
 (* The round constants                                                *)

@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA256_ShaNiX8Pair.ec
+ * SHA256_X8_ShaNiPair.ec
  * =====================
  *
  * The pair layer of the 8-way SHA-256 kernel on the x86 SHA extensions

@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA256_Avx2X8.ec (x86_64, avx2)
+ * SHA256_X8_Avx2.ec (x86_64, avx2)
  * ===============================
  *
  * Functional correctness and termination of the entry points of the
@@ -29,11 +29,11 @@ from Jasmin require import JWord JUtils JMemory JModel_x86.
 require import BArray32 BArray64 BArray256 BArray512 BArray2048.
 require import NirapodSha2.
 require import Bytes FIPS180_SHA2 WordSpec Vec Mem Rounds256 Lanes.
-require import SHA256_Avx2X8Vec SHA256_Avx2X8Rounds SHA256_Avx2X8Sched SHA256_Avx2X8Block SHA256_Avx2X8Tr.
+require import SHA256_X8_Avx2Vec SHA256_X8_Avx2Rounds SHA256_X8_Avx2Sched SHA256_X8_Avx2Block SHA256_X8_Avx2Tr.
 import SHA256.
 
-clone SHA256_Avx2X8Vec.X8Lanes as A32 with theory A <- BArray32.
-clone SHA256_Avx2X8Vec.X8Lanes as A512 with theory A <- BArray512.
+clone SHA256_X8_Avx2Vec.X8Lanes as A32 with theory A <- BArray32.
+clone SHA256_X8_Avx2Vec.X8Lanes as A512 with theory A <- BArray512.
 
 (* ------------------------------------------------------------------ *)
 (* The message words                                                  *)

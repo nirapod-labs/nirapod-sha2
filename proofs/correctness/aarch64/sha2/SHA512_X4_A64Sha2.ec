@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA512_A64Sha2X4.ec (aarch64/sha2)
+ * SHA512_X4_A64Sha2.ec (aarch64/sha2)
  * ==================================
  *
  * Functional correctness, lane by lane, of the four-way entry point
@@ -10,7 +10,7 @@
  * (src/aarch64/sha2/sha512_x4_compress.jinc, FEAT_SHA512) against FIPS
  * 180-4 section 6.4.2: every lane k ends with compress applied to its own
  * chaining value and its own block. The entry point that reads the blocks
- * from memory is proven in SHA512_A64Sha2X4Lanes.ec.
+ * from memory is proven in SHA512_X4_A64Sha2Lanes.ec.
  *
  * Representation. The four chaining values are u64[32], word-major: word
  * w of lane k is u64 4w + k (lane4 of lib/Lanes.ec), so the 128-bit slot
@@ -19,7 +19,7 @@
  * pair of lanes 2i, 2i + 1 at a time: __sha512_x4_load_pair transposes
  * its 2x2 blocks of words (VTRN1, VTRN2 on 64-bit lanes) so that s[5l +
  * q] holds words 2q, 2q + 1 of lane 2i + l, the state layout of the
- * one-way kernel; __sha512_x4_block2 (SHA512_A64Sha2X4Block.ec) runs the
+ * one-way kernel; __sha512_x4_block2 (SHA512_X4_A64Sha2Block.ec) runs the
  * block; __sha512_x4_store_pair transposes back.
  *
  * Theorems:
@@ -39,7 +39,7 @@ from Jasmin require import JWord JUtils JModel_armv8a.
 require import BArray128 BArray160 BArray256 BArray512 BArray640.
 require import NirapodSha2 WordSpec.
 require import Bytes FIPS180_SHA2 Rounds512 Vec Sha2Insn Lanes.
-require import SHA512_A64Sha2 SHA512_A64Sha2Blocks SHA512_A64Sha2X4Block.
+require import SHA512_A64Sha2 SHA512_A64Sha2Blocks SHA512_X4_A64Sha2Block.
 require Arrays.
 import SHA512 A512.
 

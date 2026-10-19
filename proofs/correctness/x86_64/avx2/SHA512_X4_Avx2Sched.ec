@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA512_Avx2X4Sched.ec (x86_64, avx2)
+ * SHA512_X4_Avx2Sched.ec (x86_64, avx2)
  * ====================================
  *
  * Functional correctness of the 4-way SHA-512 AVX2 kernel
@@ -25,11 +25,11 @@ require import AllCore List IntDiv.
 from Jasmin require import JWord JUtils JMemory JModel_x86.
 require import BArray32 BArray512 BArray2560.
 require import NirapodSha2.
-require import FIPS180_SHA2 WordSpec Lanes64 Rounds512 SHA512_Avx2X4Vec SHA512_Avx2X4Rounds.
+require import FIPS180_SHA2 WordSpec Lanes64 Rounds512 SHA512_X4_Avx2Vec SHA512_X4_Avx2Rounds.
 import SHA512.
 
-clone SHA512_Avx2X4Vec.X4Lanes as A2560 with theory A <- BArray2560.
-clone SHA512_Avx2X4Vec.X4Lanes as A32 with theory A <- BArray32.
+clone SHA512_X4_Avx2Vec.X4Lanes as A2560 with theory A <- BArray2560.
+clone SHA512_X4_Avx2Vec.X4Lanes as A32 with theory A <- BArray32.
 
 (* ------------------------------------------------------------------ *)
 (* The round constants                                                *)

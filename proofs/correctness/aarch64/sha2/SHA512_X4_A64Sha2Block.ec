@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA512_A64Sha2X4Block.ec (aarch64/sha2)
+ * SHA512_X4_A64Sha2Block.ec (aarch64/sha2)
  * =======================================
  *
  * The two-lane block of the four-way AArch64 SHA-512 instruction kernel

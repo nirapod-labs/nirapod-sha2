@@ -2,13 +2,13 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * SHA256_Avx2X8Rounds.ec (x86_64, avx2)
+ * SHA256_X8_Avx2Rounds.ec (x86_64, avx2)
  * =====================================
  *
  * Functional correctness of the 8-way SHA-256 AVX2 kernel
  * (src/x86_64/avx2/sha256_x8_compress.jinc) against FIPS 180-4 section
  * 6.2.2, round layer (the schedule and the constants are in
- * SHA256_Avx2X8Sched.ec, the rounds driver in SHA256_Avx2X8Block.ec):
+ * SHA256_X8_Avx2Sched.ec, the rounds driver in SHA256_X8_Avx2Block.ec):
  *
  *   round_x8      one call of __sha256_x8_round: round t of step 3 on
  *                 every lane
@@ -30,7 +30,7 @@ require import AllCore List IntDiv.
 from Jasmin require import JWord JUtils JMemory JModel_x86.
 require import BArray256 BArray512 BArray2048.
 require import NirapodSha2.
-require import FIPS180_SHA2 WordSpec Vec Bmi Rounds256 SHA256_Avx2X8Vec.
+require import FIPS180_SHA2 WordSpec Vec Bmi Rounds256 SHA256_X8_Avx2Vec.
 import SHA256.
 
 (* ------------------------------------------------------------------ *)

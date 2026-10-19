@@ -609,6 +609,12 @@ have he : (dsize + 7) %/ 8 = dsize %/ 8 + (dsize %% 8 + 7) %/ 8.
 by case: hr => hr; move: hi; rewrite he hr /=; smt().
 qed.
 
+(* The buffered tail and its padding fill one block. Stated alone so that
+   the solver sees only these facts. *)
+lemma size_tail_pad512 (m : bytes) :
+  size (tail 128 m) + size ([W8.of_int 128] ++ zeros (127 - size m %% 128)) = 128.
+proof. by rewrite size_tail // size_cat size_zeros /=; smt(modz_cmp). qed.
+
 lemma finalize_correct (h0 : W64.t list) (m : bytes) :
   hoare [F.finalize :
            stream512 h0 m h buf total /\ size m < 2^61 ==>
@@ -645,7 +651,7 @@ seq 1 : (to_uint fill = size (mfin 128 16 m) %% 128 /\ size (mfin 128 16 m) %% 1
                = tail 128 m ++ y.
     + by rewrite hsr -cats1 -catA /y /#.
     have hsy : size (tail 128 m ++ y) = 128.
-    + by rewrite size_cat size_tail // /y size_cat size_zeros /=; smt().
+    + by rewrite size_cat /y size_tail_pad512.
     have hl := pend512_full b1 _ hsy _; first by rewrite -hty.
     have [hc ht0] := parse512_close m y hsy.
     have hmf : mfin 128 16 m = m ++ y by rewrite /mfin ifF 1:/# -catA.
