@@ -13,12 +13,12 @@
 # SERIES, if any, are applied on top of JASMIN_COMMIT.
 #
 # The environment follows the upstream CI at JASMIN_COMMIT: default.nix,
-# scripts/mathcomp-word.nix, and nixpkgs b845e7606d23 (scripts/nixpkgs.nix),
+# scripts/mathcomp-word.nix, and nixpkgs 652efddd59a2 (scripts/nixpkgs.nix),
 # which builds Rocq 9.0 with OCaml 4.14.
 
-# Jasmin, branch main, 2026-09-10.
+# Jasmin, branch main, 2026-10-12.
 JASMIN_URL=https://github.com/jasmin-lang/jasmin.git
-JASMIN_COMMIT=288a569b6ed2bb50078b1882739fda6aa7873ec6
+JASMIN_COMMIT=e8f59794c92ce1d8dba49cb087173a49f20a691f
 
 OCAML_VERSION=4.14.4
 
@@ -26,9 +26,9 @@ OCAML_VERSION=4.14.4
 # the solver's answer depends only on the pins. Released Rocq packages live
 # in the `released/` directory of rocq-prover/opam.
 OPAM_REPO_URL=https://github.com/ocaml/opam-repository.git
-OPAM_REPO_COMMIT=518a009d5e480956e913feae3b5eb8f7f57879b8
+OPAM_REPO_COMMIT=f8293643f2af7e03d1910f7d6e5229c7943f9ea1
 ROCQ_OPAM_URL=https://github.com/rocq-prover/opam.git
-ROCQ_OPAM_COMMIT=6f4c8bfcf7c3ed641eae4640d91b9ec8f7c754d2
+ROCQ_OPAM_COMMIT=564ab90f5874c0c91cee746c4706bc2ba686a5a9
 
 # mathcomp-word at the revision upstream CI uses (scripts/mathcomp-word.nix).
 COQWORD_URL=https://github.com/jasmin-lang/coqword.git
