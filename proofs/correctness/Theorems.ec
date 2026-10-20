@@ -21,6 +21,11 @@
  * and sha512_x4_ctx), and each description is proved equal to the one the
  * proofs use.
  *
+ * The array forms of src/*_ASIZE.jinc, which read an array of any size
+ * in place of memory, are stated in the abstract theory ArrayTheorems
+ * over that size; their input is written with take and drop of the
+ * array's bytes.
+ *
  * The last section states the exports of src/nirapod_sha2.jinc, the
  * procedures the C API calls, at their own arguments.
  *
@@ -63,7 +68,7 @@
 require import AllCore List IntDiv.
 require BitEncoding.
 import BitEncoding.BitChunking.
-from Jasmin require import JWord JUtils JMemory.
+from Jasmin require import JWord JUtils JMemory JByte_array.
 require import BArray28 BArray32 BArray48 BArray64 BArray112 BArray128 BArray144 BArray208 BArray256.
 require import BArray272 BArray512 BArray784.
 require import SBArray112_32 SBArray112_64 SBArray144_112 SBArray208_64 SBArray208_128 SBArray272_208.
@@ -72,7 +77,7 @@ require import NirapodSha2.
 require import Bytes FIPS180_SHA2 FIPS198_HMAC.
 require JWordList.
 require StreamSpec State K256 K512 SHA256_Stream SHA512_Stream HMAC_SHA256 HMAC_SHA512 Ctx256 Ctx512 CtxHmac256 CtxHmac512.
-require Lanes SHA256_X8 SHA512_X4 CtxX8 CtxX4 Exports.
+require Lanes SHA256_X8 SHA512_X4 CtxX8 CtxX4 Exports ArrayForms StdOrder.
 
 abbrev memread = JWordList.memread.
 
@@ -917,6 +922,211 @@ proof.
 conseq (CtxX4.sha512_x4_ctx_final_total c0 d0 h0 ms0) => // &m _ r.
 by rewrite sha512_x4_ctxE tag10E /Lanes.lane_block.
 qed.
+
+(* ------------------------------------------------------------------ *)
+(* The array forms                                                    *)
+
+(* src/fill_ASIZE.jinc and the absorbs of src/sha256_ASIZE.jinc,
+   src/sha512_ASIZE.jinc, src/sha256_x8_ASIZE.jinc and
+   src/sha512_x4_ASIZE.jinc read their input from an array a of _ASIZE
+   bytes, the size a namespace sets when it includes them. The theory
+   below states them for any size asize with 0 < asize < 2^64, the side
+   condition of a clone, over the procedures of ArrayForms.ArrayForm: the
+   instance text with the size left abstract. An instance of size s is
+   covered by cloning ArrayTheorems with asize <= s and the s-byte array
+   theory, then proving its extracted procedures equivalent to those of
+   AF.F, which proc; sim does on the text jasmin2ec extracts.
+   correctness/units/<unit>/ArrayInst.ec does so, and states every
+   theorem below on the extracted procedures themselves, for the sizes 1,
+   64, 128 and 333 of the array test unit tests/array/array.jazz, on the
+   portable units.
+
+   What the caller provides: off + len at most asize (off + 7 stride +
+   len for 8-way SHA-256, off + 3 stride + len for 4-way SHA-512) and a
+   stream length below 2^64 after the call; the finalize theorems above
+   then need it below 2^61. The bytes absorbed are take len (drop off
+   (to_list a)); lane k of a multi-way form takes those from off + k
+   stride on. Lanes may overlap, and stride 0 gives every lane the same
+   bytes. *)
+
+abstract theory ArrayTheorems.
+
+op asize : int.
+
+axiom asize_ok : 0 < asize < 18446744073709551616.
+
+clone import ByteArray as BArrayA with op size <= asize.
+
+clone ArrayForms.ArrayForm as AF with op asize <= asize, theory BArrayA <= BArrayA
+proof asize_ok by exact asize_ok.
+
+lemma fill64_array_total (b0 : BArray64.t) (a0 : BArrayA.t) (d0 o0 n0 : W64.t) :
+  phoare [AF.F.fill64_array :
+           buf = b0 /\ a = a0 /\ dst_ = d0 /\ off_ = o0 /\ n_ = n0 /\
+           W64.to_uint d0 + W64.to_uint n0 <= 64 /\ W64.to_uint o0 + W64.to_uint n0 <= asize ==>
+           forall i, 0 <= i < 64 =>
+             BArray64.get8 res.`1 i
+             = if W64.to_uint d0 <= i < W64.to_uint d0 + W64.to_uint n0
+               then BArrayA.get8 a0 (W64.to_uint o0 + (i - W64.to_uint d0))
+               else BArray64.get8 b0 i] = 1%r.
+proof. by conseq (AF.fill64_total b0 a0 d0 o0 n0) => // &m _ r; rewrite /AF.fill64a. qed.
+
+lemma fill128_array_total (b0 : BArray128.t) (a0 : BArrayA.t) (d0 o0 n0 : W64.t) :
+  phoare [AF.F.fill128_array :
+           buf = b0 /\ a = a0 /\ dst_ = d0 /\ off_ = o0 /\ n_ = n0 /\
+           W64.to_uint d0 + W64.to_uint n0 <= 128 /\ W64.to_uint o0 + W64.to_uint n0 <= asize ==>
+           forall i, 0 <= i < 128 =>
+             BArray128.get8 res.`1 i
+             = if W64.to_uint d0 <= i < W64.to_uint d0 + W64.to_uint n0
+               then BArrayA.get8 a0 (W64.to_uint o0 + (i - W64.to_uint d0))
+               else BArray128.get8 b0 i] = 1%r.
+proof. by conseq (AF.fill128_total b0 a0 d0 o0 n0) => // &m _ r; rewrite /AF.fill128a. qed.
+
+lemma abytesE (a0 : BArrayA.t) (o0 l0 : W64.t) : W64.to_uint o0 + W64.to_uint l0 <= asize =>
+  AF.abytes a0 (W64.to_uint o0) (W64.to_uint l0)
+  = take (W64.to_uint l0) (drop (W64.to_uint o0) (BArrayA.to_list a0)).
+proof.
+move=> h; have := W64.to_uint_cmp o0; have := W64.to_uint_cmp l0.
+by move=> [hl _] [ho _]; rewrite AF.abytesE.
+qed.
+
+lemma sha256_absorb_array_total (h0 : W32.t list) (m : bytes) (a0 : BArrayA.t) (o0 l0 : W64.t) :
+  phoare [AF.F.sha256_absorb_array :
+           sha256_state h0 m h buf total /\ a = a0 /\ off = o0 /\ len = l0 /\
+           W64.to_uint o0 + W64.to_uint l0 <= asize /\ size m + W64.to_uint l0 < W64.modulus ==>
+           sha256_state h0 (m ++ take (W64.to_uint l0) (drop (W64.to_uint o0) (BArrayA.to_list a0)))
+             res.`1 res.`2 res.`3] = 1%r.
+proof.
+conseq (AF.sha256_absorb_total h0 m a0 o0 l0).
++ by move=> &m [hs [-> [-> [-> [hpl hml]]]]]; rewrite -sha256_stateE.
+by move=> &m [_ [_ [_ [_ [hpl _]]]]] r; rewrite sha256_stateE -abytesE.
+qed.
+
+lemma sha512_absorb_array_total (h0 : W64.t list) (m : bytes) (a0 : BArrayA.t) (o0 l0 : W64.t) :
+  phoare [AF.F.sha512_absorb_array :
+           sha512_state h0 m h buf total /\ a = a0 /\ off = o0 /\ len = l0 /\
+           W64.to_uint o0 + W64.to_uint l0 <= asize /\ size m + W64.to_uint l0 < W64.modulus ==>
+           sha512_state h0 (m ++ take (W64.to_uint l0) (drop (W64.to_uint o0) (BArrayA.to_list a0)))
+             res.`1 res.`2 res.`3] = 1%r.
+proof.
+conseq (AF.sha512_absorb_total h0 m a0 o0 l0).
++ by move=> &m [hs [-> [-> [-> [hpl hml]]]]]; rewrite -sha512_stateE.
+by move=> &m [_ [_ [_ [_ [hpl _]]]]] r; rewrite sha512_stateE -abytesE.
+qed.
+
+(* Lane k of 8 (4) takes the bytes at off + k stride. *)
+lemma lane_abytes (a0 : BArrayA.t) (o0 s0 l0 : W64.t) q k :
+  W64.to_uint o0 + (q - 1) * W64.to_uint s0 + W64.to_uint l0 <= asize => 0 <= k < q =>
+  AF.abytes a0 (W64.to_uint o0 + k * W64.to_uint s0) (W64.to_uint l0)
+  = take (W64.to_uint l0) (drop (W64.to_uint o0 + k * W64.to_uint s0) (BArrayA.to_list a0)).
+proof.
+move=> h hk; have [ho _] := W64.to_uint_cmp o0; have [hs _] := W64.to_uint_cmp s0.
+have [hl _] := W64.to_uint_cmp l0.
+have hks : k * W64.to_uint s0 <= (q - 1) * W64.to_uint s0 by apply StdOrder.IntOrder.ler_wpmul2r; smt().
+rewrite AF.abytesE //; smt().
+qed.
+
+lemma x8_state_ext h0 (ms ms' : int -> bytes) h buf total :
+  (forall k, 0 <= k < 8 => ms k = ms' k) =>
+  sha256_x8_state h0 ms h buf total => sha256_x8_state h0 ms' h buf total.
+proof. by move=> he hs k hk; rewrite -(he k hk); exact (hs k hk). qed.
+
+lemma x4_state_ext h0 (ms ms' : int -> bytes) h buf total :
+  (forall k, 0 <= k < 4 => ms k = ms' k) =>
+  sha512_x4_state h0 ms h buf total => sha512_x4_state h0 ms' h buf total.
+proof. by move=> he hs k hk; rewrite -(he k hk); exact (hs k hk). qed.
+
+lemma sha256_x8_absorb_array_total (h0 : W32.t list) (ms0 : int -> bytes) (a0 : BArrayA.t) (o0 s0 l0 : W64.t) :
+  phoare [AF.F.sha256_x8_absorb_array :
+           sha256_x8_state h0 ms0 h buf total /\ a = a0 /\ off = o0 /\ stride = s0 /\ len = l0 /\
+           W64.to_uint o0 + 7 * W64.to_uint s0 + W64.to_uint l0 <= asize /\
+           W64.to_uint total + W64.to_uint l0 < W64.modulus ==>
+           sha256_x8_state h0
+             (fun k => ms0 k ++ take (W64.to_uint l0)
+                         (drop (W64.to_uint o0 + k * W64.to_uint s0) (BArrayA.to_list a0)))
+             res.`1 res.`2 res.`3] = 1%r.
+proof.
+conseq (AF.sha256_x8_absorb_total h0 ms0 a0 o0 s0 l0).
++ by move=> &m [hs [-> [-> [-> [-> [hpl htl]]]]]]; rewrite -sha256_x8_stateE.
+move=> &m [_ [_ [_ [_ [_ [hpl _]]]]]] r; rewrite -sha256_x8_stateE.
+have he : forall k, 0 <= k < 8 =>
+  AF.mxl a0 ms0 (W64.to_uint o0) (W64.to_uint s0) (W64.to_uint l0) k
+  = ms0 k ++ take (W64.to_uint l0) (drop (W64.to_uint o0 + k * W64.to_uint s0) (BArrayA.to_list a0)).
++ by move=> k hk; rewrite /AF.mxl /AF.mx /= (lane_abytes a0 o0 s0 l0 8 k).
+by split; apply x8_state_ext => k hk; rewrite he.
+qed.
+
+lemma sha512_x4_absorb_array_total (h0 : W64.t list) (ms0 : int -> bytes) (a0 : BArrayA.t) (o0 s0 l0 : W64.t) :
+  phoare [AF.F.sha512_x4_absorb_array :
+           sha512_x4_state h0 ms0 h buf total /\ a = a0 /\ off = o0 /\ stride = s0 /\ len = l0 /\
+           W64.to_uint o0 + 3 * W64.to_uint s0 + W64.to_uint l0 <= asize /\
+           W64.to_uint total + W64.to_uint l0 < W64.modulus ==>
+           sha512_x4_state h0
+             (fun k => ms0 k ++ take (W64.to_uint l0)
+                         (drop (W64.to_uint o0 + k * W64.to_uint s0) (BArrayA.to_list a0)))
+             res.`1 res.`2 res.`3] = 1%r.
+proof.
+conseq (AF.sha512_x4_absorb_total h0 ms0 a0 o0 s0 l0).
++ by move=> &m [hs [-> [-> [-> [-> [hpl htl]]]]]]; rewrite -sha512_x4_stateE.
+move=> &m [_ [_ [_ [_ [_ [hpl _]]]]]] r; rewrite -sha512_x4_stateE.
+have he : forall k, 0 <= k < 4 =>
+  AF.mxl a0 ms0 (W64.to_uint o0) (W64.to_uint s0) (W64.to_uint l0) k
+  = ms0 k ++ take (W64.to_uint l0) (drop (W64.to_uint o0 + k * W64.to_uint s0) (BArrayA.to_list a0)).
++ by move=> k hk; rewrite /AF.mxl /AF.mx /= (lane_abytes a0 o0 s0 l0 4 k).
+by split; apply x4_state_ext => k hk; rewrite he.
+qed.
+
+(* The one-shot hashes of a slice, as tests/array/array.jazz composes
+   them: the initial hash value, the absorb from the array, finalize. *)
+lemma sha256_total (a0 : BArrayA.t) (o0 l0 : W64.t) :
+  phoare [AF.F.sha256 :
+           a = a0 /\ off = o0 /\ len = l0 /\
+           W64.to_uint o0 + W64.to_uint l0 <= asize /\ W64.to_uint l0 < 2^61 ==>
+           BArray32.to_list res
+           = SHA256.sha256 (take (W64.to_uint l0) (drop (W64.to_uint o0) (BArrayA.to_list a0)))] = 1%r.
+proof.
+conseq (AF.sha256_total a0 o0 l0) => // &m [_ [_ [_ [hpl _]]]] r.
+by rewrite abytesE.
+qed.
+
+lemma sha512_total (a0 : BArrayA.t) (o0 l0 : W64.t) :
+  phoare [AF.F.sha512 :
+           a = a0 /\ off = o0 /\ len = l0 /\
+           W64.to_uint o0 + W64.to_uint l0 <= asize /\ W64.to_uint l0 < 2^61 ==>
+           BArray64.to_list res
+           = SHA512.sha512 (take (W64.to_uint l0) (drop (W64.to_uint o0) (BArrayA.to_list a0)))] = 1%r.
+proof.
+conseq (AF.sha512_total a0 o0 l0) => // &m [_ [_ [_ [hpl _]]]] r.
+by rewrite abytesE.
+qed.
+
+lemma sha256_x8_total (a0 : BArrayA.t) (o0 s0 l0 : W64.t) :
+  phoare [AF.F.sha256_x8 :
+           a = a0 /\ off = o0 /\ stride = s0 /\ len = l0 /\
+           W64.to_uint o0 + 7 * W64.to_uint s0 + W64.to_uint l0 <= asize /\ W64.to_uint l0 < 2^61 ==>
+           forall k, 0 <= k < 8 =>
+             take 32 (drop (32 * k) (BArray256.to_list res))
+             = SHA256.sha256 (take (W64.to_uint l0)
+                 (drop (W64.to_uint o0 + k * W64.to_uint s0) (BArrayA.to_list a0)))] = 1%r.
+proof.
+conseq (AF.sha256_x8_total a0 o0 s0 l0) => // &m [_ [_ [_ [_ [hpl _]]]]] r.
+by split => h k hk; have := h k hk; rewrite /Lanes.lane_block (lane_abytes a0 o0 s0 l0 8 k).
+qed.
+
+lemma sha512_x4_total (a0 : BArrayA.t) (o0 s0 l0 : W64.t) :
+  phoare [AF.F.sha512_x4 :
+           a = a0 /\ off = o0 /\ stride = s0 /\ len = l0 /\
+           W64.to_uint o0 + 3 * W64.to_uint s0 + W64.to_uint l0 <= asize /\ W64.to_uint l0 < 2^61 ==>
+           forall k, 0 <= k < 4 =>
+             take 64 (drop (64 * k) (BArray256.to_list res))
+             = SHA512.sha512 (take (W64.to_uint l0)
+                 (drop (W64.to_uint o0 + k * W64.to_uint s0) (BArrayA.to_list a0)))] = 1%r.
+proof.
+conseq (AF.sha512_x4_total a0 o0 s0 l0) => // &m [_ [_ [_ [_ [hpl _]]]]] r.
+by split => h k hk; have := h k hk; rewrite /Lanes.lane_block (lane_abytes a0 o0 s0 l0 4 k).
+qed.
+
+end ArrayTheorems.
 
 (* ------------------------------------------------------------------ *)
 (* The exports of src/nirapod_sha2.jinc                               *)
