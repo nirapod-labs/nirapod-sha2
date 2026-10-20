@@ -430,8 +430,9 @@ $(BUILD)/ct/array-%.ok: $(ARRAY_JAZZ) $(JASMIN_DEPS)
 #                               (default build/extract/models), as
 #                               <arch>/<variant>/NirapodSha2.ec,
 #                               NirapodSha2Safety.ec and the array theories,
-#                               and for the portable units ArraySha2.ec,
-#                               the model of tests/array/array.jazz
+#                               and for the portable units ArraySha2.ec
+#                               and ArraySha2Safety.ec, the two models of
+#                               tests/array/array.jazz
 #     make check-extraction     extract again and require MODELS (default
 #                               proofs/extracted) to hold the same files,
 #                               byte for byte: a stale, hand-edited or

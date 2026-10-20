@@ -32,6 +32,8 @@
 #                           test unit (--array-entry, tests/array/array.jazz),
 #                           the instances of src/*_ASIZE.jinc it compiles,
 #                           for the proofs of the array forms
+#     ArraySha2Safety.ec    portable units only: the same unit with
+#                           -m safety, for the safety proofs of those forms
 #     COMMANDS              the commands, as run from the repository root
 #
 # The entry is the root file with no namespace, so a procedure has the same
@@ -140,7 +142,10 @@ MODES = (
 
 # The array test unit is built with the portable kernels only, so its
 # model is extracted into the portable units' directories.
-ARRAY_MAIN = "ArraySha2.ec"
+ARRAY_MODES = (
+    ("ArraySha2.ec", []),
+    ("ArraySha2Safety.ec", ["-m", "safety"]),
+)
 ARRAY_VARIANT = "portable"
 
 SHARED_ROOTS = ("Hash", "HashWord")
@@ -243,7 +248,7 @@ def extract_unit(jasmin2ec, unit, entry, dest, array_entry=None):
     commands = []
     runs = [(main, flags, entry) for _, main, flags in MODES]
     if array_entry and unit.variant == ARRAY_VARIANT:
-        runs.append((ARRAY_MAIN, [], array_entry))
+        runs += [(main, flags, array_entry) for main, flags in ARRAY_MODES]
     for main, flags, src in runs:
         tmp = tempfile.mkdtemp(prefix="extract-")
         try:
@@ -272,7 +277,8 @@ def extract_unit(jasmin2ec, unit, entry, dest, array_entry=None):
                 "# `make extract`. The entry requires src/nirapod_sha2.jinc\n"
                 "# through the Hash root, with no namespace.\n" % unit.name)
         if len(runs) > len(MODES):
-            f.write("# %s is the model of the array test unit.\n" % ARRAY_MAIN)
+            f.write("# %s are the models of the array test unit.\n"
+                    % " and ".join(main for main, _ in ARRAY_MODES))
         for c in commands:
             f.write(c + "\n")
 
