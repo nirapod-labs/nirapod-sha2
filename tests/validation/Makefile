@@ -12,8 +12,8 @@
 # The differential suite needs independent implementations. Name their
 # install prefixes, each with include/openssl and lib/libcrypto.a:
 #
-#     make check ORACLE_OPENSSL=/opt/openssl-4.0.2 \
-#                ORACLE_AWSLC=/opt/aws-lc-5.8.0
+#     make check ORACLE_OPENSSL=/opt/openssl-4.0.3 \
+#                ORACLE_AWSLC=/opt/aws-lc-5.11.0
 #
 # Variables: VECTORS (default ../vectors), ITERATIONS, LARGE, SUITES,
 # BUILD, CC. SUITES holds suite names from `make list`.

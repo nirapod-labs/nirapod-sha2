@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+# shellcheck shell=bash disable=SC2034
+#
+# toolchain/baselines/PIN
+# =======================
+#
+# The independent SHA-2 implementations this project compares against: the
+# oracles of the differential tests (tests/validation, "Oracles") and the
+# baselines of the benchmarks (bench/). Shell syntax, read by build.sh.
+#
+# Each source is a release archive pinned by its SHA-256; the full commit
+# it was made from is recorded beside it. OpenSSL is the only project that
+# publishes a checksum for its archive, and the one below matches it.
+
+OPENSSL_NAME=openssl-4.0.3
+OPENSSL_URL=https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz
+OPENSSL_SHA256=325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9
+OPENSSL_COMMIT=af1775b60dfa141a4ad762585052cabeb9f37e9e
+
+AWSLC_NAME=aws-lc-5.11.0
+AWSLC_URL=https://github.com/aws/aws-lc/archive/refs/tags/v5.11.0.tar.gz
+AWSLC_SHA256=8cb24c6e6be1fa7ff05075c4560ca8b537a7ef48f9e6f465af4ea455794d74f4
+AWSLC_COMMIT=fa9bc8d6f7cfb2cf849b247fb06bbbfc41ecc9d6
+
+BORINGSSL_NAME=boringssl-99b9d64
+BORINGSSL_URL=https://github.com/google/boringssl/archive/99b9d64ec02384c4c939f264b40e91d6cb5ca904.tar.gz
+BORINGSSL_SHA256=3f49b416ef6f35a88c69f96ac6e431e0976e9ce55271e97f374ea1de31b94a84
+BORINGSSL_COMMIT=99b9d64ec02384c4c939f264b40e91d6cb5ca904
+
+HACL_NAME=hacl-star-0.7.2
+HACL_URL=https://github.com/cryspen/hacl-packages/archive/refs/tags/ocaml-v0.7.2.tar.gz
+HACL_SHA256=98c73bdd6a4fd3d73f8ef8ad725b17aa217a64a65d4c12ac63ba58895ff7ec80
+HACL_COMMIT=81303b83a54a92d3b5f54f1b8ddbea60438cc2bf

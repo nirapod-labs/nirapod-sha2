@@ -18,9 +18,9 @@
 #
 # BASELINE_ROOT points at an install tree of the pinned baselines:
 #
-#     install/openssl-4.0.2
-#     install/aws-lc-5.8.0
-#     install/boringssl-ad89997
+#     install/openssl-4.0.3
+#     install/aws-lc-5.11.0
+#     install/boringssl-99b9d64
 #     install/hacl-star-0.7.2
 #
 # The paths are a property of the host, not of the library, so they are
@@ -71,9 +71,9 @@ CPPFLAGS_BENCH := -I$(ROOT)/include -I$(ROOT)/capi/testing
 
 BASELINE_ROOT ?=
 
-OPENSSL_DIR := $(BASELINE_ROOT)/install/openssl-4.0.2
-AWSL_DIR    := $(BASELINE_ROOT)/install/aws-lc-5.8.0
-BORING_DIR  := $(BASELINE_ROOT)/install/boringssl-ad89997
+OPENSSL_DIR := $(BASELINE_ROOT)/install/openssl-4.0.3
+AWSL_DIR    := $(BASELINE_ROOT)/install/aws-lc-5.11.0
+BORING_DIR  := $(BASELINE_ROOT)/install/boringssl-99b9d64
 HACL_DIR    := $(BASELINE_ROOT)/install/hacl-star-0.7.2
 
 OPENSSL_LIB := $(firstword $(wildcard $(OPENSSL_DIR)/lib/libcrypto.a \
@@ -152,22 +152,22 @@ $(BENCH)/nirapod-bench: $(OUT)/obj/bench.o $(OUT)/obj/bench_kat.o \
 $(OUT)/obj/backend_evp_openssl.o: backend_evp.c bench.h Makefile | $(OUT)/obj
 	$(CC) $(WARN) $(BASELINE_WARN) $(CFLAGS) -Wno-deprecated-declarations \
 	      -DBENCH_OPENSSL -DBENCH_HAVE_SHA512_224 \
-	      -DBENCH_LIBRARY='"openssl"' -DBENCH_VERSION='"4.0.2"' \
+	      -DBENCH_LIBRARY='"openssl"' -DBENCH_VERSION='"4.0.3"' \
 	      -DBENCH_REVISION='"af1775b60dfa141a4ad762585052cabeb9f37e9e"' \
 	      -I$(OPENSSL_DIR)/include -c -o $@ backend_evp.c
 
 $(OUT)/obj/backend_evp_awsl.o: backend_evp.c bench.h Makefile | $(OUT)/obj
 	$(CC) $(WARN) $(BASELINE_WARN) $(CFLAGS) -Wno-deprecated-declarations \
 	      -DBENCH_AWSLC -DBENCH_HAVE_SHA512_224 \
-	      -DBENCH_LIBRARY='"aws-lc"' -DBENCH_VERSION='"5.8.0"' \
+	      -DBENCH_LIBRARY='"aws-lc"' -DBENCH_VERSION='"5.11.0"' \
 	      -DBENCH_REVISION='"fa9bc8d6f7cfb2cf849b247fb06bbbfc41ecc9d6"' \
 	      -I$(AWSL_DIR)/include -c -o $@ backend_evp.c
 
 $(OUT)/obj/backend_evp_boring.o: backend_evp.c bench.h Makefile | $(OUT)/obj
 	$(CC) $(WARN) $(BASELINE_WARN) $(CFLAGS) -Wno-deprecated-declarations \
 	      -DBENCH_BORINGSSL -DBENCH_LIBRARY='"boringssl"' \
-	      -DBENCH_VERSION='"ad89997"' \
-	      -DBENCH_REVISION='"ad899970279fa74481fca3daa076e0a1a72a2e71"' \
+	      -DBENCH_VERSION='"99b9d64"' \
+	      -DBENCH_REVISION='"99b9d64ec02384c4c939f264b40e91d6cb5ca904"' \
 	      -I$(BORING_DIR)/include -c -o $@ backend_evp.c
 
 $(OUT)/obj/backend_hacl.o: backend_hacl.c bench.h Makefile | $(OUT)/obj
