@@ -151,6 +151,23 @@ lemma lanes_valid8E mv (f : int -> int) l : lanes_valid mv 8 f l =>
   /\ is_valid (2 ^ 64) mv (f 6) l /\ is_valid (2 ^ 64) mv (f 7) l.
 proof. by move=> h; do 7!(split; 1: by apply h); apply h. qed.
 
+(* Integer steps of the absorb proofs. They stand apart so that each SMT
+   call sees only its own premises, not the context of a procedure proof. *)
+lemma head_lt (a b : int) : a <= b => a <> b => a < b.
+proof. smt(). qed.
+
+lemma head_rest (f n l b : int) :
+  (f = 0 => n = 0) => (f <> 0 => f + n <> b => n = l) => f + n <> b => f + n <> 0 => n = l.
+proof. smt(). qed.
+
+lemma head_mod (f n l t b : int) :
+  f = t %% b => (f + n + (l - n)) %% b = (t %% b + l) %% b.
+proof. smt(). qed.
+
+lemma rest_small (f l o m b : int) :
+  0 <= f < m => f < b => o <= l => l - o < b => (f <> 0 => o = l) => 0 <= f + (l - o) < b.
+proof. smt(). qed.
+
 (* ------------------------------------------------------------------ *)
 (* Eight-way SHA-256: state                                           *)
 
@@ -326,9 +343,9 @@ sp; seq 1 : (valid trace__sha256_x8_absorb_lanes /\ total_init /\ fill_init /\ i
   + by rewrite W64.to_uintD_small; smt(W64.to_uint_cmp).
   have h64 : to_uint f0 + to_uint n{m} <> 64.
   + by move: hfull; rewrite W64.to_uint_eq efn W64.to_uint_small.
-  rewrite efn; split; 1: smt().
+  rewrite efn; split; 1: exact (head_lt _ _ hfn h64).
   split; 1: exact hl.
-  by split; smt().
+  by split; [exact (head_rest _ _ _ _ hf0 hfl h64) | exact (head_mod _ _ _ _ _ hf)].
 sp; seq 1 : (valid trace__sha256_x8_absorb_lanes /\ total_init /\ fill_init /\ inlen_init
              /\ ms_init /\ off_init /\ total = _total + _inlen /\ in_0 = _in /\ inlen = _inlen
              /\ h_init = full256 /\ in_init = full64 /\ to_uint off <= to_uint _inlen
@@ -380,7 +397,7 @@ sp; seq 1 : (valid trace__sha256_x8_absorb_lanes /\ total_init /\ fill_init /\ i
   + have := shrc (inlen{m} - off{m}) 6 _; 1: done.
     by rewrite hz W64.to_uint0 eLO => ->.
   have hl64 : to_uint inlen{m} - to_uint off{m} < 64 by smt(divz_eq modz_ge0 ltz_pmod).
-  by rewrite -hm pmod_small; smt(W64.to_uint_cmp).
+  by rewrite -hm pmod_small //; exact (rest_small _ _ _ _ _ (W64.to_uint_cmp fill{m}) hf ho hl64 hf0).
 wp; while (valid trace__sha256_x8_absorb_lanes /\ total_init /\ fill_init /\ inlen_init
            /\ ms_init /\ off_init /\ n_init /\ k_init /\ 0 <= k <= 8 /\ total = _total + _inlen
            /\ in_0 = _in /\ inlen = _inlen /\ h_init = full256 /\ in_init = full64
@@ -740,9 +757,9 @@ sp; seq 1 : (valid trace__sha512_x4_absorb_lanes /\ total_init /\ fill_init /\ i
   + by rewrite W64.to_uintD_small; smt(W64.to_uint_cmp).
   have h64 : to_uint f0 + to_uint n{m} <> 128.
   + by move: hfull; rewrite W64.to_uint_eq efn W64.to_uint_small.
-  rewrite efn; split; 1: smt().
+  rewrite efn; split; 1: exact (head_lt _ _ hfn h64).
   split; 1: exact hl.
-  by split; smt().
+  by split; [exact (head_rest _ _ _ _ hf0 hfl h64) | exact (head_mod _ _ _ _ _ hf)].
 sp; seq 1 : (valid trace__sha512_x4_absorb_lanes /\ total_init /\ fill_init /\ inlen_init
              /\ ms_init /\ off_init /\ total = _total + _inlen /\ in_0 = _in /\ inlen = _inlen
              /\ h_init = full256 /\ in_init = full32 /\ to_uint off <= to_uint _inlen
@@ -794,7 +811,7 @@ sp; seq 1 : (valid trace__sha512_x4_absorb_lanes /\ total_init /\ fill_init /\ i
   + have := shrc (inlen{m} - off{m}) 7 _; 1: done.
     by rewrite hz W64.to_uint0 eLO => ->.
   have hl64 : to_uint inlen{m} - to_uint off{m} < 128 by smt(divz_eq modz_ge0 ltz_pmod).
-  by rewrite -hm pmod_small; smt(W64.to_uint_cmp).
+  by rewrite -hm pmod_small //; exact (rest_small _ _ _ _ _ (W64.to_uint_cmp fill{m}) hf ho hl64 hf0).
 wp; while (valid trace__sha512_x4_absorb_lanes /\ total_init /\ fill_init /\ inlen_init
            /\ ms_init /\ off_init /\ n_init /\ k_init /\ 0 <= k <= 4 /\ total = _total + _inlen
            /\ in_0 = _in /\ inlen = _inlen /\ h_init = full256 /\ in_init = full32
