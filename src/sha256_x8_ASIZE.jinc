@@ -40,6 +40,7 @@ from Hash require "fill_ASIZE.jinc"
        && is_arr_init(buf, 320, (64u) total % 64)
        && is_arr_init(buf, 384, (64u) total % 64)
        && is_arr_init(buf, 448, (64u) total % 64)
+       && (64u) off <= _ASIZE && (64u) stride <= _ASIZE && (64u) len <= _ASIZE
        && (64u) off + 7 * (64u) stride + (64u) len <= _ASIZE
        && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
        && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)

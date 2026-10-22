@@ -18,8 +18,10 @@
 
 /* Copy n bytes of a from offset off into buf at dst. */
 #[safety =
-   { requires = (64u) dst_ + (64u) n_ <= 64 && is_arr_init(buf, 0, (64u) dst_)
-       && (64u) off_ + (64u) n_ <= _ASIZE && is_arr_init(a, (64u) off_, (64u) n_)
+   { requires = (64u) dst_ <= 64 && (64u) n_ <= 64 && (64u) dst_ + (64u) n_ <= 64
+       && is_arr_init(buf, 0, (64u) dst_)
+       && (64u) off_ <= _ASIZE && (64u) off_ + (64u) n_ <= _ASIZE
+       && is_arr_init(a, (64u) off_, (64u) n_)
    , res = { buf_out, ms_out }
    , ensures = is_arr_init(buf_out, 0, (64u) dst_ + (64u) n_)
    }
@@ -82,8 +84,10 @@ inline fn __fill64_array(
 
 /* Copy n bytes of a from offset off into buf at dst. */
 #[safety =
-   { requires = (64u) dst_ + (64u) n_ <= 128 && is_arr_init(buf, 0, (64u) dst_)
-       && (64u) off_ + (64u) n_ <= _ASIZE && is_arr_init(a, (64u) off_, (64u) n_)
+   { requires = (64u) dst_ <= 128 && (64u) n_ <= 128 && (64u) dst_ + (64u) n_ <= 128
+       && is_arr_init(buf, 0, (64u) dst_)
+       && (64u) off_ <= _ASIZE && (64u) off_ + (64u) n_ <= _ASIZE
+       && is_arr_init(a, (64u) off_, (64u) n_)
    , res = { buf_out, ms_out }
    , ensures = is_arr_init(buf_out, 0, (64u) dst_ + (64u) n_)
    }
