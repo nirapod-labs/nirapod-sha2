@@ -50,7 +50,8 @@ usage: ci/run.sh [options]
 
 Environment:
   CI_TIMEOUT_<JOB>   wall-clock limit per job in seconds
-  CI_SAFETY_TIMEOUT  limit of one safety-checker run, seconds
+  CI_SAFETY_TIMEOUT  limit of one safety-checker run (one export), seconds
+  CI_SAFETY_JOBS     safety-checker runs at a time (default: half the cores)
   CI_PROOF_JOBS      proof files checked at a time (default: cores, max 8)
   SHA2_TOOLCHAIN_WORK      toolchain work directory to verify
   SHA2_TOOLCHAIN_PROVENANCE  provenance file to verify
