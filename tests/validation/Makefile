@@ -10,10 +10,12 @@
 #     make check
 #
 # The differential suite needs independent implementations. Name their
-# install prefixes, each with include/openssl and lib/libcrypto.a:
+# install prefixes: ORACLE_OPENSSL, ORACLE_AWSLC and ORACLE_BORINGSSL with
+# include/openssl and lib/libcrypto.a, ORACLE_HACL with include/hacl and
+# lib/libhacl_static.a:
 #
 #     make check ORACLE_OPENSSL=/opt/openssl-4.0.3 \
-#                ORACLE_AWSLC=/opt/aws-lc-5.11.0
+#                ORACLE_HACL=/opt/hacl-star-0.7.2
 #
 # Variables: VECTORS (default ../vectors), ITERATIONS, LARGE, SUITES,
 # BUILD, CC. SUITES holds suite names from `make list`.
@@ -72,6 +74,7 @@ CPPFLAGS += -I$(ROOT)/include -I$(ROOT)/capi -I$(ROOT)/capi/testing -I$(HERE)
 ORACLE_OPENSSL ?=
 ORACLE_AWSLC ?=
 ORACLE_BORINGSSL ?=
+ORACLE_HACL ?=
 ORACLE_LIBS ?= -lpthread
 ifeq ($(HOST_SYSTEM),linux)
 ORACLE_LIBS += -ldl
@@ -83,6 +86,7 @@ BORINGSSL_LIBS := $(ORACLE_LIBS) -lstdc++
 endif
 
 ORACLE_CFLAGS := -O2 -I$(HERE)
+ORACLE_SRCS := $(HERE)/oracle-main.c $(HERE)/oracle-backend.h $(HERE)/oracle-protocol.h
 ORACLES :=
 ORACLE_ARGS :=
 
@@ -92,28 +96,55 @@ oracle_lib = $(firstword $(wildcard $(1)/lib/libcrypto.a $(1)/lib64/libcrypto.a 
 ifneq ($(strip $(ORACLE_OPENSSL)),)
 ORACLES += $(ORACLE_BIN)/oracle-openssl
 ORACLE_ARGS += --oracle $(ORACLE_BIN)/oracle-openssl
-$(ORACLE_BIN)/oracle-openssl: FORCE $(HERE)/oracle-main.c $(HERE)/oracle-protocol.h
+$(ORACLE_BIN)/oracle-openssl: FORCE $(ORACLE_SRCS) $(HERE)/oracle-openssl.c
 	@mkdir -p $(@D)
-	$(CC) $(ORACLE_CFLAGS) -I$(ORACLE_OPENSSL)/include -o $@ $(HERE)/oracle-main.c \
+	$(CC) $(ORACLE_CFLAGS) -I$(ORACLE_OPENSSL)/include -o $@ \
+	  $(HERE)/oracle-main.c $(HERE)/oracle-openssl.c \
 	  $(call oracle_lib,$(ORACLE_OPENSSL)) $(ORACLE_LIBS)
 endif
 
 ifneq ($(strip $(ORACLE_AWSLC)),)
 ORACLES += $(ORACLE_BIN)/oracle-awslc
 ORACLE_ARGS += --oracle $(ORACLE_BIN)/oracle-awslc
-$(ORACLE_BIN)/oracle-awslc: FORCE $(HERE)/oracle-main.c $(HERE)/oracle-protocol.h
+$(ORACLE_BIN)/oracle-awslc: FORCE $(ORACLE_SRCS) $(HERE)/oracle-openssl.c
 	@mkdir -p $(@D)
-	$(CC) $(ORACLE_CFLAGS) -I$(ORACLE_AWSLC)/include -o $@ $(HERE)/oracle-main.c \
+	$(CC) $(ORACLE_CFLAGS) -I$(ORACLE_AWSLC)/include -o $@ \
+	  $(HERE)/oracle-main.c $(HERE)/oracle-openssl.c \
 	  $(call oracle_lib,$(ORACLE_AWSLC)) $(ORACLE_LIBS)
 endif
 
 ifneq ($(strip $(ORACLE_BORINGSSL)),)
 ORACLES += $(ORACLE_BIN)/oracle-boringssl
 ORACLE_ARGS += --oracle $(ORACLE_BIN)/oracle-boringssl
-$(ORACLE_BIN)/oracle-boringssl: FORCE $(HERE)/oracle-main.c $(HERE)/oracle-protocol.h
+$(ORACLE_BIN)/oracle-boringssl: FORCE $(ORACLE_SRCS) $(HERE)/oracle-openssl.c
 	@mkdir -p $(@D)
-	$(CC) $(ORACLE_CFLAGS) -I$(ORACLE_BORINGSSL)/include -o $@ $(HERE)/oracle-main.c \
+	$(CC) $(ORACLE_CFLAGS) -I$(ORACLE_BORINGSSL)/include -o $@ \
+	  $(HERE)/oracle-main.c $(HERE)/oracle-openssl.c \
 	  $(call oracle_lib,$(ORACLE_BORINGSSL)) $(BORINGSSL_LIBS)
+endif
+
+# HACL*: its headers include one another from include/, include/hacl and
+# include/krml, and on Linux need _GNU_SOURCE for the endian functions. The
+# headers carry no version, so the banner names the install prefix and the
+# SHA-256 of the static library linked.
+ifneq ($(strip $(ORACLE_HACL)),)
+HACL_LIB := $(firstword $(wildcard $(ORACLE_HACL)/lib/libhacl_static.a \
+              $(ORACLE_HACL)/lib64/libhacl_static.a))
+HACL_SUM := $(firstword $(shell (sha256sum $(HACL_LIB) || shasum -a 256 $(HACL_LIB)) \
+              2>/dev/null))
+CC_IS_CLANG := $(shell $(CC) -dM -E - </dev/null 2>/dev/null | grep -c __clang__)
+HACL_DEFS := $(if $(filter linux,$(HOST_SYSTEM)),-D_GNU_SOURCE) \
+             $(if $(filter 1,$(CC_IS_CLANG)),-Wno-nonportable-include-path)
+HACL_IDENTITY := HACL* C package $(notdir $(ORACLE_HACL)), libhacl_static.a sha256 $(HACL_SUM)
+ORACLES += $(ORACLE_BIN)/oracle-hacl
+ORACLE_ARGS += --oracle $(ORACLE_BIN)/oracle-hacl
+$(ORACLE_BIN)/oracle-hacl: FORCE $(ORACLE_SRCS) $(HERE)/oracle-hacl.c
+	@[ -n "$(HACL_LIB)" ] || { echo "no libhacl_static.a under $(ORACLE_HACL)" >&2; exit 1; }
+	@mkdir -p $(@D)
+	$(CC) $(ORACLE_CFLAGS) $(HACL_DEFS) -I$(ORACLE_HACL)/include \
+	  -I$(ORACLE_HACL)/include/hacl -I$(ORACLE_HACL)/include/krml \
+	  '-DORACLE_IDENTITY="$(HACL_IDENTITY)"' -o $@ \
+	  $(HERE)/oracle-main.c $(HERE)/oracle-hacl.c $(HACL_LIB) $(ORACLE_LIBS)
 endif
 
 # --------------------------------------------------------------------
