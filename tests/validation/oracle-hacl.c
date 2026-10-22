@@ -13,8 +13,9 @@
  *
  * The pinned package has SHA-224, SHA-256, SHA-384 and SHA-512 and the two
  * HMACs; it has no SHA-512/224 or SHA-512/256 entry point, so this oracle
- * does not implement them. Its lengths are 32-bit: a longer input is
- * reported as not implemented.
+ * does not implement them. Its lengths are 32-bit: a longer one-shot
+ * input is reported as not implemented, and operation 3 feeds the
+ * message one block per update.
  *
  * The headers carry no version, so the build names the identity:
  * ORACLE_IDENTITY, set by tests/validation/Makefile from the install
@@ -43,7 +44,7 @@ const char *oracle_backend_identity(void)
 
 unsigned oracle_backend_mask(void)
 {
-    return 0x0fu | (1u << 8) | (1u << 9);
+    return 0x0fu | (0x0fu << 16) | (1u << 8) | (1u << 9);
 }
 
 int oracle_backend_hash(unsigned alg, const uint8_t *in, size_t len, uint8_t *out,
@@ -79,5 +80,76 @@ int oracle_backend_hmac(unsigned alg, const uint8_t *key, size_t key_len, const 
                                    (uint32_t)msg_len);
         *out_len = 64;
     }
+    return ORACLE_STATUS_OK;
+}
+
+int oracle_backend_stream(unsigned alg, const uint8_t *block, size_t period, uint64_t len,
+                          uint8_t *out, size_t *out_len)
+{
+    uint8_t *p = (uint8_t *)block;
+    int ok = 1;
+
+    if (alg >= 4 || period > UINT32_MAX) {
+        return ORACLE_STATUS_UNSUPPORTED;
+    }
+    if (alg < 2) {
+        Hacl_Streaming_MD_state_32 *s =
+            alg == 0 ? Hacl_Streaming_SHA2_create_in_224() : Hacl_Streaming_SHA2_create_in_256();
+
+        if (s == NULL) {
+            return ORACLE_STATUS_ERROR;
+        }
+        if (alg == 0) {
+            Hacl_Streaming_SHA2_init_224(s);
+        } else {
+            Hacl_Streaming_SHA2_init_256(s);
+        }
+        while (ok && len > 0) {
+            uint32_t piece = (uint32_t)(len < period ? len : period);
+
+            ok = (alg == 0 ? Hacl_Streaming_SHA2_update_224(s, p, piece)
+                           : Hacl_Streaming_SHA2_update_256(s, p, piece)) ==
+                 Hacl_Streaming_Types_Success;
+            len -= piece;
+        }
+        if (alg == 0) {
+            Hacl_Streaming_SHA2_finish_224(s, out);
+            Hacl_Streaming_SHA2_free_224(s);
+        } else {
+            Hacl_Streaming_SHA2_finish_256(s, out);
+            Hacl_Streaming_SHA2_free_256(s);
+        }
+    } else {
+        Hacl_Streaming_MD_state_64 *s =
+            alg == 2 ? Hacl_Streaming_SHA2_create_in_384() : Hacl_Streaming_SHA2_create_in_512();
+
+        if (s == NULL) {
+            return ORACLE_STATUS_ERROR;
+        }
+        if (alg == 2) {
+            Hacl_Streaming_SHA2_init_384(s);
+        } else {
+            Hacl_Streaming_SHA2_init_512(s);
+        }
+        while (ok && len > 0) {
+            uint32_t piece = (uint32_t)(len < period ? len : period);
+
+            ok = (alg == 2 ? Hacl_Streaming_SHA2_update_384(s, p, piece)
+                           : Hacl_Streaming_SHA2_update_512(s, p, piece)) ==
+                 Hacl_Streaming_Types_Success;
+            len -= piece;
+        }
+        if (alg == 2) {
+            Hacl_Streaming_SHA2_finish_384(s, out);
+            Hacl_Streaming_SHA2_free_384(s);
+        } else {
+            Hacl_Streaming_SHA2_finish_512(s, out);
+            Hacl_Streaming_SHA2_free_512(s);
+        }
+    }
+    if (!ok) {
+        return ORACLE_STATUS_ERROR;
+    }
+    *out_len = digest_bytes[alg];
     return ORACLE_STATUS_OK;
 }

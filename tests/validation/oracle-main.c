@@ -24,6 +24,8 @@
 #include "oracle-backend.h"
 #include "oracle-protocol.h"
 
+static uint8_t stream_block[ORACLE_STREAM_PERIOD];
+
 static uint32_t get32(const uint8_t *p)
 {
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) |
@@ -61,6 +63,7 @@ int main(int argc, char **argv)
         return 0;
     }
     banner();
+    oracle_stream_block(stream_block);
 
     for (;;) {
         uint8_t head[ORACLE_HEADER_BYTES];
@@ -73,6 +76,15 @@ int main(int argc, char **argv)
         if (!read_all(head, sizeof head)) {
             break;
         }
+        if (head[0] == ORACLE_OP_STREAM) {
+            uint64_t len = (uint64_t)get32(head + 4) | ((uint64_t)get32(head + 8) << 32);
+
+            status = oracle_backend_stream(head[1], stream_block, ORACLE_STREAM_PERIOD, len,
+                                           out, &out_len);
+            reply(status, out, out_len);
+            continue;
+        }
+
         key_len = get32(head + 4);
         msg_len = get32(head + 8);
         total = key_len + msg_len;

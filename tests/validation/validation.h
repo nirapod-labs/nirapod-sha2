@@ -209,5 +209,6 @@ int suite_negative(void);
 int suite_multiway(void);
 int suite_oracle(void);
 int suite_xarch(void);
+int suite_long(void);
 
 #endif /* NIRAPOD_SHA2_VALIDATION_H */

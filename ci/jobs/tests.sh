@@ -13,10 +13,10 @@
 #
 # SHA2_BASELINES is the install directory of the pinned independent
 # implementations (toolchain/baselines/build.sh WORK makes WORK/install).
-# The differential suite compares every kernel with OpenSSL, AWS-LC,
-# BoringSSL and HACL* from there. It is part of this job: without
-# SHA2_BASELINES, or with an implementation missing, the job fails rather
-# than pass with the comparison skipped.
+# The differential and long suites compare every kernel with OpenSSL,
+# AWS-LC, BoringSSL and HACL* from there. They are part of this job:
+# without SHA2_BASELINES, or with an implementation missing, the job fails
+# rather than pass with the comparison skipped.
 
 set -euo pipefail
 # shellcheck disable=SC1091

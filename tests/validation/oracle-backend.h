@@ -34,4 +34,9 @@ int oracle_backend_hash(unsigned alg, const uint8_t *in, size_t len, uint8_t *ou
 int oracle_backend_hmac(unsigned alg, const uint8_t *key, size_t key_len, const uint8_t *msg,
                         size_t msg_len, uint8_t *out, size_t *out_len);
 
+/* The hash of len bytes made of block (period bytes) repeated, through the
+ * implementation's incremental interface, one block per update. */
+int oracle_backend_stream(unsigned alg, const uint8_t *block, size_t period, uint64_t len,
+                          uint8_t *out, size_t *out_len);
+
 #endif /* NIRAPOD_SHA2_ORACLE_BACKEND_H */

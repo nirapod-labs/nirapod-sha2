@@ -61,7 +61,7 @@ unsigned oracle_backend_mask(void)
 
     for (i = 0; i < 6; i++) {
         if (digest_for(i) != NULL) {
-            mask |= 1u << i;
+            mask |= (1u << i) | (1u << (16 + i));
         }
     }
     return mask | (1u << 8) | (1u << 9);
@@ -93,6 +93,37 @@ int oracle_backend_hmac(unsigned alg, const uint8_t *key, size_t key_len, const 
     }
     if (HMAC(alg == 0 ? EVP_sha256() : EVP_sha512(), key, (int)key_len, msg, msg_len, out,
              &n) == NULL) {
+        return ORACLE_STATUS_ERROR;
+    }
+    *out_len = n;
+    return ORACLE_STATUS_OK;
+}
+
+int oracle_backend_stream(unsigned alg, const uint8_t *block, size_t period, uint64_t len,
+                          uint8_t *out, size_t *out_len)
+{
+    const EVP_MD *md = digest_for(alg);
+    EVP_MD_CTX *ctx;
+    unsigned int n = 0;
+    int ok;
+
+    if (md == NULL) {
+        return ORACLE_STATUS_UNSUPPORTED;
+    }
+    ctx = EVP_MD_CTX_new();
+    if (ctx == NULL) {
+        return ORACLE_STATUS_ERROR;
+    }
+    ok = EVP_DigestInit_ex(ctx, md, NULL) == 1;
+    while (ok && len > 0) {
+        size_t piece = len < period ? (size_t)len : period;
+
+        ok = EVP_DigestUpdate(ctx, block, piece) == 1;
+        len -= piece;
+    }
+    ok = ok && EVP_DigestFinal_ex(ctx, out, &n) == 1;
+    EVP_MD_CTX_free(ctx);
+    if (!ok) {
         return ORACLE_STATUS_ERROR;
     }
     *out_len = n;

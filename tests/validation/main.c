@@ -43,6 +43,7 @@ static const struct suite_entry {
     { "multiway", suite_multiway },
     { "differential", suite_oracle },
     { "xarch", suite_xarch },
+    { "long", suite_long },
 };
 
 #define SUITE_COUNT (sizeof suites / sizeof suites[0])

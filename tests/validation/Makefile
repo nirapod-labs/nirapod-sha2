@@ -9,10 +9,10 @@
 #
 #     make check
 #
-# The differential suite needs independent implementations. Name their
-# install prefixes: ORACLE_OPENSSL, ORACLE_AWSLC and ORACLE_BORINGSSL with
-# include/openssl and lib/libcrypto.a, ORACLE_HACL with include/hacl and
-# lib/libhacl_static.a:
+# The differential and long suites need independent implementations. Name
+# their install prefixes: ORACLE_OPENSSL, ORACLE_AWSLC and ORACLE_BORINGSSL
+# with include/openssl and lib/libcrypto.a, ORACLE_HACL with include/hacl
+# and lib/libhacl_static.a:
 #
 #     make check ORACLE_OPENSSL=/opt/openssl-4.0.3 \
 #                ORACLE_HACL=/opt/hacl-star-0.7.2
@@ -58,7 +58,7 @@ LARGE      ?= 1048579
 SUITES     ?=
 
 SRCS := util.c json.c oracle.c cavp.c wycheproof.c bounds.c splits.c cross.c \
-        negative.c multiway.c diff.c xarch.c main.c
+        negative.c multiway.c diff.c xarch.c long.c main.c
 OBJS := $(addprefix $(OBJDIR)/,$(SRCS:.c=.o))
 DEPS := $(wildcard $(HERE)/*.h) $(ROOT)/include/nirapod_sha2.h \
         $(ROOT)/capi/testing/nirapod_sha2_testing.h
