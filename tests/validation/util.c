@@ -205,6 +205,11 @@ int suite_end(validation_suite *s)
                s->public_api.fail == 0 ? "PASS" : "FAIL", s->public_api.pass,
                s->public_api.fail, s->public_api.skip);
     }
+    if (s->controls != 0) {
+        printf("  %-22s %s %lu run, %lu rejected\n", "negative controls",
+               s->missed == 0 ? "PASS" : "FAIL", s->controls, s->controls - s->missed);
+    }
+    total_fail += s->missed;
     printf("  %-22s %s PASS %lu FAIL %lu SKIP %lu\n", "suite total",
            total_fail == 0 ? "PASS" : "FAIL", total_pass, total_fail, total_skip);
     fflush(stdout);
@@ -216,11 +221,63 @@ void fail_case(validation_suite *s, int kernel, const char *fmt, ...)
     va_list ap;
 
     count_fail(s, kernel);
+    if (s->quiet) {
+        return;
+    }
     fprintf(stderr, "FAIL %s %s: ", s->name, kernel_label(kernel));
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
     va_end(ap);
     fputc('\n', stderr);
+}
+
+void control_begin(validation_suite *scratch, const validation_suite *s)
+{
+    memset(scratch, 0, sizeof *scratch);
+    scratch->name = s->name;
+    scratch->quiet = 1;
+}
+
+static int control_note(validation_suite *s, int rejected, const char *fmt, va_list ap)
+    __attribute__((format(printf, 3, 0)));
+
+static int control_note(validation_suite *s, int rejected, const char *fmt, va_list ap)
+{
+    s->controls++;
+    if (rejected) {
+        return 1;
+    }
+    s->missed++;
+    fprintf(stderr, "FAIL %s control: ", s->name);
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, ": the check did not reject it\n");
+    return 0;
+}
+
+int control_end(validation_suite *s, const validation_suite *scratch, const char *fmt, ...)
+{
+    unsigned long failed = scratch->public_api.fail;
+    va_list ap;
+    int k, rc;
+
+    for (k = 0; k < VALIDATION_KERNELS; k++) {
+        failed += scratch->kernel[k].fail;
+    }
+    va_start(ap, fmt);
+    rc = control_note(s, failed != 0, fmt, ap);
+    va_end(ap);
+    return rc;
+}
+
+int control_record(validation_suite *s, int rejected, const char *fmt, ...)
+{
+    va_list ap;
+    int rc;
+
+    va_start(ap, fmt);
+    rc = control_note(s, rejected, fmt, ap);
+    va_end(ap);
+    return rc;
 }
 
 static const char *const kernel_names[VALIDATION_KERNELS] = {
@@ -742,6 +799,9 @@ int check_bytes(validation_suite *s, int kernel, const uint8_t *got, const uint8
         return 1;
     }
     count_fail(s, kernel);
+    if (s->quiet) {
+        return 0;
+    }
     fprintf(stderr, "FAIL %s %s: %s\n", s->name, kernel_label(kernel), what);
     hex_line(stderr, "got ", got, n);
     hex_line(stderr, "want", want, n);
@@ -761,6 +821,9 @@ int check_code(validation_suite *s, int kernel, int got, int want, const char *f
         return 1;
     }
     count_fail(s, kernel);
+    if (s->quiet) {
+        return 0;
+    }
     fprintf(stderr, "FAIL %s %s: %s: got %d, want %d\n", s->name, kernel_label(kernel), what, got,
             want);
     return 0;
@@ -779,6 +842,9 @@ int check(validation_suite *s, int kernel, int ok, const char *fmt, ...)
         return 1;
     }
     count_fail(s, kernel);
+    if (s->quiet) {
+        return 0;
+    }
     fprintf(stderr, "FAIL %s %s: %s\n", s->name, kernel_label(kernel), what);
     return 0;
 }
