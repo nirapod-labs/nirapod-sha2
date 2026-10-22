@@ -22,6 +22,12 @@
  *
  * The one-shot functions are not run at this length: that would need the
  * whole message in memory.
+ *
+ * Negative controls, run on the answers already computed so that they
+ * cost no second pass over the message: for each function, the oracle
+ * answers with one more oracle added that answers a digest with one bit
+ * flipped must be rejected as a disagreement, and for each target the
+ * comparison with the agreed answer, one bit flipped, must fail.
  */
 
 #include "validation.h"
@@ -85,35 +91,36 @@ int suite_long(void)
 
     for (i = 0; i < sizeof long_algs / sizeof long_algs[0]; i++) {
         const hash_alg *a = &HASH_ALGS[long_algs[i]];
-        uint8_t expected[VALIDATION_MAX_DIGEST];
-        size_t answered = 0;
-        int disagree = 0;
+        uint8_t expected[VALIDATION_MAX_DIGEST], wrong[VALIDATION_MAX_DIGEST];
+        uint8_t answer[VALIDATION_MAX_ORACLES + 1][ORACLE_MAX_DIGEST];
+        int has[VALIDATION_MAX_ORACLES + 1];
+        size_t first = 0;
+        int answered, disagree = 0;
 
         for (o = 0; o < (size_t)validation.oracle_count; o++) {
-            uint8_t got[ORACLE_MAX_DIGEST];
             size_t got_len = 0;
-            int rc = oracle_stream(oracles[o], (unsigned)a->oracle_id, LONG_BYTES, got,
+            int rc = oracle_stream(oracles[o], (unsigned)a->oracle_id, LONG_BYTES, answer[o],
                                    &got_len);
 
+            has[o] = rc == 1 && got_len == a->digest_len;
             if (rc < 0 || (rc == 1 && got_len != a->digest_len)) {
                 fail_case(&s, VALIDATION_PUBLIC, "%s: oracle %zu failed on %llu bytes",
                           a->name, o, (unsigned long long)LONG_BYTES);
                 disagree = 1;
-                continue;
             }
-            if (rc == 0) {
-                continue;
-            }
-            if (answered > 0 && memcmp(expected, got, a->digest_len) != 0) {
-                fail_case(&s, VALIDATION_PUBLIC, "%s: oracle %zu disagrees with oracle 0 on "
-                          "%llu bytes", a->name, o, (unsigned long long)LONG_BYTES);
-                disagree = 1;
-                continue;
-            }
-            memcpy(expected, got, a->digest_len);
-            answered++;
         }
-        printf("  %s, %llu bytes (bit length 2^32 + %llu): %zu of %d oracles answered\n",
+        answered = oracle_consensus(answer[0], sizeof answer[0], has,
+                                    (size_t)validation.oracle_count, a->digest_len, expected,
+                                    &first);
+        if (answered < 0) {
+            fail_case(&s, VALIDATION_PUBLIC, "%s: oracle %zu disagrees with an earlier oracle "
+                      "on %llu bytes", a->name, first, (unsigned long long)LONG_BYTES);
+            disagree = 1;
+        }
+        if (disagree) {
+            continue;
+        }
+        printf("  %s, %llu bytes (bit length 2^32 + %llu): %d of %d oracles answered\n",
                a->name, (unsigned long long)LONG_BYTES,
                (unsigned long long)(LONG_BYTES * 8 - (UINT64_C(1) << 32)), answered,
                validation.oracle_count);
@@ -122,9 +129,18 @@ int suite_long(void)
             fail_case(&s, VALIDATION_PUBLIC, "%s: no oracle implements operation 3", a->name);
             continue;
         }
-        if (disagree) {
-            continue;
-        }
+
+        /* Control: one more oracle, whose answer has one bit flipped. */
+        o = (size_t)validation.oracle_count;
+        memcpy(answer[o], expected, a->digest_len);
+        answer[o][a->digest_len / 2] ^= 0x10;
+        has[o] = 1;
+        control_record(&s,
+                       oracle_consensus(answer[0], sizeof answer[0], has, o + 1, a->digest_len,
+                                        wrong, &first) < 0,
+                       "%s: an oracle answering a wrong digest", a->name);
+        memcpy(wrong, expected, a->digest_len);
+        wrong[a->digest_len - 1] ^= 0x01;
         for (m = 0; m <= (size_t)VALIDATION_KERNELS; m++) {
             int target = m == VALIDATION_KERNELS ? VALIDATION_PUBLIC : (int)m;
             uint8_t got[VALIDATION_MAX_DIGEST];
@@ -137,8 +153,17 @@ int suite_long(void)
                           (unsigned long long)LONG_BYTES);
                 continue;
             }
-            check_bytes(&s, target, got, expected, a->digest_len, "%s: %llu bytes", a->name,
-                        (unsigned long long)LONG_BYTES);
+            if (check_bytes(&s, target, got, expected, a->digest_len, "%s: %llu bytes",
+                            a->name, (unsigned long long)LONG_BYTES)) {
+                validation_suite c;
+
+                /* Control: the same comparison against a wrong answer. */
+                control_begin(&c, &s);
+                check_bytes(&c, target, got, wrong, a->digest_len, "%s: %llu bytes", a->name,
+                            (unsigned long long)LONG_BYTES);
+                control_end(&s, &c, "%s on %s: a digest with one bit flipped", a->name,
+                            kernel_label(target));
+            }
         }
     }
 
