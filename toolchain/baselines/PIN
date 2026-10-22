@@ -12,6 +12,8 @@
 # Each source is a release archive pinned by its SHA-256; the full commit
 # it was made from is recorded beside it. OpenSSL is the only project that
 # publishes a checksum for its archive, and the one below matches it.
+# BoringSSL and SPHINCS+ have no release to pin, so their archives are the
+# ones GitHub makes of a commit.
 
 OPENSSL_NAME=openssl-4.0.3
 OPENSSL_URL=https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz
@@ -32,3 +34,14 @@ HACL_NAME=hacl-star-0.7.2
 HACL_URL=https://github.com/cryspen/hacl-packages/archive/refs/tags/ocaml-v0.7.2.tar.gz
 HACL_SHA256=98c73bdd6a4fd3d73f8ef8ad725b17aa217a64a65d4c12ac63ba58895ff7ec80
 HACL_COMMIT=81303b83a54a92d3b5f54f1b8ddbea60438cc2bf
+
+# The SPHINCS+ reference code, for the 8-way SHA-256 and 4-way SHA-512 of
+# its sha2-avx2 directory. It is a benchmark baseline only, on x86-64; the
+# differential tests do not use it. SPHINCS_PARAMS is the parameter set it
+# is compiled with. Neither multi-way function reads it; it is needed only
+# because every header of the directory includes params.h.
+SPHINCS_NAME=sphincsplus-7ec789a
+SPHINCS_URL=https://github.com/sphincs/sphincsplus/archive/7ec789ace6874d875f4bb84cb61b81155398167e.tar.gz
+SPHINCS_SHA256=99e6a8af4370beff7b8a9af732b8013128859a89f30670c5169da71f07ff6a5a
+SPHINCS_COMMIT=7ec789ace6874d875f4bb84cb61b81155398167e
+SPHINCS_PARAMS=sphincs-sha2-256f
