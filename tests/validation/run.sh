@@ -12,8 +12,8 @@
 #
 # the first three pointing at a prefix with include/openssl and
 # lib/libcrypto.a, the last at one with include/hacl and
-# lib/libhacl_static.a. Without one the differential and long suites
-# report SKIP.
+# lib/libhacl_static.a. Without one the differential, long and fuzz
+# suites report SKIP.
 
 set -eu
 

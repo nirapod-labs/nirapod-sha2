@@ -30,6 +30,7 @@
 #define VALIDATION_MAX_ORACLES 4
 #define VALIDATION_MAX_DIGEST 64
 #define VALIDATION_GUARD 0xa5
+#define VALIDATION_FUZZ_SEED UINT64_C(0x5eed5a2e1f0d3c47)
 
 typedef struct validation_counts {
     unsigned long pass;
@@ -122,6 +123,8 @@ typedef struct validation_env {
     size_t large_bytes;
     int require_oracle;
     const char *write_xarch;
+    uint64_t seed;
+    size_t fuzz_cases;
     int oracle_count;
     const char *oracle[VALIDATION_MAX_ORACLES];
 } validation_env;
@@ -210,5 +213,6 @@ int suite_multiway(void);
 int suite_oracle(void);
 int suite_xarch(void);
 int suite_long(void);
+int suite_fuzz(void);
 
 #endif /* NIRAPOD_SHA2_VALIDATION_H */

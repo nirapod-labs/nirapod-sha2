@@ -18,6 +18,8 @@
  *     --require-oracle    fail when no oracle is named
  *     --write-xarch FILE  write the xarch values of this build to FILE
  *                         instead of checking them (suite xarch)
+ *     --seed N            seed of the fuzz suite (decimal or 0x hex)
+ *     --fuzz-cases N      cases of the fuzz suite (default 20000)
  */
 
 #include "validation.h"
@@ -44,6 +46,7 @@ static const struct suite_entry {
     { "differential", suite_oracle },
     { "xarch", suite_xarch },
     { "long", suite_long },
+    { "fuzz", suite_fuzz },
 };
 
 #define SUITE_COUNT (sizeof suites / sizeof suites[0])
@@ -53,7 +56,7 @@ static void usage(FILE *f)
     fprintf(f,
             "usage: validation [--vectors DIR] [--oracle PATH]... [--iterations N]\n"
             "                  [--large N] [--suite NAME]... [--list] [--require-oracle]\n"
-            "                  [--write-xarch FILE]\n");
+            "                  [--write-xarch FILE] [--seed N] [--fuzz-cases N]\n");
 }
 
 static unsigned long parse_ulong(const char *what, const char *s)
@@ -130,6 +133,8 @@ int main(int argc, char **argv)
     validation.large_bytes = (1u << 20) + 3;
     validation.require_oracle = 0;
     validation.write_xarch = NULL;
+    validation.seed = VALIDATION_FUZZ_SEED;
+    validation.fuzz_cases = 20000;
     validation.oracle_count = 0;
     memset(selected, 0, sizeof selected);
 
@@ -171,6 +176,16 @@ int main(int argc, char **argv)
             return 0;
         } else if (strcmp(arg, "--write-xarch") == 0 && i + 1 < argc) {
             validation.write_xarch = argv[++i];
+        } else if (strcmp(arg, "--seed") == 0 && i + 1 < argc) {
+            char *end;
+            const char *v = argv[++i];
+
+            validation.seed = (uint64_t)strtoull(v, &end, 0);
+            if (*v == '\0' || *v == '-' || *end != '\0') {
+                die("bad seed: %s", v);
+            }
+        } else if (strcmp(arg, "--fuzz-cases") == 0 && i + 1 < argc) {
+            validation.fuzz_cases = (size_t)parse_ulong("fuzz cases", argv[++i]);
         } else if (strcmp(arg, "--require-oracle") == 0) {
             validation.require_oracle = 1;
         } else if (strcmp(arg, "--help") == 0 || strcmp(arg, "-h") == 0) {
