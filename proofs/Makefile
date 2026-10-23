@@ -18,6 +18,11 @@
 #                          no theory name occurs twice on a unit's load path
 #   make check-imported    the imported crypto-specs theories
 #   make check-spec        the specification files
+#   make check-spec-exec   the specification evaluated on CAVP vectors
+#                          (spec/validation/): the generated files equal a
+#                          fresh generation, every file checks, and each
+#                          negative control is rejected
+#   make spec-vectors      rewrite the generated files of spec/validation/
 #   make check-lib         the files that need no model, once each
 #   make check-units       the files that need a model, once per unit
 #   make check-unit UNIT=<unit>   one unit only
@@ -112,7 +117,11 @@ IMPORTED_FLAGS := -no-eco -R $(CRYPTO_SPECS)/common $(IMPORTED_PROVERS) -timeout
 
 ec_files = $(sort $(wildcard $(addsuffix /*.ec,$(1))))
 
-SPEC_FILES     := $(shell find spec -name '*.ec' 2>/dev/null | LC_ALL=C sort)
+# The specification proper; spec/validation/ is checked by check-spec-exec.
+SPEC_FILES     := $(shell find spec -path spec/validation -prune -o -name '*.ec' -print 2>/dev/null | LC_ALL=C sort)
+EXEC_DIR       := spec/validation
+EXEC_FILES     := $(sort $(wildcard $(EXEC_DIR)/*.ec))
+CAVP_VECTORS   := ../tests/vectors/cavp
 IMPORTED_FILES := $(shell find $(CRYPTO_SPECS)/common -name '*.ec' 2>/dev/null | LC_ALL=C sort)
 TREE_FILES     := $(shell find $(TREES) -name '*.ec' 2>/dev/null | LC_ALL=C sort)
 
@@ -185,10 +194,11 @@ lib_flags  = $(EC_COMMON) $(addprefix -I ,$(LIB_DIRS) $(wildcard $(addsuffix /$(
 # Proof targets
 
 .PHONY: check scan-holes check-constants check-layout check-imported check-spec
+.PHONY: check-spec-exec spec-vectors
 .PHONY: check-lib check-units check-unit print-unit
 
 check: scan-holes check-constants check-layout check-imported check-spec \
-       check-lib check-units check-inventory
+       check-spec-exec check-lib check-units check-inventory
 
 scan-holes:
 	@$(PYTHON) -I tools/scan_holes.py \
@@ -224,6 +234,23 @@ check-imported:
 check-spec:
 	@$(MAKE) --no-print-directory LABEL=check-spec FILES="$(SPEC_FILES)" \
 	  FLAGS="$(OWN_FLAGS)" compile-files
+
+# The specification evaluated on NIST CAVP vectors. SpecEval.ec holds the
+# rewriting rules, each a proved lemma; tools/spec_vectors.py generates
+# the CAVP_*.ec files from tests/vectors/cavp, after checking the response
+# files against their SHA256SUMS. Each lemma there is closed by cbv with
+# those rules. The controls, one per generated file, are its first lemma
+# with one output bit flipped, which EasyCrypt must reject as a proof that
+# does not close; they are written to scratch directories only.
+check-spec-exec:
+	@$(PYTHON) -I tools/spec_vectors.py check $(CAVP_VECTORS) $(EXEC_DIR)
+	@$(MAKE) --no-print-directory LABEL=check-spec-exec FILES="$(EXEC_FILES)" \
+	  FLAGS="$(OWN_FLAGS)" compile-files
+	@$(PYTHON) -I tools/spec_vectors.py controls $(CAVP_VECTORS) --jobs $(J) \
+	  --easycrypt "$(EASYCRYPT)" --flags "$(OWN_FLAGS)"
+
+spec-vectors:
+	@$(PYTHON) -I tools/spec_vectors.py write $(CAVP_VECTORS) $(EXEC_DIR)
 
 check-lib:
 	@files="$(call ec_files,$(LIB_DIRS))"; \

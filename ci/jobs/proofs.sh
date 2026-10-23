@@ -9,6 +9,8 @@
 #
 #   make -C proofs check            hole scan, constant derivation, layout,
 #                                   imported theories, specification, the
+#                                   specification evaluated on CAVP vectors
+#                                   and its controls, the
 #                                   files that need no model, every unit's
 #                                   files on its models, and the committed
 #                                   axiom and theorem inventory of every unit
