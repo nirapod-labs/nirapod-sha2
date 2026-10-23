@@ -1,0 +1,474 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: H. M. Yousuf <hmyousuf@nirapod.org>
+Date: Fri, 23 Oct 2026 00:21:57 +0600
+Subject: [PATCH] tests: expected outputs of the combined series
+
+The expected outputs of the negative and safety test suites are generated
+by their runners. The patches of the series were written on different
+bases, and each records the output of its own base. On the combined tree
+the outputs differ in three generated parts only: the asmgen messages of
+the Advanced SIMD negative tests now use upstream's message format, with
+the address forms of a 128-bit load or store; the negative test count
+and the order of the RISC-V entries follow from the tests the series
+adds; and the safety report of the shift-bound tests lists the ARMv8-A
+runs, which the ARMv8-A checker adds, with its relational constraints in
+sorted order. No verdict changes.
+---
+ compiler/tests/negative.expected   | 229 +++++++++++++++--------------
+ compiler/tests/safety/run.expected |  66 ++++++++-
+ 2 files changed, 178 insertions(+), 117 deletions(-)
+
+diff --git a/compiler/tests/negative.expected b/compiler/tests/negative.expected
+index b76b682..530e85b 100644
+--- a/compiler/tests/negative.expected
++++ b/compiler/tests/negative.expected
+@@ -764,65 +764,46 @@ Allowed args are:
+     mem: [base + imm], imm a multiple of 2 in [0, 8190] or in [-256, 255]
+          [base + s * index], s in {1, 2}
+ 
+-fail/asmgen/risc-v/lw_offset_range.jazz:
+-
+-"fail/asmgen/risc-v/lw_offset_range.jazz", line 5 (4-24):
+-compilation error in function lw_offset_range:
+-asmgen: instruction LOAD_s32 is given an unencodable address as an argument:
+-  x10, [:u32 x10 +32u (32u) 2048]
+-Allowed args are:
+-  reg, mem
+-    mem: [base + imm], imm in [-2048, 2047]
+-
+-fail/asmgen/risc-v/sw_offset_neg.jazz:
+-
+-"fail/asmgen/risc-v/sw_offset_neg.jazz", line 4 (4-24):
+-compilation error in function sw_offset_neg:
+-asmgen: instruction STORE_32 is given an unencodable address as an argument:
+-  x11, [:u32 x10 -32u (32u) 2049]
+-Allowed args are:
+-  reg, mem
+-    mem: [base + imm], imm in [-2048, 2047]
+-
+ fail/asmgen/armv8a/vdupe_index_range.jazz:
+ 
+ "fail/asmgen/armv8a/vdupe_index_range.jazz", line 6 (4-26):
+ compilation error in function vdupe_index_range:
+-asmgen: instruction VDUPE_8u16 is given at least one too large immediate as an argument.
+-Allowed args compatible with the input (except on immediate sizes) are:
+-  [[xreg]; [xreg]; [imm 8 [0, 7]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [xreg]; [imm 8 [0, 7]]]
++asmgen: instruction VDUPE_8u16 is given an unencodable immediate as an argument:
++  v0, v0, (8u) 8
++Allowed args are:
++  xreg, xreg, imm 8
++    imm 8: [0, 7]
+ 
+ fail/asmgen/armv8a/vext_index_range.jazz:
+ 
+ "fail/asmgen/armv8a/vext_index_range.jazz", line 7 (4-24):
+ compilation error in function vext_index_range:
+-asmgen: instruction VEXT is given at least one too large immediate as an argument.
+-Allowed args compatible with the input (except on immediate sizes) are:
+-  [[xreg]; [xreg]; [xreg]; [imm 8 [0, 15]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [xreg]; [xreg]; [imm 8 [0, 15]]]
++asmgen: instruction VEXT is given an unencodable immediate as an argument:
++  v0, v0, v1, (8u) 16
++Allowed args are:
++  xreg, xreg, xreg, imm 8
++    imm 8: [0, 15]
+ 
+ fail/asmgen/armv8a/vins_index_range.jazz:
+ 
+ "fail/asmgen/armv8a/vins_index_range.jazz", line 8 (4-28):
+ compilation error in function vins_index_range:
+-asmgen: instruction VINS_4u32 is given at least one too large immediate as an argument.
+-Allowed args compatible with the input (except on immediate sizes) are:
+-  [[xreg]; [reg]; [imm 8 [0, 3]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [reg]; [imm 8 [0, 3]]]
++asmgen: instruction VINS_4u32 is given an unencodable immediate as an argument:
++  v0, x1, (8u) 4
++Allowed args are:
++  xreg, reg, imm 8
++    imm 8: [0, 3]
+ 
+ fail/asmgen/armv8a/vinse_index_range.jazz:
+ 
+ "fail/asmgen/armv8a/vinse_index_range.jazz", line 8 (4-33):
+ compilation error in function vinse_index_range:
+-asmgen: instruction VINSE_16u8 is given at least one too large immediate as an argument.
+-Allowed args compatible with the input (except on immediate sizes) are:
+-  [[xreg]; [xreg]; [imm 8 [0, 15]]; [imm 8 [0, 15]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [xreg]; [imm 8 [0, 15]]; [imm 8 [0, 15]]]
++asmgen: instruction VINSE_16u8 is given an unencodable immediate as an argument:
++  v0, v1, (8u) 0, (8u) 16
++Allowed args are:
++  xreg, xreg, imm 8, imm 8
++    imm 8: [0, 15]
++    imm 8: [0, 15]
+ 
+ fail/asmgen/armv8a/vldr_index_scale16.jazz:
+ 
+@@ -835,141 +816,167 @@ fail/asmgen/armv8a/vldr_offset_neg257.jazz:
+ 
+ "fail/asmgen/armv8a/vldr_offset_neg257.jazz", line 5 (4-24):
+ compilation error in function vldr_offset_neg257:
+-asmgen: instruction VLDR is given at least one too large immediate or unencodable address as an argument.
+-Allowed args compatible with the input (except on immediate sizes and address shapes) are:
+-  [[xreg]; [mem (glob not allowed) [Xn|SP, #imm] with imm in [-256, 255] or a multiple of 16 in [0, 65520], or [Xn|SP, Xm]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [mem (glob not allowed) [Xn|SP, #imm] with imm in [-256, 255] or a multiple of 16 in [0, 65520], or [Xn|SP, Xm]]]
++asmgen: instruction VLDR is given an unencodable address as an argument:
++  v0, [:u128 x0 -64u (64u) 257]
++Allowed args are:
++  xreg, mem
++    mem: [base + imm], imm a multiple of 16 in [0, 65520] or in [-256, 255]
++         [base + index]
+ 
+ fail/asmgen/armv8a/vldr_offset_range.jazz:
+ 
+ "fail/asmgen/armv8a/vldr_offset_range.jazz", line 5 (4-26):
+ compilation error in function vldr_offset_range:
+-asmgen: instruction VLDR is given at least one too large immediate or unencodable address as an argument.
+-Allowed args compatible with the input (except on immediate sizes and address shapes) are:
+-  [[xreg]; [mem (glob not allowed) [Xn|SP, #imm] with imm in [-256, 255] or a multiple of 16 in [0, 65520], or [Xn|SP, Xm]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [mem (glob not allowed) [Xn|SP, #imm] with imm in [-256, 255] or a multiple of 16 in [0, 65520], or [Xn|SP, Xm]]]
++asmgen: instruction VLDR is given an unencodable address as an argument:
++  v0, [:u128 x0 +64u (64u) 65536]
++Allowed args are:
++  xreg, mem
++    mem: [base + imm], imm a multiple of 16 in [0, 65520] or in [-256, 255]
++         [base + index]
+ 
+ fail/asmgen/armv8a/vldr_offset_unaligned.jazz:
+ 
+ "fail/asmgen/armv8a/vldr_offset_unaligned.jazz", line 5 (4-24):
+ compilation error in function vldr_offset_unaligned:
+-asmgen: instruction VLDR is given at least one too large immediate or unencodable address as an argument.
+-Allowed args compatible with the input (except on immediate sizes and address shapes) are:
+-  [[xreg]; [mem (glob not allowed) [Xn|SP, #imm] with imm in [-256, 255] or a multiple of 16 in [0, 65520], or [Xn|SP, Xm]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [mem (glob not allowed) [Xn|SP, #imm] with imm in [-256, 255] or a multiple of 16 in [0, 65520], or [Xn|SP, Xm]]]
++asmgen: instruction VLDR is given an unencodable address as an argument:
++  v0, [:u128 x0 +64u (64u) 264]
++Allowed args are:
++  xreg, mem
++    mem: [base + imm], imm a multiple of 16 in [0, 65520] or in [-256, 255]
++         [base + index]
+ 
+ fail/asmgen/armv8a/vldr_scaled_index4.jazz:
+ 
+ "fail/asmgen/armv8a/vldr_scaled_index4.jazz", line 5 (4-26):
+ compilation error in function vldr_scaled_index4:
+-asmgen: instruction VLDR is given at least one too large immediate or unencodable address as an argument.
+-Allowed args compatible with the input (except on immediate sizes and address shapes) are:
+-  [[xreg]; [mem (glob not allowed) [Xn|SP, #imm] with imm in [-256, 255] or a multiple of 16 in [0, 65520], or [Xn|SP, Xm]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [mem (glob not allowed) [Xn|SP, #imm] with imm in [-256, 255] or a multiple of 16 in [0, 65520], or [Xn|SP, Xm]]]
++asmgen: instruction VLDR is given an unencodable address as an argument:
++  v0, [:u128 x0 +64u (64u) 4 *64u x1]
++Allowed args are:
++  xreg, mem
++    mem: [base + imm], imm a multiple of 16 in [0, 65520] or in [-256, 255]
++         [base + index]
+ 
+ fail/asmgen/armv8a/vmovi_nonzero.jazz:
+ 
+ "fail/asmgen/armv8a/vmovi_nonzero.jazz", line 5 (4-18):
+ compilation error in function vmovi_nonzero:
+-asmgen: instruction VMOVI is given at least one too large immediate as an argument.
+-Allowed args compatible with the input (except on immediate sizes) are:
+-  [[xreg]; [imm 64 (0 only)]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [imm 64 (0 only)]]
++asmgen: instruction VMOVI is given an unencodable immediate as an argument:
++  v0, (64u) 1
++Allowed args are:
++  xreg, imm 64
++    imm 64: (0 only)
+ 
+ fail/asmgen/armv8a/vshl_amount_range.jazz:
+ 
+ "fail/asmgen/armv8a/vshl_amount_range.jazz", line 6 (4-26):
+ compilation error in function vshl_amount_range:
+-asmgen: instruction VSHL_4u32 is given at least one too large immediate as an argument.
+-Allowed args compatible with the input (except on immediate sizes) are:
+-  [[xreg]; [xreg]; [imm 8 [0, 31]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [xreg]; [imm 8 [0, 31]]]
++asmgen: instruction VSHL_4u32 is given an unencodable immediate as an argument:
++  v0, v0, (8u) 32
++Allowed args are:
++  xreg, xreg, imm 8
++    imm 8: [0, 31]
+ 
+ fail/asmgen/armv8a/vsli_amount_range.jazz:
+ 
+ "fail/asmgen/armv8a/vsli_amount_range.jazz", line 7 (4-29):
+ compilation error in function vsli_amount_range:
+-asmgen: instruction VSLI_2u64 is given at least one too large immediate as an argument.
+-Allowed args compatible with the input (except on immediate sizes) are:
+-  [[xreg]; [xreg]; [imm 8 [0, 63]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [xreg]; [imm 8 [0, 63]]]
++asmgen: instruction VSLI_2u64 is given an unencodable immediate as an argument:
++  v0, v1, (8u) 64
++Allowed args are:
++  xreg, xreg, imm 8
++    imm 8: [0, 63]
+ 
+ fail/asmgen/armv8a/vsri_amount_zero.jazz:
+ 
+ "fail/asmgen/armv8a/vsri_amount_zero.jazz", line 7 (4-28):
+ compilation error in function vsri_amount_zero:
+-asmgen: instruction VSRI_4u32 is given at least one too large immediate as an argument.
+-Allowed args compatible with the input (except on immediate sizes) are:
+-  [[xreg]; [xreg]; [imm 8 [1, 32]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [xreg]; [imm 8 [1, 32]]]
++asmgen: instruction VSRI_4u32 is given an unencodable immediate as an argument:
++  v0, v1, (8u) 0
++Allowed args are:
++  xreg, xreg, imm 8
++    imm 8: [1, 32]
+ 
+ fail/asmgen/armv8a/vsshr_amount_range.jazz:
+ 
+ "fail/asmgen/armv8a/vsshr_amount_range.jazz", line 6 (4-27):
+ compilation error in function vsshr_amount_range:
+-asmgen: instruction VSSHR_4u32 is given at least one too large immediate as an argument.
+-Allowed args compatible with the input (except on immediate sizes) are:
+-  [[xreg]; [xreg]; [imm 8 [1, 32]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [xreg]; [imm 8 [1, 32]]]
++asmgen: instruction VSSHR_4u32 is given an unencodable immediate as an argument:
++  v0, v0, (8u) 33
++Allowed args are:
++  xreg, xreg, imm 8
++    imm 8: [1, 32]
+ 
+ fail/asmgen/armv8a/vstr_scaled_index.jazz:
+ 
+ "fail/asmgen/armv8a/vstr_scaled_index.jazz", line 6 (4-26):
+ compilation error in function vstr_scaled_index:
+-asmgen: instruction VSTR is given at least one too large immediate or unencodable address as an argument.
+-Allowed args compatible with the input (except on immediate sizes and address shapes) are:
+-  [[xreg]; [mem (glob not allowed) [Xn|SP, #imm] with imm in [-256, 255] or a multiple of 16 in [0, 65520], or [Xn|SP, Xm]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [mem (glob not allowed) [Xn|SP, #imm] with imm in [-256, 255] or a multiple of 16 in [0, 65520], or [Xn|SP, Xm]]]
++asmgen: instruction VSTR is given an unencodable address as an argument:
++  v0, [:u128 x0 +64u (64u) 8 *64u x1]
++Allowed args are:
++  xreg, mem
++    mem: [base + imm], imm a multiple of 16 in [0, 65520] or in [-256, 255]
++         [base + index]
+ 
+ fail/asmgen/armv8a/vstr_scaled_index2.jazz:
+ 
+ "fail/asmgen/armv8a/vstr_scaled_index2.jazz", line 6 (4-26):
+ compilation error in function vstr_scaled_index2:
+-asmgen: instruction VSTR is given at least one too large immediate or unencodable address as an argument.
+-Allowed args compatible with the input (except on immediate sizes and address shapes) are:
+-  [[xreg]; [mem (glob not allowed) [Xn|SP, #imm] with imm in [-256, 255] or a multiple of 16 in [0, 65520], or [Xn|SP, Xm]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [mem (glob not allowed) [Xn|SP, #imm] with imm in [-256, 255] or a multiple of 16 in [0, 65520], or [Xn|SP, Xm]]]
++asmgen: instruction VSTR is given an unencodable address as an argument:
++  v0, [:u128 x0 +64u (64u) 2 *64u x1]
++Allowed args are:
++  xreg, mem
++    mem: [base + imm], imm a multiple of 16 in [0, 65520] or in [-256, 255]
++         [base + index]
+ 
+ fail/asmgen/armv8a/vumov_index_range.jazz:
+ 
+ "fail/asmgen/armv8a/vumov_index_range.jazz", line 7 (4-26):
+ compilation error in function vumov_index_range:
+-asmgen: instruction VUMOV_2u64 is given at least one too large immediate as an argument.
+-Allowed args compatible with the input (except on immediate sizes) are:
+-  [[reg]; [xreg]; [imm 8 [0, 1]]]
+-All allowed args (regardless of the input) are:
+-  [[reg]; [xreg]; [imm 8 [0, 1]]]
++asmgen: instruction VUMOV_2u64 is given an unencodable immediate as an argument:
++  x0, v0, (8u) 2
++Allowed args are:
++  reg, xreg, imm 8
++    imm 8: [0, 1]
+ 
+ fail/asmgen/armv8a/vushr_amount_zero.jazz:
+ 
+ "fail/asmgen/armv8a/vushr_amount_zero.jazz", line 6 (4-26):
+ compilation error in function vushr_amount_zero:
+-asmgen: instruction VUSHR_2u64 is given at least one too large immediate as an argument.
+-Allowed args compatible with the input (except on immediate sizes) are:
+-  [[xreg]; [xreg]; [imm 8 [1, 64]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [xreg]; [imm 8 [1, 64]]]
++asmgen: instruction VUSHR_2u64 is given an unencodable immediate as an argument:
++  v0, v0, (8u) 0
++Allowed args are:
++  xreg, xreg, imm 8
++    imm 8: [1, 64]
+ 
+ fail/asmgen/armv8a/xar_rotation_range.jazz:
+ 
+ "fail/asmgen/armv8a/xar_rotation_range.jazz", line 7 (4-23):
+ compilation error in function xar_rotation_range:
+-asmgen: instruction XAR is given at least one too large immediate as an argument.
+-Allowed args compatible with the input (except on immediate sizes) are:
+-  [[xreg]; [xreg]; [xreg]; [imm 8 [0, 63]]]
+-All allowed args (regardless of the input) are:
+-  [[xreg]; [xreg]; [xreg]; [imm 8 [0, 63]]]
++asmgen: instruction XAR is given an unencodable immediate as an argument:
++  v0, v0, v1, (8u) 64
++Allowed args are:
++  xreg, xreg, xreg, imm 8
++    imm 8: [0, 63]
++
++fail/asmgen/risc-v/lw_offset_range.jazz:
++
++"fail/asmgen/risc-v/lw_offset_range.jazz", line 5 (4-24):
++compilation error in function lw_offset_range:
++asmgen: instruction LOAD_s32 is given an unencodable address as an argument:
++  x10, [:u32 x10 +32u (32u) 2048]
++Allowed args are:
++  reg, mem
++    mem: [base + imm], imm in [-2048, 2047]
++
++fail/asmgen/risc-v/sw_offset_neg.jazz:
++
++"fail/asmgen/risc-v/sw_offset_neg.jazz", line 4 (4-24):
++compilation error in function sw_offset_neg:
++asmgen: instruction STORE_32 is given an unencodable address as an argument:
++  x11, [:u32 x10 -32u (32u) 2049]
++Allowed args are:
++  reg, mem
++    mem: [base + imm], imm in [-2048, 2047]
+ 
+ fail/asmgen/x86-64/incompatible_args.jazz:
+ 
+@@ -2505,4 +2512,4 @@ Statistics:
+ 	Pretyping:  65
+ 	Parsing:     5
+ 	Typing:      5
+-	Compile:   250
++	Compile:   283
+diff --git a/compiler/tests/safety/run.expected b/compiler/tests/safety/run.expected
+index a4454cf..7437eea 100644
+--- a/compiler/tests/safety/run.expected
++++ b/compiler/tests/safety/run.expected
+@@ -557,7 +557,7 @@ Memory ranges:
+   mem_x: [0; 0]
+   
+ * Rel:
+-{inv_x ≥ 0, inv_x ≤ 18446744073709551615, mem_x = 0}
++{inv_x ≤ 18446744073709551615, inv_x ≥ 0, mem_x = 0}
+ mem_x ∊ [0; 0]
+ 
+ 
+@@ -575,7 +575,25 @@ Memory ranges:
+   mem_x: [0; 0]
+   
+ * Rel:
+-{inv_x ≥ 0, inv_x ≤ 18446744073709551615, mem_x = 0}
++{inv_x ≤ 18446744073709551615, inv_x ≥ 0, mem_x = 0}
++mem_x ∊ [0; 0]
++
++
++
++Program is not safe!
++
++File fail/common/shiftcast.jazz (on arch armv8a):
++Analyzing function f
++
++
++*** Possible Safety Violation(s):
++  "fail/common/shiftcast.jazz", line 13 (2-13): in_bound: buf[x] (length 300 U8)
++  
++Memory ranges:
++  mem_x: [0; 0]
++  
++* Rel:
++{inv_x ≤ 18446744073709551615, inv_x ≥ 0, mem_x = 0}
+ mem_x ∊ [0; 0]
+ 
+ 
+@@ -593,7 +611,7 @@ Memory ranges:
+   mem_x: [0; 0]
+   
+ * Rel:
+-{inv_x ≥ 0, inv_x ≤ 18446744073709551615, mem_x = 0}
++{inv_x ≤ 18446744073709551615, inv_x ≥ 0, mem_x = 0}
+ mem_x ∊ [0; 0]
+ 
+ 
+@@ -634,6 +652,24 @@ mem_inlen ∊ [0; 0]
+ 
+ 
+ 
++Program is not safe!
++
++File fail/common/shiftfalse.jazz (on arch armv8a):
++Analyzing function shift
++
++
++*** Possible Safety Violation(s):
++  "fail/common/shiftfalse.jazz", line 9 (2-42): n *64u (64u) 64 +64u (64u) 64 <=u inlen
++  
++Memory ranges:
++  mem_inlen: [0; 0]
++  
++* Rel:
++{inv_inlen ≤ 18446744073709551615, inv_inlen ≥ 0, mem_inlen = 0}
++mem_inlen ∊ [0; 0]
++
++
++
+ Program is not safe!
+ 
+ File fail/common/shiftfalse.jazz (on arch riscv):
+@@ -665,7 +701,7 @@ Memory ranges:
+   mem_x: [0; 0]
+   
+ * Rel:
+-{inv_x ≥ 0, inv_x ≤ 18446744073709551615, mem_x = 0}
++{inv_x ≤ 18446744073709551615, inv_x ≥ 0, mem_x = 0}
+ mem_x ∊ [0; 0]
+ 
+ 
+@@ -683,7 +719,25 @@ Memory ranges:
+   mem_x: [0; 0]
+   
+ * Rel:
+-{inv_x ≥ 0, inv_x ≤ 18446744073709551615, mem_x = 0}
++{inv_x ≤ 18446744073709551615, inv_x ≥ 0, mem_x = 0}
++mem_x ∊ [0; 0]
++
++
++
++Program is not safe!
++
++File fail/common/shiftnarrow.jazz (on arch armv8a):
++Analyzing function narrow
++
++
++*** Possible Safety Violation(s):
++  "fail/common/shiftnarrow.jazz", line 8 (2-38): (64u) n *64u (64u) 64 <=u x
++  
++Memory ranges:
++  mem_x: [0; 0]
++  
++* Rel:
++{inv_x ≤ 18446744073709551615, inv_x ≥ 0, mem_x = 0}
+ mem_x ∊ [0; 0]
+ 
+ 
+@@ -701,7 +755,7 @@ Memory ranges:
+   mem_x: [0; 0]
+   
+ * Rel:
+-{inv_x ≥ 0, inv_x ≤ 18446744073709551615, mem_x = 0}
++{inv_x ≤ 18446744073709551615, inv_x ≥ 0, mem_x = 0}
+ mem_x ∊ [0; 0]
+ 
+ 

@@ -16,9 +16,9 @@
 # scripts/mathcomp-word.nix, and nixpkgs 652efddd59a2 (scripts/nixpkgs.nix),
 # which builds Rocq 9.0 with OCaml 4.14.
 
-# Jasmin, branch main, 2026-10-12.
+# Jasmin, branch main, 2026-10-22.
 JASMIN_URL=https://github.com/jasmin-lang/jasmin.git
-JASMIN_COMMIT=e8f59794c92ce1d8dba49cb087173a49f20a691f
+JASMIN_COMMIT=ca253b7c644ebdce38d0a2a7b83a65b24cfa8e27
 
 OCAML_VERSION=4.14.4
 

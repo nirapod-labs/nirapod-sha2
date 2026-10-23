@@ -1,0 +1,149 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: H. M. Yousuf <hmyousuf@nirapod.org>
+Date: Fri, 23 Oct 2026 15:15:14 +0600
+Subject: [PATCH] eclib: lemmas for the safety model
+
+---
+ eclib/JByte_array.ec | 19 ++++++++++++++++++-
+ eclib/JMemory.ec     | 14 ++++++++++++++
+ eclib/JSafety.ec     | 19 +++++++++++++++++++
+ eclib/Jcheck.ec      | 26 ++++++++++++++++++++++++++
+ 4 files changed, 77 insertions(+), 1 deletion(-)
+ create mode 100644 eclib/JSafety.ec
+
+diff --git a/eclib/JByte_array.ec b/eclib/JByte_array.ec
+index 6d3c525..8414061 100644
+--- a/eclib/JByte_array.ec
++++ b/eclib/JByte_array.ec
+@@ -23,6 +23,22 @@ abstract theory ByteArray.
+ 
+   op is_init (t:t) (k l : int): bool = forall i, k <= i => i < k + l => is_init_cell t i.
+ 
++  lemma is_init_one (t:t) (k :int):
++    is_init t k 1 = is_init_cell t k.
++  proof.
++    smt().
++  qed.
++  hint simplify is_init_one.
++
++  lemma is_init_cellP (t:t) (i j: int) (v:W8.t):
++      is_init_cell t.[i<-v] j = if (i=j /\ 0<=i<ByteArray.size) then v = (W8.of_int 255) else is_init_cell t j.
++  proof.
++    smt(get_set_if).
++  qed.
++
++  hint simplify is_init_cellP.
++
++
+   op init_arr (b : W8.t) : t =
+     init (fun _ => b).
+ 
+@@ -31,7 +47,7 @@ abstract theory ByteArray.
+ 
+  lemma is_init_set_last t len :
+    is_init t 0 len => is_init t.[len <- W8.of_int 255] 0 (len + 1).
+- proof. move => h k k0 klen k_in_bounds; rewrite get_set_if /#. qed.
++ proof. move => h k k0 klen k_in_bounds /#. qed.
+ 
+   abstract theory WSB.
+     type B.
+@@ -175,6 +191,7 @@ abstract theory ByteArray.
+     op of_list'S (l:B list) =
+       init (fun i => if i < List.size l * r then nth _zero l (i%/r) \bits8 (i%%r) else W8.zero).
+ 
++
+     lemma get8_of_list'S l i :
+       (of_list'S l).[i] =
+          if (0 <= i < ByteArray.size) /\ i < List.size l * r then nth _zero l (i%/r) \bits8 (i%%r) else W8.zero.
+diff --git a/eclib/JMemory.ec b/eclib/JMemory.ec
+index 929a6c6..73296e0 100644
+--- a/eclib/JMemory.ec
++++ b/eclib/JMemory.ec
+@@ -23,6 +23,20 @@ op valid1 : global_mem_v_t -> address -> bool.
+ op is_valid (mod: int) (mem_v: global_mem_v_t) (p: address) (l: int) =
+   (forall i, p <= i < p + l => valid1 mem_v i) /\ (0 <= p /\ p + l < mod).
+ 
++lemma is_validP (mod :int) (mem_v:global_mem_v_t) (a: address) (l : int):
++  is_valid mod mem_v a l <=> (forall a' l' , a <= a' =>  a' + l' <= a + l => is_valid mod mem_v a' l').
++proof.
++  smt().
++qed.
++
++
++lemma is_valid_bound (mod :int) (mem_v:global_mem_v_t) :
++  forall i l, is_valid mod mem_v i l => i + l <= mod.
++proof.
++  smt().
++qed.
++
++
+ axiom mem_eq_ext (m1 m2:global_mem_t) : (forall j, m1.[j] = m2.[j]) => m1 = m2.
+ 
+ axiom get_setE m x y w :
+diff --git a/eclib/JSafety.ec b/eclib/JSafety.ec
+new file mode 100644
+index 0000000..56a647b
+--- /dev/null
++++ b/eclib/JSafety.ec
+@@ -0,0 +1,19 @@
++
++require import AllCore IntDiv CoreMap List Distr StdBigop.
++import Bigbool.
++
++
++lemma BBAnd_big_foldr ['a] (F : 'a -> bool) (r : 'a list) :
++  foldr (fun x0 acc => x0 /\ acc) true (map F r) =
++  BBAnd.big predT F r.
++    proof.
++by rewrite /BBAnd.big filter_predT.
++  qed.
++
++lemma and_iota (F : int -> bool) i l :
++  foldr (fun x0 acc => x0 /\ acc) true (map F (iota_ i l)) <=>
++  forall k, i <= k < i + l => F k.
++    proof.
++      rewrite BBAnd_big_foldr BBAnd.bigP filter_predT List.allP.
++    smt( mem_iota).
++  qed.
+\ No newline at end of file
+diff --git a/eclib/Jcheck.ec b/eclib/Jcheck.ec
+index bfe94df..5c12d83 100644
+--- a/eclib/Jcheck.ec
++++ b/eclib/Jcheck.ec
+@@ -8,6 +8,27 @@ lemma valid_cat ['k] (x y : 'k trace_) :
+   valid (x ++ y) <=> valid x /\ valid y.
+ proof. exact: all_cat. qed.
+ 
++
++op trace ['k 'a] (x:'a * 'k trace_) = x.`2.
++
++op validk ['k] (k : 'k) (t : 'k trace_) =
++  with t = []       => true
++  with t = p :: t' => if p.`1 = k then p.`2 /\ validk k t' else (p.`2 => validk k t').
++
++lemma forall_validk_valid ['k] (t : 'k trace_) :
++  (forall k, validk k t) => valid t.
++proof.
++  elim: t => //= -[k' b] t hrec /#.
++qed.
++
++lemma validk_cat ['k] (k : 'k) t1 t2 :
++  validk k t1 =>
++  (valid t1 => validk k t2) =>
++  validk k (t1 ++ t2).
++proof.
++  elim t1 => //= -[k' b] t1 hrec /= /#.
++qed.
++
+ type kind =
+ [
+   | Assert
+@@ -15,3 +36,8 @@ type kind =
+ ].
+ 
+ type trace = kind trace_.
++
++lemma all_validk_valid t : validk Assert t => validk Assume t => valid t.
++proof.
++  by move=> *; apply forall_validk_valid => -[].
++qed.

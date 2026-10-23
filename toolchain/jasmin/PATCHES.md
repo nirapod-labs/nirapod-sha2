@@ -6,80 +6,76 @@ applies them with `git am` to a clean checkout of the pin and builds the
 result as upstream does: Rocq proofs, extraction of the compiler, OCaml
 build.
 
-A patch is either a commit of an upstream pull request, carried unchanged
-until the pin includes it, or a patch of this project, written to be proposed
-upstream. A carried commit keeps its author, date and message; for #1594,
-#1625, #1633 and #1639, `git cherry-pick -x` appended the upstream commit it
-was taken from.
-The one carried commit that is not byte-identical to its pull request is
-listed under "Identity with the pull requests", with the difference.
+A patch is either a commit of an upstream pull request, carried until the
+pin includes it, or a patch of this project, written to be proposed
+upstream. A carried commit keeps its author, date and message. Where a
+carried commit is not identical to its pull request, "Identity with the pull
+requests" says how it differs.
 
 Upstream Jasmin is distributed under the MIT licence, reproduced in
 `jasmin-license.txt` next to this file from the pinned commit. The patches
 modify Jasmin and are distributed under the same terms.
 
-The Advanced SIMD and cryptographic-extension patches for `armv8a`, listed in
-`SERIES` after these, are described in `PATCHES-SIMD.md`.
+`SERIES` lists the Advanced SIMD patches of `patches-simd/` first, then the
+patches of `patches/`. The Advanced SIMD patches are described in
+`PATCHES-SIMD.md`.
 
 ## Series
 
-Pin: `e8f59794c92ce1d8dba49cb087173a49f20a691f` (jasmin-lang/jasmin, main,
-2026-10-12). It includes #1616 (conditional select) and #1621
-(`jasmin-checksafety --slice`), carried by the previous series, and #1565,
-which redefined the instruction descriptors. The open pull requests are
-carried at their heads of 2026-10-13: #1624 first, whose commits then apply
-with no change, then #1594 and #1625, then the patches of this project in
-the order of `SERIES`, with #1632 in the place of the project patch it
-replaces. Two pull requests merged upstream after the pin are carried as
-their merge commits: #1633 in the place of the project patch it replaces
-(0021), and #1639 after the patches of this project (0029), because the
-Advanced SIMD series of `PATCHES-SIMD.md` builds on both.
+Pin: `ca253b7c644ebdce38d0a2a7b83a65b24cfa8e27` (jasmin-lang/jasmin, main,
+2026-10-22). The environment of upstream CI (`default.nix`, `scripts/`,
+`.gitlab-ci.yml`) is the same as at the previous pin, `e8f5979`, so the
+opam pins of `PIN` and the EasyCrypt pin are unchanged. Open pull requests
+are carried at the heads listed below, checked on 2026-10-23.
 
 | Patches | Origin | Content | Proof status |
 |---|---|---|---|
-| 0001-0006 | PR #1624, head `282fcaa4192e` | LDP and STP; architecture-specific conditions on memory arguments | assembly generation and global-load lowering proved; instruction semantics trusted |
-| 0007-0008 | PR #1594, head `a30c006246fc` | Mach-O relocation operators in ARMv8-A assembly | printer only (trusted) |
-| 0009-0016 | PR #1625, head `02a2330a04c9` | safety checker: unsound verdicts, false alarms, CallTopHeuristic | safety checker (trusted) |
-| 0017 | this project: port of PR #1617, head `00e7e972eeb6` | EXTR, BFC, BFI, BFXIL, SBFX, UBFX | instruction semantics trusted |
-| 0018 | this project | safety checker for ARMv8-A | safety checker (trusted) |
-| 0019-0020 | PR #1632, head `c0006367ca98`; 0019 differs in one generated line | located error for an instruction argument the target cannot express | `check_rexpr`, `check_lexpr`, `check_fexpr` return the new error; same accepted arguments; theorem statements and proofs unchanged |
-| 0021 | PR #1633, merged as `2bc3e20cf1e1` | ARMv8-A and ARMv7-M: `a & !b` and `!b & a` lowered to BIC, through a recogniser shared with x86-64 | lowering proved |
-| 0022 | this project | ARMv8-A: store of an immediate through a scratch register | lowering proved |
-| 0023 | this project | ARMv8-A: 32-bit load zero-extended to 64 bits (LDRW, written `LDR <Wt>`) | lowering proved; instruction semantics and printing trusted |
-| 0024 | this project | safety checker: abstract values and environments shared when unchanged; relational constraints printed sorted | safety checker (trusted) |
-| 0025 | this project | safety checker option `array_track_max_bytes` | safety checker (trusted) |
-| 0026 | this project | safety checker option `congruence_reduction` | safety checker (trusted) |
-| 0027 | this project | ARMv8-A: x29 never allocated | calling convention proved; register allocation checked by the proved development |
-| 0028 | this project | safety checker options `relational_loop_vars`, `relational_loop_vars_in` | safety checker (trusted) |
-| 0029 | PR #1639, merged as `88f73422b34a` | ARMv8-A: callee-saved registers and the saved stack pointer reached through X17 when LDR and STR cannot encode their offset | linearization proved |
+| 0001-0002 | PR #1594, head `a30c006246fc` | Mach-O relocation operators in ARMv8-A assembly | printer only (trusted) |
+| 0003-0010 | PR #1625, head `02a2330a04c9` | safety checker: unsound verdicts, false alarms, CallTopHeuristic | safety checker (trusted) |
+| 0011 | this project | safety checker for ARMv8-A | safety checker (trusted) |
+| 0012-0013 | PR #1632, head `63a0ee596edd` | located error for an instruction argument the target cannot express | `check_rexpr`, `check_lexpr`, `check_fexpr` return the new error; same accepted arguments; theorem statements and proofs unchanged |
+| 0014 | this project | ARMv8-A: store of an immediate through a scratch register | lowering proved |
+| 0015-0016 | PR #1650, head `820a9b26f20d` | safety checker: exact bounds of an unsigned right shift by a constant | safety checker (trusted) |
+| 0017 | this project | ARMv8-A: 32-bit load zero-extended to 64 bits (LDRW, written `LDR <Wt>`) | lowering proved; instruction semantics and printing trusted |
+| 0018 | this project | safety checker: abstract values and environments shared when unchanged; relational constraints printed sorted | safety checker (trusted) |
+| 0019 | this project | safety checker option `array_track_max_bytes` | safety checker (trusted) |
+| 0020 | this project | safety checker option `congruence_reduction` | safety checker (trusted) |
+| 0021 | this project | ARMv8-A: x29 never allocated | calling convention proved; register allocation checked by the proved development |
+| 0022 | this project | safety checker options `relational_loop_vars`, `relational_loop_vars_in` | safety checker (trusted) |
+| 0023-0031 | PR #1572, head `546ead43009e` | the safety pass: a total mode of the semantics, the safety conditions of the program as assertions, and the proof that the assertions imply safety | proved |
+| 0032 | this project, lemmas of PR #1170 | Jasmin EasyCrypt library: lemmas for the safety model | checked by EasyCrypt |
+| 0033 | this project, port of the EasyCrypt side of PR #1170 | `jasmin2ec -m safety`: the safety model and its proof skeletons | the pass of 0023-0031 is proved; masks and printing trusted |
+| 0034 | this project | ARMv8-A: one CSDB for a run of protects | printer only (trusted) |
+| 0035 | this project | the expected outputs of the negative and safety test suites on the combined tree | none (test data) |
 
 "Proved" means that the Rocq development of the patched tree, checked by
 `make -C proofs all`, covers the change: the compiler correctness theorem is
 proved again with it. "Trusted" means the change is outside that theorem:
 instruction semantics transcribed from the Arm Architecture Reference Manual,
-or hand-written OCaml (printers, analysers). `docs/TOOLCHAIN.md` gives the
-whole boundary.
+or hand-written OCaml (printers, analysers, the extraction to EasyCrypt).
 
-The safety-checker options of 0025, 0026 and 0028 are read from the
+The safety-checker options of 0019, 0020 and 0022 are read from the
 checker's JSON configuration file. Their defaults keep the analysis of the
 pin, and each non-default value can only add alarms, never remove one.
 
+## Previous series
+
+Against the series on `e8f5979`, these patches were dropped because the new
+pin contains them: #1624, LDP and STP with the conditions on memory
+arguments (old 0001-0006, merged as `b3ff6df`, then generalised by
+`9b95cf2` and the commits after it, which give every memory argument a
+condition and check the load and store addresses of every target); #1617,
+EXTR and the bit-field instructions (old 0017, merged as `44d1af5` and
+`9b0dc71`); #1633, BIC (old 0021, `2bc3e20`); #1639, the save slots (old
+0029, `88f7342`, since replaced by upstream's `e4ec817`, which uses the
+load and store offset condition); and #1640, system calls and the vector
+registers (old `patches-simd/0001`, `b413b9b`). The other patches were
+rebased; the ones whose changed lines differ from their earlier version are
+listed under "Identity with the pull requests" and in `PATCHES-SIMD.md`.
+0015-0016 are the corrected version of the shift-bound patch (see below);
+0023-0035 are new.
+
 ## Why each change is carried
-
-### #1624, LDP and STP
-
-Load and store a register pair in one instruction. The address of a pair
-access must be a base register plus a 7-bit offset scaled by the register
-size. The first commit adds conditions on memory arguments that assembly
-generation enforces, and 0005 checks the range on the scaled offset; an
-address outside the form is rejected by the compiler, not the assembler.
-
-0006 removes the assembly printer's rejection of an LDP whose two
-destinations are the same register, an encoding the Arm ARM makes
-CONSTRAINED UNPREDICTABLE. Register allocation gives the two destinations
-of one instruction distinct registers; `ldp_same_dest.jazz`, which loads
-both into one variable, compiles. Without the printer check, that test no
-longer fails if the two registers are equal.
 
 ### #1594, Mach-O relocation operators
 
@@ -108,29 +104,7 @@ known defects are fixed before any verdict is used:
 - the CallTopHeuristic call policy aborted on its first use;
 - start-up time quadratic in the size of the global tables.
 
-### 0017, EXTR and bit-field instructions (port of #1617)
-
-UBFX and SBFX extract a bit field in one instruction, BFI and BFXIL insert
-one, and EXTR extracts a word from a register pair. Used for index
-computations on digest bits and multi-word shifts.
-
-The pull request, by Benjamin Gregoire and Côme Le Breton, declares the
-instructions in the descriptor form that preceded the pin. At the pin an
-instruction has a total semantics, with its safety condition, its
-initialization condition and its well-formedness as separate fields
-(`id_semi_total`, `id_err`, `id_init`, `id_wf`), and the pull request does
-not compile. 0017 is one commit of this project that ports it: the
-instructions, argument kinds, printing, tests and changelog entry are those
-of the pull request; EXTR takes its semantics unchanged as
-`id_semi_total`. The pull request's semantics of BFC, BFI, BFXIL, SBFX and
-UBFX asserted the conditions on their immediates that `id_safe` also
-states, with lemmas relating the two; the port keeps the same `id_safe`
-conditions and removes the assertions and those lemmas, so the semantics is
-total and equal to the old one wherever the conditions hold. 0017 is not
-the pull request's code and is replaced by upstream's revision when there
-is one.
-
-### 0018, safety checker for ARMv8-A (this project)
+### 0011, safety checker for ARMv8-A (this project)
 
 At the pin, `jasmin-checksafety -arch armv8a` fails with "the safety checker
 is not implemented for ARMv8-A" (`compiler/safetylib/safetyMain.ml`), and the
@@ -168,37 +142,7 @@ program, located at the instruction. In `linearization.v` it adds the error
 accepted before, and the statements and proofs of the theorems that use
 them are unchanged. Tests: `compiler/tests/fail/common/bug_1126*.jazz`.
 
-The pull request replaces this project's earlier patch for the same error.
-
-0019 differs from the pull request's commit 67ea654b4 in one line: the
-`Compile:` count that `compiler/tests/negative.expected` records goes from
-235 to 247 here, from 227 to 239 in the pull request, because 0001-0006 add
-eight negative tests before it. The count is generated by the test runner;
-the negative test suite checks it. 0020 is the pull request's commit
-c0006367c.
-
-### #1633, BIC from an AND with a complemented operand
-
-At the pin, `u = !b & c` on ARMv8-A failed at assembly generation ("invalid
-rexpr for oprd"): the lowering of `&` did not recognise a complemented
-operand, although BIC computes exactly `Xn AND NOT Xm`. The pull request
-moves the recogniser the x86-64 lowering used for ANDN into the shared
-lowering (`is_lnot`, `is_andn` in `lowering.v`, with their lemmas in
-`lowering_lemmas.v`) and uses it on ARMv8-A and ARMv7-M: both operand
-orders become BIC, with the complemented operand second, and a constant
-shift of that operand is folded into BIC's shifted-register form. The
-lowering proofs of the three targets use the shared lemmas. With both
-operands complemented (`!a & !b`), one complement remains an expression and
-the program is still rejected at assembly generation, not compiled to a
-different operation. Tests: `compiler/tests/success/armv8a/bic_lowering.jazz`
-and `compiler/tests/success/arm-m4/bic_lowering.jazz`.
-
-The pull request replaces this project's earlier patch for the same
-lowering. That patch also carried a negative test for `!a & !b`; the pull
-request does not, so `negative.expected` has one entry fewer. The Advanced
-SIMD series lowers `&` on vectors through the same `is_andn`.
-
-### 0022, store of an immediate (this project)
+### 0014, store of an immediate (this project)
 
 A64 has no store of an immediate. At the pin, assigning a constant to memory
 or to a stack array on ARMv8-A (`buf[i] = 0x80;`, `[:u64 p + 8] = 0;`, any
@@ -213,7 +157,31 @@ constant stored many times is cheaper held in a register by the source. Test:
 `compiler/tests/success/armv8a/store_imm.jazz`. Upstream status: not yet
 proposed.
 
-### 0023, LDRW (this project)
+### #1650, the bounds of an unsigned right shift
+
+The checker abstracts `x = y >> k` as `y / 2^k` with a rounding interval, so
+it proves neither `2^k x <= y` nor `y <= 2^k x + 2^k - 1`, and a loop
+counter computed as `n = len >> 6` loses its relation to `len`. For a
+constant `0 <= k <= w`, a destination of the shift's width and a shifted
+expression of that same width, the patch meets both bounds into the state
+after the assignment. They hold in every concrete state, so the change only
+adds constraints. The shifted expression is copied into a fresh variable
+first, so `n >>= 6` keeps the old value of `n`.
+
+The width of the shifted expression is part of the condition. A cast such as
+`(8u) x` with `x : u64` is a truncation that the front end keeps as the
+expression `x` with a narrower declared width; the shift `((8u) x) >> k` then
+has an operand of width 64 under a shift of width 8, and bounds stated on
+the untruncated `x` are false. An earlier version of this patch checked only
+the destination width and accepted an out-of-bounds read
+(`n = ((8u) x) >> 0; i = buf[x];` with `buf` of 300 bytes). The carried
+version requires the operand to have exactly the shift's width and falls
+back to the old abstraction otherwise; `fail/common/shiftcast.jazz` is that
+program as a negative test, and `fail/common/shiftnarrow.jazz` a narrower
+destination. Every safety verdict obtained with the earlier version has to
+be obtained again with this one.
+
+### 0017, LDRW (this project)
 
 At the pin, `x = (64u)[:u32 p];` on ARMv8-A was rejected: zero-extending
 loads were lowered for bytes (LDRB) and halfwords (LDRH) only. `LDR <Wt>`
@@ -225,15 +193,12 @@ the destination register. The zero-extending word load is lowered to it,
 and the Jasmin EasyCrypt library models it (`op LDRW`). LDRW is also listed
 as a load (`armv8a_is_load`), so a zero-extending word load from a global
 array is lowered to an address computation followed by the load, like the
-other loads. Before the patch the source needed a 32-bit load followed by a
-separate zero extension (an extra UXTW). The instruction semantics, its
-printing and its EasyCrypt model are trusted, like those of the other
-instructions. The lowering proof needs no change; `make -C proofs all`
-checks it again with the new case. Test:
-`compiler/tests/success/armv8a/ldrw.jazz`, with a load from a pointer and
-from a global array. Upstream status: not yet proposed.
+other loads. The instruction semantics, its printing and its EasyCrypt
+model are trusted, like those of the other instructions. Test:
+`compiler/tests/success/armv8a/ldrw.jazz`. Upstream status: not yet
+proposed.
 
-### 0024, sharing unchanged abstract values (this project)
+### 0018, sharing unchanged abstract values (this project)
 
 APRON's `Abstract1.change_environment` copied the abstract value even when
 the environment was unchanged, and the environment of an expression was
@@ -245,11 +210,10 @@ value in place, so sharing one is safe, and verdicts are unchanged.
 
 Without the copy, APRON can return the constraints of a relational value in
 another order, and the safety report printed them in the order returned.
-The patch prints them sorted, so the report depends on the value only. The
-expected output of the safety tests (`compiler/tests/safety/run.expected`)
-changes in that order alone. Upstream status: not yet proposed.
+The patch prints them sorted, so the report depends on the value only.
+Upstream status: not yet proposed.
 
-### 0025, `array_track_max_bytes` (this project)
+### 0019, `array_track_max_bytes` (this project)
 
 Every byte of every array is a dimension of the numerical abstract state, and
 the cost of each operation grows with the number of dimensions. With the
@@ -258,11 +222,10 @@ more than n bytes are not dimensions: an assignment to such a cell is
 dropped, and a read gives the full range of the cell's type. Their
 initialization and the bounds of indices into them are still checked. The
 default, -1, tracks every array as before. Leaving cells out can only add
-alarms. Test: the cram test `compiler/tests/safety/arraytrack.t` (a table
-lookup, a masked index and an uninitialized read, with and without the
-option). Upstream status: not yet proposed.
+alarms. Test: the cram test `compiler/tests/safety/arraytrack.t`. Upstream
+status: not yet proposed.
 
-### 0026, `congruence_reduction` (this project)
+### 0020, `congruence_reduction` (this project)
 
 The reduced product of the numerical and congruence domains meets every
 congruence fact into the numerical state after every operation. With the
@@ -275,23 +238,25 @@ the numerical state, so lower values can only add alarms. Test: the cram
 test `compiler/tests/safety/congruence.t`. Upstream status: not yet
 proposed.
 
-### 0027, x29 never allocated (this project)
+### 0021, x29 never allocated (this project)
 
 x29 is the frame pointer. AAPCS64 lets each platform decide whether it must
 address a valid frame record at all times, and Apple platforms require it;
 a function may leave its caller's record in place by not writing x29. At
-the pin, register allocation could assign x29 to a variable, which breaks
-stack traces taken while the function runs on macOS. The patch reserves
-x29 on every platform: the OCaml register allocator never assigns it, and
-`armv8a_decl.v` removes it from the registers of the internal calling
-convention, so the compiler correctness theorem is checked again with the
-smaller set. The allocator's result is checked by the proved development,
-as before. Test: the cram test `compiler/tests/armv8a_x29.t` compiles a
-function whose variables fit in the registers and one that spills, for
-Linux and macOS, and finds no use of x29 or w29 in the output. Upstream
-status: not yet proposed.
+the pin, register allocation can still assign x29 to a variable: the
+allocatable registers exclude only the stack pointer, and `icall_reg` in
+`armv8a_decl.v` still lists R29.
+That breaks stack traces taken while the function runs on macOS. The patch
+reserves x29 on every platform: the OCaml register allocator never assigns
+it, and `armv8a_decl.v` removes it from the registers of the internal
+calling convention, so the compiler correctness theorem is checked again
+with the smaller set. The allocator's result is checked by the proved
+development, as before. Test: the cram test `compiler/tests/armv8a_x29.t`
+compiles a function whose variables fit in the registers and one that
+spills, for Linux and macOS, and finds no use of x29 or w29 in the output.
+Upstream status: not yet proposed.
 
-### 0028, `relational_loop_vars` (this project)
+### 0022, `relational_loop_vars` (this project)
 
 With static packing, the variables of every while-loop condition, with the
 variables they depend on and those that depend on them, are in the
@@ -300,25 +265,94 @@ interval domain. With the configuration option `"relational_loop_vars":
 false`, only those of the functions listed in `"relational_loop_vars_in"`
 are, closed over the variables of the same functions. The default, true,
 keeps the behaviour of the pin. Fewer relational variables can only add
-alarms. Test: the cram test `compiler/tests/safety/loopvars.t`: a scan
-whose memory range is [0; 64] by default, [0; 65535] with the option false,
-and [0; 64] again when its function is listed. Upstream status: not yet
-proposed.
+alarms. Test: the cram test `compiler/tests/safety/loopvars.t`. Upstream
+status: not yet proposed.
 
-### #1639, save slots out of the reach of LDR and STR
+### #1572, the safety pass
 
-An export function saves its callee-saved registers, and the stack pointer
-it was called with, in slots addressed from SP. At the pin, a slot was
-addressed directly whenever its offset passed `is_arith_small`, the test
-for an ADD immediate, which accepts offsets that LDR and STR cannot encode:
-in a large frame the compiler printed `ldr x19, [sp, #36864]`, which does
-not assemble. The pull request adds `is_save_slot_offset`, true only for a
-multiple of 8 from 0 to 32760 (the unsigned-offset form of LDR and STR of an
-X register, DDI 0487 M.d, C6.2.216 and C6.2.415); otherwise the address of
-the first slot is computed into X17 and the slots are reached from it, as
-the pin already did for offsets that failed `is_arith_small`. The
-linearization proof (`armv8a_params_proof.v`) is checked again with the new
-condition. Test: `compiler/tests/success/armv8a/large_stack/save_slot_offset.jazz`.
+The pull request gives the semantics a second mode, total, in which a memory
+or array access out of bounds and a read of an uninitialised variable do not
+fail but return a default value, and turns every condition under which the
+semantics with errors can fail into an assertion of the program
+(`Safety.sc_prog`). Its main theorem, in `proofs/lang/safety_proof.v`, is that
+a program whose assertions all hold runs without error. The proofs are part
+of `make -C proofs all`. The pass is the basis of 0033; the compiler does
+not run it otherwise.
+
+The varmap module type gains six fields and `safety_proof.v` one section
+hypothesis; `ADMITS` lists them. They are of the kinds already there: fields
+of a module type, implemented by its module, and a section hypothesis,
+discharged when the section closes. The assumption report of the end-to-end
+theorem (`ASSUMPTIONS`) does not change.
+
+### 0032, lemmas for the safety model (this project)
+
+Lemmas about the initialisation of byte arrays (`JByte_array.ec`), the
+validity of memory ranges (`JMemory.ec`), the traces of assertions
+(`Jcheck.ec`) and conjunctions over ranges (`JSafety.ec`, new), used by the
+proofs of the safety model. They are taken from the Jasmin EasyCrypt library
+of upstream's draft pull request #1170 (head `1e7479a2d8e8`). Every lemma is
+proved; the library adds no axiom (`ECLIB_AXIOMS` is unchanged), and
+`toolchain/build.sh test` checks it with the pinned EasyCrypt.
+
+### 0033, `jasmin2ec -m safety` (this project)
+
+`jasmin2ec -m safety` extracts a model in which every procedure carries the
+assertions of the safety pass of #1572, after default contracts are added
+(array parameters and results initialised). Initialisation is made explicit
+by masks (`compiler/src/safety_mask.ml`): a boolean per scalar and a byte
+array per array, `0xFF` where a cell is initialised, passed with array
+arguments and returned with array results, including results written to a
+sub-array. Each procedure records the trace of its assertions, and with
+`--output-proof` the extraction emits one `<f>_spec` Hoare lemma per
+contract with a proof skeleton. A proof of those lemmas in EasyCrypt shows
+that the assertions hold, and by the theorem of #1572 that the program is
+safe.
+
+The printing of the model and its proof skeletons is upstream's from the
+draft pull request #1170, merged into the current `toEC.ml`; on this pin
+the assertions come from the proved pass instead of the draft's own
+generator. `Safety.sc_prog` is added to the extraction of the proofs
+(`proofs/lang/extraction.v`). What is trusted: the masks, the printing of
+assertions as EasyCrypt formulas and the rest of the extraction to
+EasyCrypt, which are hand-written OCaml like the existing extraction.
+Upstream status: not yet proposed; it follows #1572 and #1170.
+
+### 0034, one CSDB for a run of protects (this project)
+
+A protect is assembled as `ORR d, a, msf` followed by `CSDB`
+(`assemble_slh_protect` in `armv8a_extra.v`). No instruction after a CSDB
+in program order, other than a branch, may use the results of data value or
+condition flag predictions made for the instructions before it (Arm ARM,
+CSDB). In a run `ORR; CSDB; ORR; CSDB; ...; ORR; CSDB` of adjacent protects,
+the printer now drops every CSDB but the last, provided that no ORR of the
+run reads a register written by an earlier ORR of the run. The instructions
+that then come before a CSDB are register-to-register ORRs, which neither
+access memory nor branch, and every use of a protected value still comes
+after the last CSDB. A label or any other instruction ends a run. CSDB has
+no architectural effect, so the printed code computes what the assembly
+program computes; the change is in the printer
+(`compiler/src/pp_arm_v8a.ml`), outside the proofs. Each protect after the
+first in a run costs one instruction less.
+
+Test: the cram test `compiler/tests/armv8a_csdb.t`: three independent
+protects and two `protect_ptr` print one CSDB; a protect of the previous
+protect's result, and two protects with an instruction between them, keep
+both. Upstream status: not yet proposed.
+
+### 0035, expected test outputs (this project)
+
+The expected outputs of the negative test suite
+(`compiler/tests/negative.expected`) and of the safety test runner
+(`compiler/tests/safety/run.expected`) are generated by the runners. Each
+patch above records the output on the base it was written on. On the
+combined tree three generated parts differ: the asmgen messages of the
+Advanced SIMD negative tests use upstream's newer message format, with the
+address forms of a 128-bit load or store; the negative test count and the
+position of two RISC-V entries follow from the tests the series adds; and
+the safety report lists the ARMv8-A runs of the shift-bound tests, which
+0011 adds, with their constraints sorted by 0018. No verdict changes. The
+pull requests each regenerate their own files.
 
 ## Assembly checks
 
@@ -331,33 +365,20 @@ with `compiler/scripts/runtest` (Python with PyYAML, and `llvm-mc` on
 
 ## Identity with the pull requests
 
-- #1624: 0001-0006 are the pull request's six commits at its head,
-  282fcaa, which upstream based on the pin. They apply with no conflict.
-- #1594, #1625: each commit was compared with the commit named in its
-  `cherry picked from` line, at the heads in the table. Author, date and
-  message are equal, and `git patch-id --stable` is equal for all ten.
-- #1633, #1639: 0021 and 0029 are the merge commits 2bc3e20cf and
-  88f73422b, taken with `git cherry-pick -x`. Author, date and message are
-  equal, and `git patch-id --stable` is equal for both. Both apply with no
-  conflict.
-- #1632: 0020 equals c0006367c. 0019 equals 67ea654b4 in author, date,
-  message and every changed line but one, the generated test count
-  described in its section.
+Each carried commit was compared with its pull request's commit with
+`git patch-id --stable`, at the heads in the table.
 
-The pull requests apply in this order with no conflict resolution.
+- #1625, #1650, #1572: equal for all 19 commits (0003-0010, 0015-0016,
+  0023-0031). #1572 is based on the pin itself.
+- #1594: 0002 is equal. 0001 has the same changed lines as the pull
+  request's commit; the surrounding context differs on the new pin.
+- #1632: 0013 is equal. 0012 has the same changed lines except the
+  generated content of `negative.expected`, which 0035 brings to the output
+  of the combined tree.
+- #1643: see `PATCHES-SIMD.md`.
 
 ## Considered and not carried
 
-- PR #1618 (UMULL, SMULL, UMADDL, SMADDL): SHA-2 has no multi-word
-  multiplication.
 - Rotation by zero on x86-64. `x <<r= 0` is printed as `rol $0, r`, an
   instruction that changes neither the value nor the flags; ARMv8-A drops it.
   It costs one instruction and is avoided in the source.
-- Encoding checks for single-register loads and stores. Assembly generation
-  accepts any base-plus-displacement address for LDR and STR; `[x0, #32768]`
-  for an 8-byte load, for instance, is printed although no A64 encoding has
-  that offset. The LLVM assembler (Apple clang for Mach-O,
-  `clang --target=aarch64-linux-gnu` for ELF) rejects such an address, so
-  with it the defect stops the build and cannot produce a different program;
-  the GNU assembler was not tested. Addresses that only fit the unscaled form
-  (`[x0, #3]`) are assembled by LLVM as LDUR/STUR, with the same meaning.

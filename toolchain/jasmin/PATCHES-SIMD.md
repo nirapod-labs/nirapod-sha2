@@ -2,7 +2,7 @@
 
 These patches add the AArch64 SIMD&FP register file and Advanced SIMD and
 cryptographic-extension instructions to Jasmin's `armv8a` target. They are
-listed in `SERIES` after the patches of `patches/` (see `PATCHES.md`), with
+listed in `SERIES` before the patches of `patches/` (see `PATCHES.md`), with
 their SHA-256, and `build.sh` applies them with `git am` on the same pinned
 commit. Like that series they modify Jasmin and are distributed under its MIT
 licence.
@@ -15,22 +15,23 @@ fill them in for AArch64 and add the instructions.
 
 ## Series
 
-The seven patches are the commits of jasmin-lang/jasmin pull request #1643,
-at its head `06eae3de97487e0ac8bd4e0847dddaa7c9ac5d44`, which is based on
-upstream `main` at `b1a56f315`. The pull request is open, not merged (head
-checked on 2026-10-19). They need two upstream changes that are
-merged but not in the pin: the shared BIC recogniser of #1633 and the
-save-slot test of #1639, carried as `patches/0021` and `patches/0029`.
+The six patches are the last six commits of jasmin-lang/jasmin pull request
+#1643, at its head `06eae3de97487e0ac8bd4e0847dddaa7c9ac5d44`, which is
+based on upstream `main` at `b1a56f315`, rebased on the pin. The pull
+request is open, not merged (head checked on 2026-10-23). Its first commit,
+"Do not assume that system calls preserve the vector registers", was merged
+upstream separately as #1640 (`b413b9b`) and is in the pin; so are the
+shared BIC recogniser of #1633 and the save-slot test of #1639, which the
+series builds on.
 
 | Patch | Content | Proof status |
 |---|---|---|
-| 0001 | system calls no longer assumed to preserve the vector registers, on every architecture | model of system calls and register allocation's kill set changed; compiler theorem proved again |
-| 0002 | SIMD&FP registers V0-V31 as 128-bit vector registers; calling convention; MOV (vector), LDR and STR of a Q register; lowering of u128 moves, loads and stores; saving of callee-saved vector registers; `reg u256` rejected on ARMv8-A | lowering, linearization and assembly generation proved; instruction semantics trusted |
-| 0003 | AND, BIC, ORR, EOR, NOT, ADD, SUB, SHL, USHR, SSHR, SRI, SLI, MOVI; lowering of the u128 bitwise operators, element-wise addition and subtraction, shifts by a constant and the constant zero | lowering proved; instruction semantics trusted |
-| 0004 | EXT, REV32, REV64, TRN1, TRN2, ZIP1, ZIP2, UZP1, UZP2, DUP (general and element), INS (general and element), UMOV | instruction semantics trusted; element operands printed by the trusted printer |
-| 0005 | SHA256H, SHA256H2, SHA256SU0, SHA256SU1, SHA512H, SHA512H2, SHA512SU0, SHA512SU1; lemmas relating them to FIPS 180-4; a known-answer test | instruction semantics trusted; the FIPS 180-4 lemmas are proved about those semantics |
-| 0006 | EOR3, BCAX, RAX1, XAR; a lemma relating XAR to the ρ rotation of FIPS 202 | instruction semantics trusted; the lemma is proved about the semantics |
-| 0007 | changelog entries | none |
+| 0001 | SIMD&FP registers V0-V31 as 128-bit vector registers; calling convention; MOV (vector), LDR and STR of a Q register; lowering of u128 moves, loads and stores; saving of callee-saved vector registers; `reg u256` rejected on ARMv8-A | lowering, linearization and assembly generation proved; instruction semantics trusted |
+| 0002 | AND, BIC, ORR, EOR, NOT, ADD, SUB, SHL, USHR, SSHR, SRI, SLI, MOVI; lowering of the u128 bitwise operators, element-wise addition and subtraction, shifts by a constant and the constant zero | lowering proved; instruction semantics trusted |
+| 0003 | EXT, REV32, REV64, TRN1, TRN2, ZIP1, ZIP2, UZP1, UZP2, DUP (general and element), INS (general and element), UMOV | instruction semantics trusted; element operands printed by the trusted printer |
+| 0004 | SHA256H, SHA256H2, SHA256SU0, SHA256SU1, SHA512H, SHA512H2, SHA512SU0, SHA512SU1; lemmas relating them to FIPS 180-4; a known-answer test | instruction semantics trusted; the FIPS 180-4 lemmas are proved about those semantics |
+| 0005 | EOR3, BCAX, RAX1, XAR; a lemma relating XAR to the ρ rotation of FIPS 202 | instruction semantics trusted; the lemma is proved about the semantics |
+| 0006 | changelog entries | none |
 
 Intrinsic names: the bitwise instructions, moves and Q-register loads and
 stores are `V` followed by the mnemonic, with no suffix (`#VEOR`, `#VLDR`);
@@ -54,35 +55,46 @@ remains a compile error.
 
 ### Adaptations to the pin
 
-The pull request is based on a later upstream `main` than the pin. Against
-its commits, the changed lines of the patches differ in three places, and
-nowhere else (`git range-diff`). Each adaptation sits in the commit that
-needs it, so that every commit of the series builds and passes its tests on
-the pin; a separate fix-up patch would leave commits that do not:
+The pull request is based on an older upstream `main` than the pin, which
+has since changed the conditions on memory arguments, the instruction
+descriptors and the save slots. Against the pull request's commits, the
+rebased patches differ in these places (`git range-diff`), each in the
+commit that needs it:
 
-- `compiler/tests/negative.expected` records a `Compile:` count for the
-  negative tests that ran before each test it lists. The patches of
-  `patches/` add negative tests before this series, so the count each patch
-  changes is ten higher than in the pull request (247 to 248 in 0001, then
-  257, 263, 268, and 269 in 0006). The count is generated by the test
-  runner; the negative test suite checks it.
-- 0002 adds VLDR to `armv8a_is_load` in a list that, on this pin, also
-  holds LDRW (`patches/0023`).
-- 0002 gives the vector register type to the ARMv8-A safety checker
-  (`compiler/safetylib/armv8a_safety.ml`, `patches/0018`), which upstream
-  does not have; without it the compiler does not build.
+- Address of a Q-register load or store. The pull request added its own
+  condition, `CAmemC_armv8a_q`. The pin checks the address of every load
+  and store with `CAmemC_armv8a_ldst ws` (upstream `3671e33`), whose rule
+  for a 16-byte access is the same set of forms: an offset that is a
+  multiple of 16 from 0 to 65520 or lies in [-256, 255], or an index
+  register. VLDR and VSTR use `CAmemC_armv8a_ldst U128`, and 0001 adds the
+  description of that case to the error message (`armv8a_camem_cond_pp`),
+  which on the pin had none for 16 bytes. The condition also accepts an
+  index scaled by 16, which A64 can encode; assembly generation only
+  represents the scales 1, 2, 4 and 8 and never produces it.
+- Callee-saved registers. On the pin `armv8a_call_conv` names the saved
+  general-purpose registers once, as `saved_regs`, for `callee_saved` and
+  for `syscall_preserved`; 0001 adds V8-V15 to `callee_saved` only, so a
+  system call is still assumed to preserve no vector register.
+- Save slots. On the pin `is_save_slot_offset` takes the size of the saved
+  register; 0001 passes `Uptr` for the stack pointer and the size of each
+  saved register for the others.
+- Instruction descriptors. The pin no longer has the field `id_safe_wf`;
+  the new descriptors do not set it.
+- Tests. The generated `negative.expected` is brought to the output of the
+  combined tree by `patches/0035`. The success tests
+  `save_slot_offset_q.jazz`, `simd_permute.jazz`, `simd_exec.jazz` and
+  `bic_lowering.jazz` were adjusted to the pin in the rebase.
 
 ### Syscalls and the vector registers
 
-Before 0001, a system call such as `#randombytes` was assumed to preserve
-every callee-saved register in full. AAPCS64 requires only the low 64 bits
-of V8-V15 to be preserved, and the Microsoft x64 ABI makes the upper half
-of YMM6-YMM15 volatile. 0001 assumes that a system call preserves only the
-callee-saved registers that are not vector registers (`syscall_preserved`
-in `arch_decl.v`), in the semantics and in register allocation. On ARMv8-A,
-an export function that issues a system call therefore saves and restores
-q8-q15 (16 instructions and 128 bytes of frame), and a u128 value cannot
-stay in a register across the call. `callee_saved` is unchanged.
+Since #1640, which the pin includes, a system call such as `#randombytes`
+is assumed to preserve only the callee-saved registers that are not vector
+registers (`syscall_preserved` in `arch_decl.v`), in the semantics and in
+register allocation, because AAPCS64 requires only the low 64 bits of
+V8-V15 to be preserved. On ARMv8-A, an export function that issues a
+system call therefore saves and restores q8-q15 (16 instructions and 128
+bytes of frame), and a u128 value cannot stay in a register across the
+call. `callee_saved` keeps the vector registers V8-V15.
 
 ### Register allocation
 
@@ -95,7 +107,7 @@ before; the emitted code may name other registers.
 
 Proved, by `make -C proofs all` on the patched tree: the compiler correctness
 theorem (`it_compile_prog_to_asmP`) with the patched ARMv8-A parameters
-(`armv8a_h_params`). This covers the system-call model of 0001, the new
+(`armv8a_h_params`). This covers the new
 lowering cases (each lowered u128 expression computes the value of the source
 expression), the saving and restoring of 128-bit registers in function
 prologues and epilogues, and assembly generation for the new register class
@@ -116,7 +128,7 @@ Trusted, as for every instruction of the target:
 - The encodability conditions on immediates and addresses
   (`armv8a_check_CAimm`, `armv8a_check_CAmem`), transcribed from the same
   document. A Q-register load or store takes an offset that is a multiple
-  of 16 from 0 to 65520 or lies in [-256, 255], or an unshifted register.
+  of 16 from 0 to 65520 or lies in [-256, 255], or an index register.
   A condition that is too permissive makes the assembler reject the output;
   it cannot change what an accepted instruction means. EXT is the
   exception: llvm-mc accepts a byte position above 15 and encodes it
@@ -201,24 +213,22 @@ vector registers are caller-saved.
 
 In the Jasmin tree:
 
-- 0001: `compiler/tests/success/windows/x86-64/syscall.jazz` and
-  `fail/windows/x86-64/syscall_live_u256.jazz`;
-- 0002: `success/armv8a/simd_moves.jazz`,
+- 0001: `success/armv8a/simd_moves.jazz`,
   `success/armv8a/large_stack/save_slot_offset_q.jazz`, seven programs
   under `fail/asmgen/armv8a/` with a Q-register address that cannot be
   encoded, and `fail/register_allocation/armv8a/syscall_live_u128.jazz` and
   `u256_reg.jazz`;
-- 0003: `success/armv8a/simd_ops.jazz`, `bic_lowering.jazz` extended to
+- 0002: `success/armv8a/simd_ops.jazz`, `bic_lowering.jazz` extended to
   vectors, and six programs under `fail/asmgen/armv8a/` with a shift amount
   out of range or a nonzero MOVI immediate;
-- 0004: `success/armv8a/simd_permute.jazz` and five programs under
+- 0003: `success/armv8a/simd_permute.jazz` and five programs under
   `fail/asmgen/armv8a/` with an element index or EXT position out of range;
-- 0005: `success/armv8a/simd_sha2_kat.jazz` and `simd_exec.jazz`, evaluated
+- 0004: `success/armv8a/simd_sha2_kat.jazz` and `simd_exec.jazz`, evaluated
   with the semantics of the compiler by `compiler/tests/exec/exec_armv8a.ml`:
   the SHA-256 and SHA-512 digests of "abc", computed with the SHA-2
   instructions, must equal the published ones, and the permutations and
   element moves must give the values of `exec_armv8a.expected`;
-- 0006: `success/armv8a/simd_sha3.jazz`, `fail/asmgen/armv8a/xar_rotation_range.jazz`,
+- 0005: `success/armv8a/simd_sha3.jazz`, `fail/asmgen/armv8a/xar_rotation_range.jazz`,
   and the SHA-3 instructions of `simd_exec.jazz` in the same
   evaluation.
 
@@ -227,11 +237,12 @@ fail tests are rejected as `negative.expected` records, and the evaluation
 of `exec_armv8a.ml`. It does not compile the success tests: that is
 `compiler/scripts/runtest` with the categories `test-armv8a`,
 `test-armv8a-macos` and `test-x86-64-windows` of `compiler/config/tests.config`
-(see "Assembly checks" in `PATCHES.md`). On this pin, on an Apple M4, every
-success test of those categories compiles and assembles with LLVM's
-assembler, 46 for each ARMv8-A category and 3 for Windows, and the Windows
-fail test is rejected; the ELF shared-library link that the script also
-does was not run there.
+(see "Assembly checks" in `PATCHES.md`). On the previous pin, `e8f5979`,
+on an Apple M4, every success test of those categories compiled and
+assembled with LLVM's assembler, 46 for each ARMv8-A category and 3 for
+Windows, and the Windows fail test was rejected; the ELF shared-library link
+that the script also does was not run there. This has not been repeated on
+the current pin.
 
 Run on an Apple M4 (macOS 27.0, native), with harnesses that are not part
 of this repository:
@@ -267,5 +278,5 @@ of this repository:
   normal, CT and CTG modes and EasyCrypt checks the result.
 
 These runs used upstream `main` at `b1a56f315` with the seven commits of
-the pull request, not this pin; on this pin the patches differ only by the
-three adaptations above.
+the pull request, not this pin, and have not been repeated on it; on this
+pin the patches differ by the adaptations above.
