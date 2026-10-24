@@ -28,7 +28,7 @@ The `tests` job compares against independent implementations, so it needs
 pinned Jasmin and EasyCrypt. In the pull request, say which jobs you ran
 and on which architecture and operating system.
 
-Some changes carry more than a passing run:
+Some changes need more than a passing run:
 
 - A change to `src/` or to anything under `proofs/` reruns the proofs of
   every unit it touches (`proofs/README.md`, "Running"). A proof may not
