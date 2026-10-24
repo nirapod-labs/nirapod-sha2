@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Citation metadata (Citation File Format 1.2.0). There is no version or
+# release date until the first release.
+
+cff-version: 1.2.0
+message: "If you use this software in research, please cite it as below."
+title: "nirapod-sha2"
+abstract: >-
+  SHA-2 (FIPS 180-4) and HMAC (FIPS 198-1) in Jasmin for AArch64 and
+  x86-64, with a C API and EasyCrypt proofs of functional correctness.
+type: software
+authors:
+  - given-names: "H. M."
+    family-names: "Yousuf"
+    alias: "hm-yousuf"
+    email: "hmyousuf@nirapod.org"
+  - given-names: "Rifat"
+    family-names: "Ahmed"
+    alias: "rifatweb3"
+    email: "rifatahmed@nirapod.org"
+license: Apache-2.0
+keywords:
+  - SHA-2
+  - HMAC
+  - FIPS 180-4
+  - FIPS 198-1
+  - Jasmin
+  - EasyCrypt
