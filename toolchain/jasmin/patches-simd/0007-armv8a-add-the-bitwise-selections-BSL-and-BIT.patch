@@ -1,0 +1,317 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: H. M. Yousuf <hmyousuf@nirapod.org>
+Date: Fri, 23 Oct 2026 00:33:14 +0600
+Subject: [PATCH] armv8a: add the bitwise selections BSL and BIT
+
+BSL and BIT build each bit of a 128-bit result from one of two
+registers, under the control of a third. Each gives one SHA-2 function
+in a single instruction: Ch(e, f, g) is BIT(g, f, e) and Maj(a, b, c)
+is BSL(b ^ c, a, b), where forms built from AND, BIC and EOR take
+three instructions each.
+
+Both read and write their destination, like the SHA-2 schedule and hash
+updates. They're provided for the 16B arrangement only, as intrinsics
+without a size suffix: d = #VBSL(d, n, m) and d = #VBIT(d, n, m). The
+semantics transcribe the pseudocode of DDI 0487 M.d (C7.2.24 BIT,
+C7.2.25 BSL), and both are data-independent-time instructions (C5.2.4).
+armv8a_simd_lemmas.v states that they select bits as described, and
+that BIT and BSL in the roles above compute Ch and Maj.
+
+BIF, the third instruction of the group, isn't added. Its result is
+that of BIT with the two data operands exchanged, or of BSL with the
+control operand as destination, so it only changes which register is
+overwritten. Nothing is lowered to the new instructions; they're
+intrinsics only.
+
+simd_exec.jazz runs both on fixed inputs in which every combination of
+three bits occurs, through the compiler's semantics, against values
+produced by the instructions on hardware.
+---
+ changes/01-feature/1643-armv8a-simd-crypto.md |  5 +-
+ compiler/tests/exec/exec_armv8a.expected      |  1 +
+ compiler/tests/exec/exec_armv8a.ml            |  6 ++
+ compiler/tests/success/armv8a/simd_exec.jazz  | 25 +++++++-
+ compiler/tests/success/armv8a/simd_ops.jazz   |  2 +
+ eclib/JModel_armv8a.ec                        |  7 +++
+ proofs/compiler/armv8a_instr_decl.v           | 41 ++++++++++++-
+ proofs/compiler/armv8a_simd_lemmas.v          | 61 ++++++++++++++++++-
+ 8 files changed, 141 insertions(+), 7 deletions(-)
+
+diff --git a/changes/01-feature/1643-armv8a-simd-crypto.md b/changes/01-feature/1643-armv8a-simd-crypto.md
+index b7dc36a..0ff6f2c 100644
+--- a/changes/01-feature/1643-armv8a-simd-crypto.md
++++ b/changes/01-feature/1643-armv8a-simd-crypto.md
+@@ -4,8 +4,9 @@
+   and subtraction, shifts by a constant and the constant zero on `u128`
+   are lowered to Advanced SIMD instructions, and the permutations and
+   element moves (EXT, REV32, REV64, TRN1, TRN2, ZIP1, ZIP2, UZP1, UZP2,
+-  DUP, INS, UMOV) are provided as intrinsics. An export function that
+-  issues a system call now saves and restores `q8` to `q15`
++  DUP, INS, UMOV) and the bitwise selections (BSL, BIT) are provided as
++  intrinsics. An export function that issues a system call now saves and
++  restores `q8` to `q15`
+   ([PR #1643](https://github.com/jasmin-lang/jasmin/pull/1643)).
+ - armv8a: add the SHA-256, SHA-512 and SHA-3 instructions (SHA256H,
+   SHA256H2, SHA256SU0, SHA256SU1, SHA512H, SHA512H2, SHA512SU0, SHA512SU1,
+diff --git a/compiler/tests/exec/exec_armv8a.expected b/compiler/tests/exec/exec_armv8a.expected
+index c449b2c..06969b9 100644
+--- a/compiler/tests/exec/exec_armv8a.expected
++++ b/compiler/tests/exec/exec_armv8a.expected
+@@ -12,3 +12,4 @@ move_umov_bh() = 0XD; 0X1D1C
+ move_umov_sd() = 0XB0A0908; 0X1F1E1D1C1B1A1918
+ sha3_ops() = 0X28F56DBC7C0C9B90B2312278B64D09E3; 0X9356DFEFCA999FABE503AF8365D3A20; 0X3D4DB615773F35C419E53A58CF8FA279; 0X9C71F3766C1DE7CB0E25B550B045AC15
+ sha3_xar() = 0X4F8A1E6F7B70D8FD06A03D7C155CFD12; 0XF53E2879BDEDC363481A80F5F05573F4; 0XF6E1B1FA9F143CDE2AB9FA240D407AF8; 0X3E2879BDEDC363F51A80F5F05573F448
++bitsel_ops() = 0XB6E351210B4E6E05F3BDC000DCE4C1D7; 0X972155668AE9A9EABF507A983EF4F204; 0X962355250B4AED85F39CE2187EE4C014; 0X21E3416389AF4E6FFEFD9880D45433D3
+diff --git a/compiler/tests/exec/exec_armv8a.ml b/compiler/tests/exec/exec_armv8a.ml
+index f79d011..7b111ad 100644
+--- a/compiler/tests/exec/exec_armv8a.ml
++++ b/compiler/tests/exec/exec_armv8a.ml
+@@ -27,3 +27,9 @@ let () =
+ let () =
+   let prog = load_file "../success/armv8a/simd_exec.jazz" in
+   List.iter (fun f -> exec prog [] f []) [ "sha3_ops"; "sha3_xar" ]
++
++(* BSL and BIT on the same inputs; the expected values were produced by
++   the instructions on hardware. *)
++let () =
++  let prog = load_file "../success/armv8a/simd_exec.jazz" in
++  exec prog [] "bitsel_ops" []
+diff --git a/compiler/tests/success/armv8a/simd_exec.jazz b/compiler/tests/success/armv8a/simd_exec.jazz
+index 93ccfc9..3762311 100644
+--- a/compiler/tests/success/armv8a/simd_exec.jazz
++++ b/compiler/tests/success/armv8a/simd_exec.jazz
+@@ -1,6 +1,7 @@
+ /*
+- * Fixed-input checks of the Advanced SIMD permutations and element moves
+- * and of the SHA-3 instructions, evaluated by tests/exec/exec_armv8a.ml.
++ * Fixed-input checks of the Advanced SIMD permutations and element moves,
++ * of BSL and BIT and of the SHA-3 instructions, evaluated by
++ * tests/exec/exec_armv8a.ml.
+  * Byte i of the first permutation input is i and byte i of the second is
+  * 16 + i, so that every element of a result names the element it comes
+  * from.
+@@ -174,3 +175,23 @@ fn sha3_xar() -> reg u128, reg u128, reg u128, reg u128 {
+   r3 = #XAR(a, b, 63);
+   return r0, r1, r2, r3;
+ }
++
++/* BSL and BIT on the vectors of SHA3_IN, in which each of the eight
++   combinations of three bits occurs at some position. Each result bit
++   comes from one of two operands under the control of the third. */
++export
++fn bitsel_ops() -> reg u128, reg u128, reg u128, reg u128 {
++  reg u128 a b c r0 r1 r2 r3;
++  a = SHA3_IN[0];
++  b = SHA3_IN[1];
++  c = SHA3_IN[2];
++  r0 = a;
++  r0 = #VBSL(r0, b, c);
++  r1 = b;
++  r1 = #VBSL(r1, c, a);
++  r2 = a;
++  r2 = #VBIT(r2, b, c);
++  r3 = c;
++  r3 = #VBIT(r3, a, b);
++  return r0, r1, r2, r3;
++}
+diff --git a/compiler/tests/success/armv8a/simd_ops.jazz b/compiler/tests/success/armv8a/simd_ops.jazz
+index 2f152ce..5d6eb9e 100644
+--- a/compiler/tests/success/armv8a/simd_ops.jazz
++++ b/compiler/tests/success/armv8a/simd_ops.jazz
+@@ -44,6 +44,8 @@ fn simd_ops(reg u64 p) {
+     d = #VSSHR_8u16(d, 16);
+     d = #VSRI_4u32(d, a, 32);
+     d = #VSLI_2u64(d, b, 63);
++    d = #VBSL(d, a, b);
++    d = #VBIT(d, b, a);
+     [:u128 p + 32] = d;
+     d = #VMOVI(0);
+     [:u128 p + 64] = d;
+diff --git a/eclib/JModel_armv8a.ec b/eclib/JModel_armv8a.ec
+index f8f0fa0..150d3a8 100644
+--- a/eclib/JModel_armv8a.ec
++++ b/eclib/JModel_armv8a.ec
+@@ -361,6 +361,13 @@ op VEOR (x y: W128.t) : W128.t = x +^ y.
+ 
+ op VNOT (x: W128.t) : W128.t = invw x.
+ 
++(* BSL and BIT, as in their pseudocode: the destination is the first
++   argument. BSL takes the bits of n where d is set and of m elsewhere; BIT
++   takes the bits of n where m is set and keeps those of d elsewhere. *)
++op VBSL (d n m: W128.t) : W128.t = m +^ ((m +^ n) `&` d).
++
++op VBIT (d n m: W128.t) : W128.t = d +^ ((d +^ n) `&` m).
++
+ op VADD_16u8 (x y: W128.t) : W128.t = VPADD_16u8 x y.
+ op VADD_8u16 (x y: W128.t) : W128.t = VPADD_8u16 x y.
+ op VADD_4u32 (x y: W128.t) : W128.t = VPADD_4u32 x y.
+diff --git a/proofs/compiler/armv8a_instr_decl.v b/proofs/compiler/armv8a_instr_decl.v
+index 3a919bf..f0d1936 100644
+--- a/proofs/compiler/armv8a_instr_decl.v
++++ b/proofs/compiler/armv8a_instr_decl.v
+@@ -190,6 +190,8 @@ Variant armv8a_mnemonic : Type :=
+ | VORR                           (* Bitwise OR (vector, register) *)
+ | VEOR                           (* Bitwise exclusive-OR (vector) *)
+ | VNOT                           (* Bitwise NOT (vector) *)
++| VBSL                           (* Bitwise select *)
++| VBIT                           (* Bitwise insert if true *)
+ | VADD                           (* Add (vector) *)
+ | VSUB                           (* Subtract (vector) *)
+ | VSHL                           (* Shift left (immediate, vector) *)
+@@ -250,7 +252,7 @@ Definition armv8a_mnemonics : seq armv8a_mnemonic :=
+     ; STR; STRB; STRH; STP
+     ; CSDB; DSB; ISB
+     ; VMOV; VMOVI; VLDR; VSTR
+-    ; VAND; VBIC; VORR; VEOR; VNOT
++    ; VAND; VBIC; VORR; VEOR; VNOT; VBSL; VBIT
+     ; VADD; VSUB
+     ; VSHL; VUSHR; VSSHR; VSRI; VSLI
+     ; VEXT; VREV32; VREV64
+@@ -434,6 +436,8 @@ Definition string_of_armv8a_mnemonic (mn : armv8a_mnemonic) : string :=
+   | VORR => "VORR"
+   | VEOR => "VEOR"
+   | VNOT => "VNOT"
++  | VBSL => "VBSL"
++  | VBIT => "VBIT"
+   | VADD => "VADD"
+   | VSUB => "VSUB"
+   | VSHL => "VSHL"
+@@ -481,6 +485,8 @@ Definition vasm_name (mn : armv8a_mnemonic) : string :=
+   | VORR => "ORR"
+   | VEOR => "EOR"
+   | VNOT => "NOT"
++  | VBSL => "BSL"
++  | VBIT => "BIT"
+   | VADD => "ADD"
+   | VSUB => "SUB"
+   | VSHL => "SHL"
+@@ -509,7 +515,7 @@ Definition vasm_name (mn : armv8a_mnemonic) : string :=
+    their arrangement as on x86 ([VADD_4u32] is [ADD <Vd>.4S, ...]). *)
+ Definition vector_esizes (mn : armv8a_mnemonic) : seq wsize :=
+   match mn with
+-  | VMOV | VAND | VBIC | VORR | VEOR | VNOT => [:: U8 ]
++  | VMOV | VAND | VBIC | VORR | VEOR | VNOT | VBSL | VBIT => [:: U8 ]
+   | VMOVI => [:: U64 ]
+   | VLDR | VSTR => [:: U128 ]
+   | VADD | VSUB | VSHL | VUSHR | VSSHR | VSRI | VSLI => [:: U8; U16; U32; U64 ]
+@@ -4066,6 +4072,35 @@ Definition armv8a_XAR_semi (wn wm : word U128) (imm : word U8) : ty_v :=
+ Definition armv8a_XAR_instr : instr_desc_t :=
+   mk_v2_imm_instr XAR (CAimmC_armv8a_shift_amount U64) armv8a_XAR_semi.
+ 
++(* -------------------------------------------------------------------- *)
++(* Bitwise selection. BSL and BIT read the destination register and write
++   it, like the hash updates, and use the 16B arrangement. Each takes, bit
++   by bit, one of two registers under the control of a third: BSL selects
++   with the old destination, BIT inserts the bits of [Vn] where [Vm] is
++   set. The Operational information section of each one states that it
++   is a data-independent-time instruction, and ARM DDI 0487 M.d, C5.2.4
++   "DIT, Data Independent Timing", p. C5-958, lists both. *)
++
++(* [C7.2.25 BSL] ARM DDI 0487 M.d, p. C7-2983
++   Syntax: BSL <Vd>.16B, <Vn>.16B, <Vm>.16B
++   Semantics: Vm XOR ((Vm XOR Vn) AND Vd), the operation of the
++   pseudocode: each bit of Vn where Vd is set, of Vm elsewhere. *)
++Definition armv8a_VBSL_semi (wd wn wm : word U128) : ty_v :=
++  wxor wm (wand (wxor wm wn) wd).
++
++Definition armv8a_VBSL_instr : instr_desc_t :=
++  mk_v3d_instr VBSL [:: U8; U8; U8 ] armv8a_VBSL_semi.
++
++(* [C7.2.24 BIT] ARM DDI 0487 M.d, p. C7-2981
++   Syntax: BIT <Vd>.16B, <Vn>.16B, <Vm>.16B
++   Semantics: Vd XOR ((Vd XOR Vn) AND Vm), the operation of the
++   pseudocode: each bit of Vn where Vm is set, of Vd elsewhere. *)
++Definition armv8a_VBIT_semi (wd wn wm : word U128) : ty_v :=
++  wxor wd (wand (wxor wd wn) wm).
++
++Definition armv8a_VBIT_instr : instr_desc_t :=
++  mk_v3d_instr VBIT [:: U8; U8; U8 ] armv8a_VBIT_semi.
++
+ (* -------------------------------------------------------------------- *)
+ (* Description of instructions. *)
+ 
+@@ -4157,6 +4192,8 @@ Definition mn_desc (mn : armv8a_mnemonic) : instr_desc_t :=
+   | VORR => armv8a_VORR_instr
+   | VEOR => armv8a_VEOR_instr
+   | VNOT => armv8a_VNOT_instr
++  | VBSL => armv8a_VBSL_instr
++  | VBIT => armv8a_VBIT_instr
+   | VADD => armv8a_VADD_instr
+   | VSUB => armv8a_VSUB_instr
+   | VSHL => armv8a_VSHL_instr
+diff --git a/proofs/compiler/armv8a_simd_lemmas.v b/proofs/compiler/armv8a_simd_lemmas.v
+index 3add534..6d5dd4b 100644
+--- a/proofs/compiler/armv8a_simd_lemmas.v
++++ b/proofs/compiler/armv8a_simd_lemmas.v
+@@ -16,7 +16,9 @@
+      SHA512SU1 compute two message-schedule words;
+    - the [*_instr_*] lemmas: the same statements about the [id_semi] of the
+      instruction descriptions, which fix the role of each operand;
+-   - [xar_rolE]: XAR by 64 - r is a left rotation by r of the XOR.
++   - [xar_rolE]: XAR by 64 - r is a left rotation by r of the XOR;
++   - [VBSL_instr_select], [VBIT_instr_insert]: BSL and BIT select bits;
++     [VBIT_instr_ch], [VBSL_instr_maj]: BIT computes Ch and BSL Maj.
+    These are statements about the semantics as transcribed; they do not
+    validate the transcription against the architecture. *)
+ 
+@@ -373,3 +375,60 @@ Proof.
+   rewrite /xar /lift1_vec /lift1_vec'; congr make_vec.
+   by apply: eq_map => x; exact: (wror_opp x r).
+ Qed.
++
++(* -------------------------------------------------------------------- *)
++(* Bitwise selection. BSL takes each bit of its first source where the old
++   destination is set and of its second source elsewhere; BIT takes the
++   bit of its first source where its second source is set and keeps the
++   destination bit elsewhere. In FIPS 180-4 (4.1.2, 4.1.3), Ch(e, f, g)
++   takes each bit of f where e is set and of g elsewhere, and Maj(a, b, c)
++   takes the bit of a where b and c differ and that of b where they agree:
++     Ch(e, f, g)  = BIT(g, f, e)
++     Maj(a, b, c) = BSL(b XOR c, a, b)
++   Both functions are bitwise, so these statements about whole registers
++   hold in every element, at every element size; the elementwise form is
++   not stated separately. The formulas on the right of [VBIT_instr_ch] and
++   [VBSL_instr_maj] are those of [ch] and [maj] in sha256.v and of [Ch64]
++   and [Maj64] above. *)
++
++Section BITSEL.
++Context (opts : armv8a_options).
++
++Lemma VBSL_instr_select (d n m : u128) :
++  id_semi (armv8a_VBSL_instr opts) d n m = ok (wor (wand d n) (wand (wnot d) m)).
++Proof.
++  rewrite /id_semi /= /armv8a_VBSL_semi; congr ok.
++  apply/eqP/eq_from_wbit_n => i.
++  rewrite !(wxorE, wandE, worE) wN1E ltn_ord.
++  by case: (wbit_n d i); case: (wbit_n n i); case: (wbit_n m i).
++Qed.
++
++Lemma VBIT_instr_insert (d n m : u128) :
++  id_semi (armv8a_VBIT_instr opts) d n m = ok (wor (wand m n) (wand (wnot m) d)).
++Proof.
++  rewrite /id_semi /= /armv8a_VBIT_semi; congr ok.
++  apply/eqP/eq_from_wbit_n => i.
++  rewrite !(wxorE, wandE, worE) wN1E ltn_ord.
++  by case: (wbit_n d i); case: (wbit_n n i); case: (wbit_n m i).
++Qed.
++
++Lemma VBIT_instr_ch (e f g : u128) :
++  id_semi (armv8a_VBIT_instr opts) g f e = ok (wxor (wand e f) (wand (wnot e) g)).
++Proof.
++  rewrite /id_semi /= /armv8a_VBIT_semi; congr ok.
++  apply/eqP/eq_from_wbit_n => i.
++  rewrite !(wxorE, wandE) wN1E ltn_ord.
++  by case: (wbit_n e i); case: (wbit_n f i); case: (wbit_n g i).
++Qed.
++
++Lemma VBSL_instr_maj (a b c : u128) :
++  id_semi (armv8a_VBSL_instr opts) (wxor b c) a b
++  = ok (wxor (wand a b) (wxor (wand a c) (wand b c))).
++Proof.
++  rewrite /id_semi /= /armv8a_VBSL_semi; congr ok.
++  apply/eqP/eq_from_wbit_n => i.
++  rewrite !(wxorE, wandE).
++  by case: (wbit_n a i); case: (wbit_n b i); case: (wbit_n c i).
++Qed.
++
++End BITSEL.
