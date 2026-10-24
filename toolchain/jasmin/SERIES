@@ -48,7 +48,7 @@ patches/0028-From-conditions-on-argument-values-to-assertions-on-.patch 84c79092
 patches/0029-Safety-conditions-of-the-array-and-memory-accesses.patch cf863371ccc0f8e637a11bc92e52baa1db077565d637a2c02ac8c1109e8c5d56
 patches/0030-The-safety-pass-the-conditions-of-the-semantics-as-a.patch fa5e750964d905f06257faa993e8452037515114a31028aaa14bdc2742c980c3
 patches/0031-The-safety-pass-is-sound-its-assertions-imply-the-sa.patch fa099e15808ed326a64f478dc8bd18bc55b9fbd23b0cea50803299f7eff7ad66
-patches/0032-eclib-lemmas-for-the-safety-model.patch 78dbf2fcbb315ceb70fd9a269403ab5d1ef1b6495dca8ede902d600f1de79737
-patches/0033-jasmin2ec-the-safety-model.patch 1660f92db6f3f16e2f9c77b68b99abc360084acdb57c6c1d08c986ffd835b53b
+patches/0032-eclib-lemmas-for-the-safety-model.patch 28222f62991537bc433f6c2e0c5f22ad41fad47660ee716038f79297247a2aaf
+patches/0033-jasmin2ec-the-safety-model.patch 8c822d90c47e3fabf7d36a36303b25ae08a7cb717571ee4aa09674089ee1a2de
 patches/0034-armv8a-one-CSDB-for-a-run-of-protects.patch e1f135811304053e1c67bcd93038d83bfbdd7737c86b9d4c7fa8e28de2a3fc9b
 patches/0035-tests-expected-outputs-of-the-combined-series.patch 3f9cb7bc0f61ac1d626b79fcedc6e70f2ea3939decfb2c3c41c6f8b56431cf4e

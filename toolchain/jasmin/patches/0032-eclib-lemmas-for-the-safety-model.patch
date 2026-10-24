@@ -1,8 +1,10 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: H. M. Yousuf <hmyousuf@nirapod.org>
-Date: Fri, 23 Oct 2026 15:15:14 +0600
+From: Vincent Laporte <Vincent.Laporte@inria.fr>
+Date: Fri, 13 Feb 2026 12:52:31 +0100
 Subject: [PATCH] eclib: lemmas for the safety model
 
+The eclib part of jasmin-lang/jasmin pull request #1170 (Lionel Blatter,
+Vincent Laporte, Benjamin Gregoire; head 1e7479a2d8e8), unchanged.
 ---
  eclib/JByte_array.ec | 19 ++++++++++++++++++-
  eclib/JMemory.ec     | 14 ++++++++++++++

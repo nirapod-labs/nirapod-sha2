@@ -16,6 +16,12 @@ skeleton. The pass is extracted from the proofs (proofs/lang/extraction.v)
 and runs in compile.ml before the extraction to EasyCrypt. The masks are
 hand-written OCaml, outside the proofs, like the rest of the extraction to
 EasyCrypt.
+
+The extraction of assertions, traces and proof skeletons in toEC.ml and
+jasmin2ec.ml is ported from jasmin-lang/jasmin pull request #1170 (Lionel
+Blatter, Vincent Laporte, Benjamin Gregoire; head 1e7479a2d8e8) and merged
+into the current toEC.ml; the masks, the use of Safety.sc_prog and the default
+contracts are new in this port.
 ---
  compiler/entry/jasmin2ec.ml         |  90 +++-
  compiler/safetylib/armv8a_safety.ml |   4 +-

@@ -43,8 +43,8 @@ are carried at the heads listed below, checked on 2026-10-23.
 | 0021 | this project | ARMv8-A: x29 never allocated | calling convention proved; register allocation checked by the proved development |
 | 0022 | this project | safety checker options `relational_loop_vars`, `relational_loop_vars_in` | safety checker (trusted) |
 | 0023-0031 | PR #1572, head `546ead43009e` | the safety pass: a total mode of the semantics, the safety conditions of the program as assertions, and the proof that the assertions imply safety | proved |
-| 0032 | this project, lemmas of PR #1170 | Jasmin EasyCrypt library: lemmas for the safety model | checked by EasyCrypt |
-| 0033 | this project, port of the EasyCrypt side of PR #1170 | `jasmin2ec -m safety`: the safety model and its proof skeletons | the pass of 0023-0031 is proved; masks and printing trusted |
+| 0032 | PR #1170, head `1e7479a2d8e8`, its EasyCrypt library part | Jasmin EasyCrypt library: lemmas for the safety model | checked by EasyCrypt |
+| 0033 | this project, port of the EasyCrypt extraction of PR #1170 | `jasmin2ec -m safety`: the safety model and its proof skeletons | the pass of 0023-0031 is proved; masks and printing trusted |
 | 0034 | this project | ARMv8-A: one CSDB for a run of protects | printer only (trusted) |
 | 0035 | this project | the expected outputs of the negative and safety test suites on the combined tree | none (test data) |
 
@@ -285,14 +285,15 @@ of a module type, implemented by its module, and a section hypothesis,
 discharged when the section closes. The assumption report of the end-to-end
 theorem (`ASSUMPTIONS`) does not change.
 
-### 0032, lemmas for the safety model (this project)
+### 0032, lemmas for the safety model (PR #1170)
 
 Lemmas about the initialisation of byte arrays (`JByte_array.ec`), the
 validity of memory ranges (`JMemory.ec`), the traces of assertions
 (`Jcheck.ec`) and conjunctions over ranges (`JSafety.ec`, new), used by the
 proofs of the safety model. They are taken from the Jasmin EasyCrypt library
-of upstream's draft pull request #1170 (head `1e7479a2d8e8`). Every lemma is
-proved; the library adds no axiom (`ECLIB_AXIOMS` is unchanged), and
+of upstream's draft pull request #1170 by Lionel Blatter, Vincent Laporte
+and Benjamin Gregoire (head `1e7479a2d8e8`), unchanged, and the patch keeps
+the author and date of the pull request's commit. Every lemma is proved; the library adds no axiom (`ECLIB_AXIOMS` is unchanged), and
 `toolchain/build.sh test` checks it with the pinned EasyCrypt.
 
 ### 0033, `jasmin2ec -m safety` (this project)
@@ -310,7 +311,8 @@ that the assertions hold, and by the theorem of #1572 that the program is
 safe.
 
 The printing of the model and its proof skeletons is upstream's from the
-draft pull request #1170, merged into the current `toEC.ml`; on this pin
+draft pull request #1170 (Lionel Blatter, Vincent Laporte, Benjamin
+Gregoire), merged into the current `toEC.ml`; on this pin
 the assertions come from the proved pass instead of the draft's own
 generator. `Safety.sc_prog` is added to the extraction of the proofs
 (`proofs/lang/extraction.v`). What is trusted: the masks, the printing of
