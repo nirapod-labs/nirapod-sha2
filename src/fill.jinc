@@ -20,14 +20,17 @@
  *
  * Every write lands inside the range the contract names, and the bytes
  * before it are left as they were, so a buffer initialised up to dst is
- * initialised up to dst + n afterwards.
+ * initialised up to dst + n afterwards. Contract arithmetic is on 64-bit
+ * words, so dst and n are bounded each on its own before their sum: the
+ * sum alone could wrap and admit a dst far past the buffer.
  *
  * Security: the bytes moved are secret; p, dst, n, lo and hi are public
  * and are the only values that decide a branch, a bound or an address.
  */
 
 #[safety =
-   { requires = (64u) dst_ + (64u) n_ <= 64 && is_arr_init(buf, 0, (64u) dst_)
+   { requires = (64u) dst_ <= 64 && (64u) n_ <= 64 && (64u) dst_ + (64u) n_ <= 64
+       && is_arr_init(buf, 0, (64u) dst_)
        && is_mem_init((64u) p_, (64u) n_)
    , res = { buf_out, ms_out }
    , ensures = is_arr_init(buf_out, 0, (64u) dst_ + (64u) n_)
@@ -88,7 +91,8 @@ inline fn __fill64_mem(
 }
 
 #[safety =
-   { requires = (64u) dst_ + (64u) n_ <= 128 && is_arr_init(buf, 0, (64u) dst_)
+   { requires = (64u) dst_ <= 128 && (64u) n_ <= 128 && (64u) dst_ + (64u) n_ <= 128
+       && is_arr_init(buf, 0, (64u) dst_)
        && is_mem_init((64u) p_, (64u) n_)
    , res = { buf_out, ms_out }
    , ensures = is_arr_init(buf_out, 0, (64u) dst_ + (64u) n_)

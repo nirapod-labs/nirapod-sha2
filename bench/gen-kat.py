@@ -14,17 +14,18 @@
 # The message bytes follow bench_fill_msg in bench.c: byte i of the buffer
 # is (i * 131 + 7) mod 256. A single hash covers the first len bytes of the
 # buffer; message k of a multi-way workload covers bytes k*len to
-# (k+1)*len - 1. The HMAC key is 32 bytes, byte i (i * 197 + 11) mod 256,
-# and the HMAC message is the first len bytes of the buffer, as
-# bench_fill_key and bench_fill_msg define them.
+# (k+1)*len - 1. An HMAC key of k bytes (32 or 131) is the first k bytes
+# of the key buffer, byte i (i * 197 + 11) mod 256, and the HMAC message is
+# the first len bytes of the message buffer, as bench_fill_key and
+# bench_fill_msg define them.
 
 import hashlib
 import hmac
 
-LENGTHS = [0, 1, 16, 32, 55, 56, 64, 100, 128, 200, 256,
+LENGTHS = [0, 1, 16, 32, 55, 56, 64, 100, 111, 112, 128, 200, 256,
            1024, 2048, 4096, 8192, 16384, 1048576]
-HMAC_LENGTHS = [32, 1024]
-HMAC_KEY_LEN = 32
+HMAC_LENGTHS = [32, 1024, 1048576]
+HMAC_KEY_LENGTHS = [32, 131]
 
 MAX_BYTES = max(LENGTHS) * 8
 
@@ -47,8 +48,8 @@ def message(length):
     return bytes(((i * 131 + 7) & 0xFF) for i in range(length))
 
 
-def key():
-    return bytes(((i * 197 + 11) & 0xFF) for i in range(HMAC_KEY_LEN))
+def key(length):
+    return bytes(((i * 197 + 11) & 0xFF) for i in range(length))
 
 
 def digest(name, data):
@@ -95,15 +96,18 @@ def main():
             data = buf[:length]
             name = "k_%s_%d" % (cname, length)
             out.append(c_array(name, digest(hname, data)))
-            entries.append(("BENCH_%s" % cname.upper(), length, size, name))
+            entries.append(("BENCH_%s" % cname.upper(), length, 0, size, name))
         out.append("")
 
     for cname, hname, size in HMACS:
-        for length in HMAC_LENGTHS:
-            data = buf[:length]
-            name = "k_%s_%d" % (cname, length)
-            out.append(c_array(name, hmac.new(key(), data, hname).digest()))
-            entries.append(("BENCH_%s" % cname.upper(), length, size, name))
+        for key_len in HMAC_KEY_LENGTHS:
+            for length in HMAC_LENGTHS:
+                data = buf[:length]
+                name = "k_%s_key%d_%d" % (cname, key_len, length)
+                tag = hmac.new(key(key_len), data, hname).digest()
+                out.append(c_array(name, tag))
+                entries.append(("BENCH_%s" % cname.upper(), length, key_len,
+                                size, name))
         out.append("")
 
     for ways, cname, hname, size in [(8, "sha256_x8", "sha256", 32),
@@ -113,28 +117,33 @@ def main():
                             for k in range(ways))
             name = "k_%s_%d" % (cname, length)
             out.append(c_array(name, data))
-            entries.append(("BENCH_%s" % cname.upper(), length, ways * size, name))
-            entries.append(("BENCH_%s_REF" % cname.upper(), length, ways * size, name))
+            entries.append(("BENCH_%s" % cname.upper(), length, 0,
+                            ways * size, name))
+            entries.append(("BENCH_%s_REF" % cname.upper(), length, 0,
+                            ways * size, name))
         out.append("")
 
     out.append("typedef struct bench_kat_entry {")
     out.append("    bench_fn fn;")
     out.append("    size_t len;")
+    out.append("    size_t key_len;")
     out.append("    size_t out_len;")
     out.append("    const unsigned char *out;")
     out.append("} bench_kat_entry;")
     out.append("")
     out.append("static const bench_kat_entry entries[] = {")
-    for fn, length, size, name in entries:
-        out.append("    { %s, %d, %d, %s }," % (fn, length, size, name))
+    for fn, length, key_len, size, name in entries:
+        out.append("    { %s, %d, %d, %d, %s }," % (fn, length, key_len, size, name))
     out.append("};")
     out.append("")
-    out.append("const unsigned char *bench_kat(bench_fn fn, size_t len, size_t *out_len)")
+    out.append("const unsigned char *bench_kat(bench_fn fn, size_t len, size_t key_len,")
+    out.append("                               size_t *out_len)")
     out.append("{")
     out.append("    size_t i;")
     out.append("")
     out.append("    for (i = 0; i < sizeof(entries) / sizeof(entries[0]); i++) {")
-    out.append("        if (entries[i].fn == fn && entries[i].len == len) {")
+    out.append("        if (entries[i].fn == fn && entries[i].len == len &&")
+    out.append("            entries[i].key_len == key_len) {")
     out.append("            *out_len = entries[i].out_len;")
     out.append("            return entries[i].out;")
     out.append("        }")

@@ -78,6 +78,8 @@ inline fn __sha256_x8_tr4(reg u128 a b c d) -> reg u128, reg u128, reg u128, reg
  */
 #[safety =
    { requires = 0 <= f && f < 2 && is_arr_init(h8, 0, 256)
+   , res = { st_out }
+   , ensures = is_arr_init(st_out, 0, 128)
    }
  ]
 inline fn __sha256_x8_load_half(
@@ -105,7 +107,7 @@ inline fn __sha256_x8_load_half(
 }
 
 #[safety =
-   { requires = 0 <= f && f < 2 && is_arr_init(h8, 0, 256)
+   { requires = 0 <= f && f < 2 && is_arr_init(h8, 0, 256) && is_arr_init(st, 0, 128)
    , res = { h_out }
    , ensures = is_arr_init(h_out, 0, 256)
    }
@@ -140,7 +142,10 @@ inline fn __sha256_x8_store_half(
  * in the single-way kernel, so that the two dependency chains alternate.
  */
 #[safety =
-   { requires = is_arr_init(k, 0, 256)
+   { requires = 0 <= r && r < 2 && is_arr_init(st, 0, 128) && is_arr_init(m, 0, 128)
+       && is_arr_init(k, 0, 256)
+   , res = { st_out, m_out }
+   , ensures = is_arr_init(st_out, 0, 128) && is_arr_init(m_out, 0, 128)
    }
  ]
 inline fn __sha256_x8_block2(

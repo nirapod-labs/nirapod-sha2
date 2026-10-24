@@ -15,11 +15,12 @@
 #     make asm         assembly of the units of ARCH (default: the host's);
 #                      SYSTEM_aarch64=linux gives Linux AArch64 assembly
 #     make asm-all     assembly of the units of both architectures
-#     make ct          jasmin-ct and jasmin-ct --sct on every unit of the
-#                      architectures in CT_ARCHES (default: the host's,
-#                      ARCH), with the check that every export of
-#                      src/nirapod_sha2.jinc was typed by both, and on the
-#                      array test unit of those architectures
+#     make ct          jasmin-ct and jasmin-ct --sct, both with --doit, on
+#                      every unit of the architectures in CT_ARCHES
+#                      (default: the host's, ARCH), with the check that
+#                      every export of src/nirapod_sha2.jinc was typed by
+#                      both, and on the array test unit of those
+#                      architectures
 #     make array-test  tests/array/array.c against the library, through
 #                      the array test unit (src/*_ASIZE.jinc instantiated)
 #     make asm-policy  properties of the AArch64 assembly the C layer relies
@@ -29,6 +30,8 @@
 #                      check-extraction, extraction-identity and
 #                      extraction-control, the checks on them (see
 #                      "EasyCrypt models" below)
+#     make insn-check  the EasyCrypt models of the host's instructions
+#                      against this processor (see "Instruction models")
 #     make clean       remove build/
 #
 # Assembly comes from the Jasmin sources, compiled by JASMINC.
@@ -183,7 +186,7 @@ $(BUILD)/asm/%.s: $(UNIT_FILES) $(JASMIN_DEPS)
 	$(JASMINC) $(call unit_flags,$(notdir $*),$(patsubst %/,%,$(dir $*))) \
 	  $(call unit_roots,$(notdir $*)) -o $@ $(BUILD)/units/$(notdir $*).jazz
 
-.PHONY: all asm asm-all asm-policy ct check clean array-test print-units dit-check
+.PHONY: all asm asm-all asm-policy ct check clean array-test print-units dit-check residue-check
 
 # Generated units and assembly are kept, not removed as intermediates.
 .SECONDARY:
@@ -325,6 +328,28 @@ check: $(LIB) $(EXPORTS_CONTROL) $(SMOKE) $(SMOKE_PUBLIC) $(DIT_TEST) asm-policy
 dit-check: $(DIT_TEST)
 	$(DIT_TEST)
 
+# Stack and register residue (tests/residue/residue.c): after every public
+# operation, through the public functions and with each kernel built here,
+# no secret is left on the stack or in a register the call may change, and
+# the stack below the C frames is cleared. regs.S makes the calls and
+# records the registers. Linked with the testing library to force kernels.
+RESIDUE_TEST := $(OUT)/tests/residue
+
+# The residue test paints a large local array and reads it back after a
+# call. Stack clash protection (the default of some Linux compilers)
+# probes each page of such an array when its frame is made, which
+# overwrites the paint, so the test is built without it where the
+# compiler has the option.
+NO_STACK_PROBES := $(shell $(CC) -Werror -fno-stack-clash-protection -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-clash-protection)
+
+$(RESIDUE_TEST): $(TESTS)/residue/residue.c $(TESTS)/residue/regs.S $(TESTING_LIB)
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(CWARN) $(CFLAGS) $(NO_STACK_PROBES) -o $@ $(TESTS)/residue/residue.c \
+	  $(TESTS)/residue/regs.S $(TESTING_LIB)
+
+residue-check: $(RESIDUE_TEST)
+	$(RESIDUE_TEST)
+
 # The AArch64 units must leave x18 alone: macOS reserves it, and clear.c
 # does not clear it. A use of x18 or w18 anywhere in their assembly fails.
 asm-policy: $(foreach u,$(filter $(UNITS_aarch64),$(UNITS_$(HOST_ARCH))),$(ASM_ROOT)/asm/$(HOST_SYSTEM)/$(u).s)
@@ -342,17 +367,21 @@ asm-policy: $(foreach u,$(filter $(UNITS_aarch64),$(UNITS_$(HOST_ARCH))),$(ASM_R
 # Logs: build/ct/<unit>.{ct,sct}.log.
 CT_ARCHES ?= $(ARCH)
 CT_UNITS  := $(foreach a,$(CT_ARCHES),$(UNITS_$(a)))
+# --doit also requires every instruction that receives a secret to be one
+# the target's description marks as data-independent in time (the Intel
+# DOIT list on x86-64, the Arm DIT list on AArch64).
+CT_FLAGS  ?= --doit
 
 $(BUILD)/ct/%.ok: $(BUILD)/units/%.jazz $(JASMIN_DEPS) $(TESTS)/ct/exports.sh
 	@mkdir -p $(@D)
-	$(JASMIN_CT) --arch $(call unit_jarch,$*) --print $(call unit_roots,$*) $< > $(BUILD)/ct/$*.ct.log 2>&1
-	$(JASMIN_CT) --arch $(call unit_jarch,$*) --sct $(call unit_roots,$*) $< > $(BUILD)/ct/$*.sct.log 2>&1
+	$(JASMIN_CT) $(CT_FLAGS) --arch $(call unit_jarch,$*) --print $(call unit_roots,$*) $< > $(BUILD)/ct/$*.ct.log 2>&1
+	$(JASMIN_CT) $(CT_FLAGS) --arch $(call unit_jarch,$*) --sct $(call unit_roots,$*) $< > $(BUILD)/ct/$*.sct.log 2>&1
 	sh $(TESTS)/ct/exports.sh $(SRC)/nirapod_sha2.jinc nirapod_sha2_jz_$(subst -,_,$*) \
 	  $(BUILD)/ct/$*.ct.log $(BUILD)/ct/$*.sct.log
 	@touch $@
 
 ct: $(addprefix $(BUILD)/ct/,$(addsuffix .ok,$(CT_UNITS) $(addprefix array-,$(CT_ARCHES))))
-	@echo "ct: jasmin-ct and jasmin-ct --sct PASS on $(words $(CT_UNITS)) units ($(CT_UNITS)) and the array unit of $(CT_ARCHES)"
+	@echo "ct: jasmin-ct and jasmin-ct --sct ($(CT_FLAGS)) PASS on $(words $(CT_UNITS)) units ($(CT_UNITS)) and the array unit of $(CT_ARCHES)"
 
 # The array instance files (src/*_ASIZE.jinc, src/README.md "Array
 # instances"). Their test unit, tests/array/array.jazz, instantiates every
@@ -385,9 +414,9 @@ array-test: $(ARRAY_TEST)
 # requirement that every export of the unit was typed by both checkers.
 $(BUILD)/ct/array-%.ok: $(ARRAY_JAZZ) $(JASMIN_DEPS)
 	@mkdir -p $(@D)
-	$(JASMIN_CT) --arch $(JARCH_$*) --print $(call unit_roots,$*-portable) $(ARRAY_JAZZ) \
+	$(JASMIN_CT) $(CT_FLAGS) --arch $(JARCH_$*) --print $(call unit_roots,$*-portable) $(ARRAY_JAZZ) \
 	  > $(BUILD)/ct/array-$*.ct.log 2>&1
-	$(JASMIN_CT) --arch $(JARCH_$*) --sct $(call unit_roots,$*-portable) $(ARRAY_JAZZ) \
+	$(JASMIN_CT) $(CT_FLAGS) --arch $(JARCH_$*) --sct $(call unit_roots,$*-portable) $(ARRAY_JAZZ) \
 	  > $(BUILD)/ct/array-$*.sct.log 2>&1
 	@n=$$(grep -c '^ *export fn' $(ARRAY_JAZZ) || true); \
 	t=$$(grep -c '^fn A[0-9]*::[a-z0-9_]* ' $(BUILD)/ct/array-$*.ct.log || true); \
@@ -405,7 +434,10 @@ $(BUILD)/ct/array-%.ok: $(ARRAY_JAZZ) $(JASMIN_DEPS)
 #     make extract              both models of every unit into EXTRACT
 #                               (default build/extract/models), as
 #                               <arch>/<variant>/NirapodSha2.ec,
-#                               NirapodSha2Safety.ec and the array theories
+#                               NirapodSha2Safety.ec and the array theories,
+#                               and for the portable units ArraySha2.ec
+#                               and ArraySha2Safety.ec, the two models of
+#                               tests/array/array.jazz
 #     make check-extraction     extract again and require MODELS (default
 #                               proofs/extracted) to hold the same files,
 #                               byte for byte: a stale, hand-edited or
@@ -434,7 +466,8 @@ MODELS    ?= proofs/extracted
 EXTRACT_ENTRY := $(BUILD)/extract/nirapod_sha2.jazz
 EXTRACT_UNITS := $(foreach u,$(ALL_UNITS),--unit '$(u):$(call unit_jarch,$(u)):$(call unit_roots,$(u))')
 MODELS_PY     := $(PYTHON) -I $(TESTS)/extraction/models.py --jasmin2ec $(JASMIN2EC) \
-                 --entry $(EXTRACT_ENTRY) --units $(BUILD)/units
+                 --entry $(EXTRACT_ENTRY) --units $(BUILD)/units \
+                 --array-entry $(TESTS)/array/array.jazz
 
 $(EXTRACT_ENTRY): Makefile
 	@mkdir -p $(@D)
@@ -454,7 +487,32 @@ extraction-identity: extract
 extraction-control: extract
 	$(PYTHON) -I $(TESTS)/extraction/control.py --jasmin2ec $(JASMIN2EC) \
 	  --entry $(EXTRACT_ENTRY) --units $(BUILD)/units --src $(SRC) \
+	  --array-entry $(TESTS)/array/array.jazz \
 	  --models $(EXTRACT) --work $(BUILD)/extract/control $(EXTRACT_UNITS)
+
+# --------------------------------------------------------------------
+# Instruction models
+# --------------------------------------------------------------------
+#
+#     make insn-check   the EasyCrypt models of the instructions listed in
+#                       tests/insn/<host arch>.insn, evaluated on inputs
+#                       and results of this processor, with the negative
+#                       controls (tests/insn/README.md)
+#
+# The table lists the x86-64 SHA-NI instructions, so the check runs on an
+# x86-64 processor with SHA-NI. It needs JASMINC, JASMIN2EC and EASYCRYPT
+# of the pinned toolchain. INSN_SEED and INSN_RANDOM choose the random
+# vectors.
+EASYCRYPT   ?= easycrypt
+INSN_SEED   ?= 1
+INSN_RANDOM ?= 256
+
+.PHONY: insn-check
+
+insn-check:
+	JASMINC='$(JASMINC)' JASMIN2EC='$(JASMIN2EC)' EASYCRYPT='$(EASYCRYPT)' \
+	  CC='$(CC)' PYTHON='$(PYTHON)' INSN_SEED='$(INSN_SEED)' INSN_RANDOM='$(INSN_RANDOM)' \
+	  $(TESTS)/insn/check.sh $(HOST_ARCH) $(BUILD)/insn/$(HOST_ARCH)
 
 clean:
 	rm -rf $(BUILD)

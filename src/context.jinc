@@ -408,102 +408,157 @@ fn _sha512_ctx_update(
 }
 
 /*
- * Final: pad, finish, write the 32-byte final chaining value, clear.
- *
- *     ctx     a SHA-224 or SHA-256 context, whose tag must be expect
- *     digest  32 bytes; receives H_0 .. H_7 big-endian (_sha256_finalize)
- *
- * Result SHA2_STATUS_OK: digest is written, then every byte of ctx is set
- * to zero, so the context holds no state and its tag no longer matches
- * any function. SHA2_STATUS_STATE: neither ctx nor digest is written, and
- * only the first 16 bytes of ctx are read.
- *
- * digest must not overlap ctx. The local copies of h and buf hold the
- * final state on return; the export's stack clearing removes them.
+ * Final, one instance per hash function (context_DSIZE.jinc). Each
+ * namespace sets the context size and digest length of its function, and
+ * __ctx_finalize runs that function's finalize in place on h and buf at
+ * the offsets of the layout above. The final of SHA-224 is then
+ * _sha224_ctx::_sha2_ctx_final, and so on. __ctx_finalize writes the
+ * digest without reading it, and its contract says so: without one, the
+ * default contract would require the digest initialised on entry, which
+ * the caller's output buffer is not.
  */
-#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public × msf →
-         { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
-#[safety =
-   { requires = is_arr_init(ctx, 0, SHA256_CTX_BYTES)
-   , res = { ctx_out, digest_out, status, ms_out }
-   , ensures = is_arr_init(ctx_out, 0, SHA256_CTX_BYTES)
-       && is_arr_init(digest_out, 0, status == SHA2_STATUS_OK ? 32 : 0)
-   }
- ]
-fn _sha256_ctx_final(
-  reg mut ptr u8[SHA256_CTX_BYTES] ctx,
-  reg mut ptr u8[32] digest,
-  reg u64 expect,
-  reg u64 ms
-) -> reg ptr u8[SHA256_CTX_BYTES], reg ptr u8[32], reg u64, reg u64
-{
-  reg u64 tag total status z;
-  reg bool ok;
-  inline int i;
+namespace _sha224_ctx {
+  param int _CTX = SHA256_CTX_BYTES;
+  param int _DSIZE = 28;
 
-  tag, total = __sha2_ctx_open(ctx[0:16], ms);
-  status = SHA2_STATUS_STATE;
-
-  ok = tag == expect;
-  if (ok) {
-    ms = #update_msf(ok, ms);
-
+  #[safety =
+     { requires = is_arr_init(ctx, 0, _CTX)
+     , res = { ctx_out, digest_out, ms_out }
+     , ensures = is_arr_init(ctx_out, 0, _CTX) && is_arr_init(digest_out, 0, _DSIZE)
+     }
+   ]
+  inline fn __ctx_finalize(
+    reg mut ptr u8[_CTX] ctx,
+    reg mut ptr u8[_DSIZE] digest,
+    reg u64 total ms
+  ) -> reg ptr u8[_CTX], reg ptr u8[_DSIZE], reg u64
+  {
     digest, ctx[:u32 4 : 8], ctx[48 : 64], ms =
-      _sha256_finalize(digest, ctx[:u32 4 : 8], ctx[48 : 64], total, ms);
-
-    z = 0;
-    for i = 0 to SHA256_CTX_BYTES / 8 {
-      ctx.[:u64 8 * i] = z;
-    }
-    status = SHA2_STATUS_OK;
-  } else {
-    ms = #update_msf(!ok, ms);
+      _sha224::_sha256_finalize(digest, ctx[:u32 4 : 8], ctx[48 : 64], total, ms);
+    return ctx, digest, ms;
   }
 
-  return ctx, digest, status, ms;
+  from Hash require "context_DSIZE.jinc"
 }
 
-/* The SHA-512 form of _sha256_ctx_final, with a 64-byte digest. */
-#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public × msf →
-         { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
-#[safety =
-   { requires = is_arr_init(ctx, 0, SHA512_CTX_BYTES)
-   , res = { ctx_out, digest_out, status, ms_out }
-   , ensures = is_arr_init(ctx_out, 0, SHA512_CTX_BYTES)
-       && is_arr_init(digest_out, 0, status == SHA2_STATUS_OK ? 64 : 0)
-   }
- ]
-fn _sha512_ctx_final(
-  reg mut ptr u8[SHA512_CTX_BYTES] ctx,
-  reg mut ptr u8[64] digest,
-  reg u64 expect,
-  reg u64 ms
-) -> reg ptr u8[SHA512_CTX_BYTES], reg ptr u8[64], reg u64, reg u64
-{
-  reg u64 tag total status z;
-  reg bool ok;
-  inline int i;
+namespace _sha256_ctx {
+  param int _CTX = SHA256_CTX_BYTES;
+  param int _DSIZE = 32;
 
-  tag, total = __sha2_ctx_open(ctx[0:16], ms);
-  status = SHA2_STATUS_STATE;
-
-  ok = tag == expect;
-  if (ok) {
-    ms = #update_msf(ok, ms);
-
-    digest, ctx[:u64 2 : 8], ctx[80 : 128], ms =
-      _sha512_finalize(digest, ctx[:u64 2 : 8], ctx[80 : 128], total, ms);
-
-    z = 0;
-    for i = 0 to SHA512_CTX_BYTES / 8 {
-      ctx.[:u64 8 * i] = z;
-    }
-    status = SHA2_STATUS_OK;
-  } else {
-    ms = #update_msf(!ok, ms);
+  #[safety =
+     { requires = is_arr_init(ctx, 0, _CTX)
+     , res = { ctx_out, digest_out, ms_out }
+     , ensures = is_arr_init(ctx_out, 0, _CTX) && is_arr_init(digest_out, 0, _DSIZE)
+     }
+   ]
+  inline fn __ctx_finalize(
+    reg mut ptr u8[_CTX] ctx,
+    reg mut ptr u8[_DSIZE] digest,
+    reg u64 total ms
+  ) -> reg ptr u8[_CTX], reg ptr u8[_DSIZE], reg u64
+  {
+    digest, ctx[:u32 4 : 8], ctx[48 : 64], ms =
+      _sha256::_sha256_finalize(digest, ctx[:u32 4 : 8], ctx[48 : 64], total, ms);
+    return ctx, digest, ms;
   }
 
-  return ctx, digest, status, ms;
+  from Hash require "context_DSIZE.jinc"
+}
+
+namespace _sha384_ctx {
+  param int _CTX = SHA512_CTX_BYTES;
+  param int _DSIZE = 48;
+
+  #[safety =
+     { requires = is_arr_init(ctx, 0, _CTX)
+     , res = { ctx_out, digest_out, ms_out }
+     , ensures = is_arr_init(ctx_out, 0, _CTX) && is_arr_init(digest_out, 0, _DSIZE)
+     }
+   ]
+  inline fn __ctx_finalize(
+    reg mut ptr u8[_CTX] ctx,
+    reg mut ptr u8[_DSIZE] digest,
+    reg u64 total ms
+  ) -> reg ptr u8[_CTX], reg ptr u8[_DSIZE], reg u64
+  {
+    digest, ctx[:u64 2 : 8], ctx[80 : 128], ms =
+      _sha384::_sha512_finalize(digest, ctx[:u64 2 : 8], ctx[80 : 128], total, ms);
+    return ctx, digest, ms;
+  }
+
+  from Hash require "context_DSIZE.jinc"
+}
+
+namespace _sha512_ctx {
+  param int _CTX = SHA512_CTX_BYTES;
+  param int _DSIZE = 64;
+
+  #[safety =
+     { requires = is_arr_init(ctx, 0, _CTX)
+     , res = { ctx_out, digest_out, ms_out }
+     , ensures = is_arr_init(ctx_out, 0, _CTX) && is_arr_init(digest_out, 0, _DSIZE)
+     }
+   ]
+  inline fn __ctx_finalize(
+    reg mut ptr u8[_CTX] ctx,
+    reg mut ptr u8[_DSIZE] digest,
+    reg u64 total ms
+  ) -> reg ptr u8[_CTX], reg ptr u8[_DSIZE], reg u64
+  {
+    digest, ctx[:u64 2 : 8], ctx[80 : 128], ms =
+      _sha512::_sha512_finalize(digest, ctx[:u64 2 : 8], ctx[80 : 128], total, ms);
+    return ctx, digest, ms;
+  }
+
+  from Hash require "context_DSIZE.jinc"
+}
+
+namespace _sha512_224_ctx {
+  param int _CTX = SHA512_CTX_BYTES;
+  param int _DSIZE = 28;
+
+  #[safety =
+     { requires = is_arr_init(ctx, 0, _CTX)
+     , res = { ctx_out, digest_out, ms_out }
+     , ensures = is_arr_init(ctx_out, 0, _CTX) && is_arr_init(digest_out, 0, _DSIZE)
+     }
+   ]
+  inline fn __ctx_finalize(
+    reg mut ptr u8[_CTX] ctx,
+    reg mut ptr u8[_DSIZE] digest,
+    reg u64 total ms
+  ) -> reg ptr u8[_CTX], reg ptr u8[_DSIZE], reg u64
+  {
+    digest, ctx[:u64 2 : 8], ctx[80 : 128], ms =
+      _sha512_224::_sha512_finalize(digest, ctx[:u64 2 : 8], ctx[80 : 128], total, ms);
+    return ctx, digest, ms;
+  }
+
+  from Hash require "context_DSIZE.jinc"
+}
+
+namespace _sha512_256_ctx {
+  param int _CTX = SHA512_CTX_BYTES;
+  param int _DSIZE = 32;
+
+  #[safety =
+     { requires = is_arr_init(ctx, 0, _CTX)
+     , res = { ctx_out, digest_out, ms_out }
+     , ensures = is_arr_init(ctx_out, 0, _CTX) && is_arr_init(digest_out, 0, _DSIZE)
+     }
+   ]
+  inline fn __ctx_finalize(
+    reg mut ptr u8[_CTX] ctx,
+    reg mut ptr u8[_DSIZE] digest,
+    reg u64 total ms
+  ) -> reg ptr u8[_CTX], reg ptr u8[_DSIZE], reg u64
+  {
+    digest, ctx[:u64 2 : 8], ctx[80 : 128], ms =
+      _sha512_256::_sha512_finalize(digest, ctx[:u64 2 : 8], ctx[80 : 128], total, ms);
+    return ctx, digest, ms;
+  }
+
+  from Hash require "context_DSIZE.jinc"
 }
 
 /*

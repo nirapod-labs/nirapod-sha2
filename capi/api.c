@@ -14,8 +14,8 @@
  *     argument checks that need the caller's pointers and lengths: NULL
  *     pointers, length limits, overlapping buffers
  *     the unit of the operation's family (dispatch.c)
- *     the timing mode around the export (timing.c), and clearing of the
- *     registers after it (clear.c)
+ *     the timing mode around every export that reads a secret (timing.c),
+ *     and clearing of the registers after every export (clear.c)
  *     mapping of the export's status to the error codes
  *
  * Everything that touches message bytes, keys, digests or contexts is
@@ -89,19 +89,24 @@ int nirapod_sha2_run_hash(const nirapod_sha2_unit *u, nirapod_sha2_family f,
     return NIRAPOD_SHA2_OK;
 }
 
+/*
+ * The init of a hash or of a multi-way hash reads nothing: it writes the
+ * initial hash values, a zero total and the context's tag, all constants
+ * of the function, over whatever the context held. No instruction it runs
+ * has a secret operand, so it runs without the timing mode (timing.c),
+ * whose two writes would cost more than the export. The registers are
+ * cleared after it as after every call. HMAC init reads the key and is
+ * not one of these.
+ */
 int nirapod_sha2_run_init(const nirapod_sha2_unit *u, nirapod_sha2_family f,
                           nirapod_sha2_jz_init op, void *ctx)
 {
-    uint64_t token;
-
     if (ctx == NULL) {
         return NIRAPOD_SHA2_ENULL;
     }
 
-    token = nirapod_sha2_timing_enter();
     op((uint8_t *)ctx);
     nirapod_sha2_clear_registers(u->needs[f]);
-    nirapod_sha2_timing_leave(token);
     return NIRAPOD_SHA2_OK;
 }
 

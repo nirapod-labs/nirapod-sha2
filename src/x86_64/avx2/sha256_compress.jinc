@@ -75,7 +75,19 @@ u32[8] SHA256_AVX2_HI = {
  * 64-bit right shift of that qword leaves the 32-bit rotation in its low
  * half (ROTR 17 ^ ROTR 19 ^ SHR 10 in dwords 0 and 2), and VPSHUFB with
  * lo or hi gathers the two results into place with zeros beside them.
+ *
+ * Safety: m[(t + 1) mod 2] is written before it is read, so only
+ * m[t mod 2] has to be initialised on entry; on a block's first round
+ * that is m[0], the only one the caller has set.
  */
+#[safety =
+   { requires = 0 <= t && t < 64 && is_arr_init(v, 0, 32)
+       && is_arr_init(m, 4 * (t % 2), 4) && is_arr_init(x, 0, 128)
+   , res = { v_out, m_out, s_out, x_out }
+   , ensures = is_arr_init(v_out, 0, 32) && is_arr_init(m_out, 0, 8)
+       && is_arr_init(x_out, 0, 128)
+   }
+ ]
 inline fn __sha256_avx2_round(
   reg u32[8] v,
   reg u32[2] m,
@@ -200,7 +212,7 @@ inline fn __sha256_avx2_round(
  * least 13 rounds ahead of the first round that reads its words.
  */
 #[safety =
-   { requires = is_arr_init(h, 0, 32)
+   { requires = 0 <= nb && nb <= 2 && is_arr_init(h, 0, 32) && is_arr_init(x, 0, 128)
    , res = { h_out, ms_out }
    , ensures = is_arr_init(h_out, 0, 32)
    }

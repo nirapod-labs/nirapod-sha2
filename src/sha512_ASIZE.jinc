@@ -40,6 +40,7 @@ from Hash require "fill_ASIZE.jinc"
          { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
 #[safety =
    { requires = is_arr_init(h, 0, 64) && is_arr_init(buf, 0, (64u) total % 128)
+       && (64u) off <= _ASIZE && (64u) len <= _ASIZE
        && (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
    , res = { h_out, buf_out, total_out, ms_out }
    , ensures = is_arr_init(h_out, 0, 64)

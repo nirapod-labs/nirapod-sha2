@@ -12,6 +12,13 @@
  *
  * Both the one-shot and the incremental forms run the case. The files are
  * parsed with json.c, which is independent of the library.
+ *
+ * The number of cases run must equal the file's numberOfTests. Its
+ * negative control runs each file once more, through the public
+ * functions, with the first case left out as a parser that missed it
+ * would (drop, 0 for none, is the case to leave out); the count must then
+ * disagree. With drop set, run_file returns the verdict of the count
+ * instead of stopping the run.
  */
 
 #include "validation.h"
@@ -26,7 +33,8 @@ static int prefix_match(const uint8_t *got, size_t got_len, const uint8_t *want,
     return want_len <= got_len && memcmp(got, want, want_len) == 0;
 }
 
-static void run_file(validation_suite *s, int kernel, const hmac_alg *alg, const char *path)
+static int run_file(validation_suite *s, int kernel, const hmac_alg *alg, const char *path,
+                    long long drop)
 {
     size_t text_len;
     char *text = read_file(path, &text_len);
@@ -34,7 +42,7 @@ static void run_file(validation_suite *s, int kernel, const hmac_alg *alg, const
     json_value *doc = json_parse(text, text_len, err, sizeof err);
     const json_value *groups;
     const json_value *number;
-    long long expected_total, seen = 0;
+    long long expected_total, seen = 0, records = 0;
     const char *file;
     size_t g, t;
 
@@ -88,6 +96,9 @@ static void run_file(validation_suite *s, int kernel, const hmac_alg *alg, const
             validation_ctx c;
             char what[4224];
 
+            if (++records == drop) {
+                continue;
+            }
             if (key == NULL || msg == NULL || tag == NULL || result == NULL ||
                 key->type != JSON_STRING || msg->type != JSON_STRING ||
                 tag->type != JSON_STRING || result->type != JSON_STRING) {
@@ -161,11 +172,21 @@ static void run_file(validation_suite *s, int kernel, const hmac_alg *alg, const
         }
     }
 
-    if (seen != expected_total) {
+    if (seen != expected_total && drop == 0) {
         die("%s: %lld cases, numberOfTests is %lld", path, seen, expected_total);
     }
     json_free(doc);
     free(text);
+    return seen == expected_total;
+}
+
+static void file_path(char *path, size_t cap, const char *dir, const hmac_alg *alg)
+{
+    if (strcmp(alg->name, "HMAC-SHA-256") == 0) {
+        snprintf(path, cap, "%s/hmac_sha256_test.json", dir);
+    } else {
+        snprintf(path, cap, "%s/hmac_sha512_test.json", dir);
+    }
 }
 
 int suite_wycheproof(void)
@@ -187,13 +208,19 @@ int suite_wycheproof(void)
             if (!validation_usable(&s, target, a->family)) {
                 continue;
             }
-            if (strcmp(a->name, "HMAC-SHA-256") == 0) {
-                snprintf(path, sizeof path, "%s/hmac_sha256_test.json", dir);
-            } else {
-                snprintf(path, sizeof path, "%s/hmac_sha512_test.json", dir);
-            }
-            run_file(&s, target, a, path);
+            file_path(path, sizeof path, dir, a);
+            run_file(&s, target, a, path, 0);
         }
+    }
+    for (i = 0; i < sizeof HMAC_ALGS / sizeof HMAC_ALGS[0]; i++) {
+        const hmac_alg *a = &HMAC_ALGS[i];
+        validation_suite c;
+        char path[4096];
+
+        file_path(path, sizeof path, dir, a);
+        control_begin(&c, &s);
+        control_record(&s, !run_file(&c, VALIDATION_PUBLIC, a, path, 1),
+                       "%s: %s with its first case left out", a->name, strrchr(path, '/') + 1);
     }
     return suite_end(&s);
 }

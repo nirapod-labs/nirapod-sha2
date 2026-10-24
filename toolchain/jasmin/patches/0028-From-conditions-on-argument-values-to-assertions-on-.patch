@@ -1,0 +1,272 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Benjamin Gregoire <Benjamin.Gregoire@inria.fr>
+Date: Wed, 23 Sep 2026 17:25:13 +0200
+Subject: [PATCH] From conditions on argument values to assertions on argument
+ expressions
+
+sc_to_eassert (safety_common.v) turns a safety_cond term on the argument
+values into an assertion on the argument expressions: a predicate
+IOpN_safety at the top becomes PappN_safety, any other condition the
+expression sc_to_e builds. Outside the domain of the translation, that is
+when the condition reads a variable beyond the arguments
+(safety_cond_below) or has a predicate IOpN_safety below an operator
+(safety_cond_expr), the assertion is false, which is sound. The conditions
+wint_int builds are in the domain, so its assertions are unchanged.
+
+safety_common_proof.v evaluates the conjunctions of assertions (aands) in
+any mode and proves what check_xs buys: the conditions of the left values,
+asserted before the assignment, evaluate to the same value after it
+(check_scaP). safe_assertP relates a sequence of assertions run in one mode
+to the empty command run in another. read_easserts_rec_E and
+read_easserts_cons (expr_facts.v) compute the variables the assertions
+read.
+
+(cherry picked from commit 18c219977f7752a0044722f9d66627117cdd7c51)
+---
+ proofs/_CoqProject                |   1 +
+ proofs/lang/expr_facts.v          |  16 ++++
+ proofs/lang/safety_common.v       |  29 +++++-
+ proofs/lang/safety_common_proof.v | 147 ++++++++++++++++++++++++++++++
+ 4 files changed, 190 insertions(+), 3 deletions(-)
+ create mode 100644 proofs/lang/safety_common_proof.v
+
+diff --git a/proofs/_CoqProject b/proofs/_CoqProject
+index e3b28c5..200e953 100644
+--- a/proofs/_CoqProject
++++ b/proofs/_CoqProject
+@@ -218,6 +218,7 @@ lang/pseudo_operator.v
+ lang/psem_facts.v
+ lang/relational_logic.v
+ lang/safety_common.v
++lang/safety_common_proof.v
+ lang/safety_cond.v
+ lang/safety_cond_facts.v
+ lang/sem_one_varmap.v
+diff --git a/proofs/lang/expr_facts.v b/proofs/lang/expr_facts.v
+index 1999ee4..0d3030f 100644
+--- a/proofs/lang/expr_facts.v
++++ b/proofs/lang/expr_facts.v
+@@ -412,6 +412,22 @@ Lemma read_eassert_Pand e1 e2 :
+   Sv.Equal (read_eassert (Pand e1 e2)) (Sv.union (read_eassert e1) (read_eassert e2)).
+ Proof. by rewrite /read_eassert /= read_eassertE -!/(read_eassert _). Qed.
+ 
++Lemma read_easserts_rec_E as_ s :
++  Sv.Equal (read_easserts_rec s as_) (Sv.union (read_easserts as_) s).
++Proof.
++  rewrite /read_easserts; elim: as_ s => [ | a as_ hrec] s /=.
++  + clear; SvD.fsetdec.
++  do 2!(rewrite hrec -/read_easserts read_eassertE).
++  clear; SvD.fsetdec.
++Qed.
++
++Lemma read_easserts_cons a as_ :
++  Sv.Equal (read_easserts (a :: as_)) (Sv.union (read_eassert a) (read_easserts as_)).
++Proof.
++  rewrite {1}/read_easserts /= read_easserts_rec_E (read_eassertE a Sv.empty).
++  clear; SvD.fsetdec.
++Qed.
++
+ Let Pr i := forall s, Sv.Equal (read_i_rec s i) (Sv.union s (read_i i)).
+ Let Pi i := forall s, Sv.Equal (read_I_rec s i) (Sv.union s (read_I i)).
+ Let Pc c := forall s, Sv.Equal (foldl read_I_rec s c) (Sv.union s (read_c c)).
+diff --git a/proofs/lang/safety_common.v b/proofs/lang/safety_common.v
+index fe00c85..6aedc6b 100644
+--- a/proofs/lang/safety_common.v
++++ b/proofs/lang/safety_common.v
+@@ -7,8 +7,12 @@ Import Utf8.
+ (* Translation of a condition on the argument values of an operator into an
+    expression, and into an assertion, on its argument expressions. The
+    coercion from words to integers is a parameter: [wint_int] takes the
+-   identity, its arguments being already integers; the safety pass will apply
+-   [Oint_of_word]. *)
++   identity, its arguments being already integers; the safety pass applies
++   [Oint_of_word].
++
++   A variable beyond the arguments, or a predicate [IOpN_safety] below an
++   operator, which the expression language cannot express, gives the assertion
++   [false]: asserting it is sound. *)
+ 
+ Section TO_E.
+ 
+@@ -34,8 +38,27 @@ Fixpoint sc_to_e (es : pexprs) (c : safety_cond) : pexpr :=
+   | IOpN_safety _ _ _ _ => Pbool false
+   end.
+ 
++(* The conditions [sc_to_e] translates into an expression: those without the
++   predicates [IOpN_safety]. *)
++Fixpoint safety_cond_expr (c : safety_cond) : bool :=
++  match c with
++  | IBool _ | IConst _ | IVar _ => true
++  | IOp1 _ c => safety_cond_expr c
++  | IOp2 _ c1 c2 => safety_cond_expr c1 && safety_cond_expr c2
++  | IOpN_safety _ _ _ _ => false
++  end.
++
++(* A predicate [IOpN_safety] at the top is the assertion [PappN_safety]. *)
+ Definition sc_to_eassert (es : pexprs) (c : safety_cond) : eassert :=
+-  Pexpr (sc_to_e es c).
++  if safety_cond_below (size es) c then
++    match c with
++    | IOpN_safety o c1 c2 c3 =>
++      if [&& safety_cond_expr c1, safety_cond_expr c2 & safety_cond_expr c3]
++      then PappN_safety o [:: sc_to_e es c1; sc_to_e es c2; sc_to_e es c3]
++      else Pexpr (Pbool false)
++    | _ => Pexpr (if safety_cond_expr c then sc_to_e es c else Pbool false)
++    end
++  else Pexpr (Pbool false).
+ 
+ End TO_E.
+ 
+diff --git a/proofs/lang/safety_common_proof.v b/proofs/lang/safety_common_proof.v
+new file mode 100644
+index 0000000..e1c23e1
+--- /dev/null
++++ b/proofs/lang/safety_common_proof.v
+@@ -0,0 +1,147 @@
++(* * Semantic lemmas on the assertions of [safety_common.v].
++
++   The safety pass conjoins the assertions it generates with [aands] and
++   asserts the conditions of the left values of an instruction before it,
++   which [check_xs] licenses. The lemmas below evaluate these assertions in
++   any mode; [safe_assertP] relates a sequence of assertions run on one side
++   to the empty command on the other. *)
++
++From mathcomp Require Import ssreflect ssrfun ssrbool ssralg eqtype word_ssrZ.
++Require Import psem safety_common.
++Import Utf8.
++
++Lemma read_aands as_ : Sv.Equal (read_eassert (aands as_)) (read_easserts as_).
++Proof.
++  elim: as_ => //= a l hrec; rewrite read_easserts_cons -hrec => {hrec}.
++  case: l.
++  + by rewrite /= /read_easserts /=; clear; SvD.fsetdec.
++  move=> b l; move: (b::l) => {b} {}l.
++  by rewrite read_eassert_Pand.
++Qed.
++
++Lemma use_mem_aands as_ : use_mem_eassert (aands as_) = has use_mem_eassert as_.
++Proof.
++  elim: as_ => //=.
++  move=> a [ /= | a' l] hl.
++  + by rewrite orbF.
++  by move: (a'::l) hl => {a'} {}l <-.
++Qed.
++
++Section LEMMAS.
++
++Context
++  {asm_op syscall_state : Type}
++  {ep : EstateParams syscall_state}
++  {spp : SemPexprParams}.
++
++#[local] Existing Instance nosubword.
++#[local] Existing Instance withassert.
++
++(* The assertions are evaluated in one mode, which the lemmas below leave
++   free; [safe_assertP] needs two of them at once, so the mode is fixed by a
++   section of its own. *)
++Section MODE.
++
++Context {sm : SemMode}.
++
++(* ------------------------------------------------------------------------- *)
++(* Conjunctions of assertions                                                 *)
++
++Lemma aandE gd s a1 a2 :
++  sem_eassert gd s (Pand a1 a2) = ok true <->
++  sem_eassert gd s a1 = ok true /\ sem_eassert gd s a2 = ok true.
++Proof.
++  split.
++  + rewrite /=; t_xrbindP => b1 h1 b2 h2 /andP [] hb1 hb2; split.
++    + by rewrite h1 hb1.
++    by rewrite h2 hb2.
++  by move=> [] h1 h2; rewrite /= h1 h2.
++Qed.
++
++Lemma aandsE_cons gd s a as_ :
++  sem_eassert gd s (aands (a::as_)) = ok true <->
++  sem_eassert gd s a = ok true /\ sem_eassert gd s (aands as_) = ok true.
++Proof.
++  case: as_ => /=.
++  + by split => [h | []].
++  by move=> ??; rewrite aandE.
++Qed.
++
++Lemma aandsE_cat gd s as1 as2 :
++  sem_eassert gd s (aands (as1 ++ as2)) = ok true <->
++  sem_eassert gd s (aands as1) = ok true /\ sem_eassert gd s (aands as2) = ok true.
++Proof.
++  elim: as1 => /=.
++  + by split => [h | []].
++  by move=> a as1 hrec; rewrite !aandsE_cons hrec; tauto.
++Qed.
++
++(* ------------------------------------------------------------------------- *)
++(* The conditions of the left values                                          *)
++
++(* The conditions attached to the left values of an assignment are asserted
++   *before* the assignment. [check_xs] checks syntactically that this is
++   legitimate; this lemma is what it buys. *)
++Lemma check_scaP gd (sc : safety_asserts) s1 s2 okmem W :
++  okmem || ~~ has use_mem_eassert sc ->
++  disjoint (read_easserts sc) W ->
++  evm s1 =[\W] evm s2 ->
++  (okmem -> emem s1 = emem s2) ->
++  sem_eassert gd s1 (aands sc) = sem_eassert gd s2 (aands sc).
++Proof.
++  rewrite -read_aands -use_mem_aands.
++  move: (aands _) => a hokm /Sv.is_empty_spec hdisj hvm hmem.
++  have ? : evm s1 =[read_eassert a] evm s2.
++  + by move=> x hx; apply hvm; SvD.fsetdec.
++  case: okmem hokm hmem => /=.
++  + by move=> _ /(_ erefl) hmem; apply: eq_on_sem_eassert.
++  by move=> huse _; apply: use_mem_eassertP_eq_on.
++Qed.
++
++End MODE.
++
++(* ------------------------------------------------------------------------- *)
++(* Running the generated assertions                                           *)
++
++Section SAFE_ASSERT.
++
++Context {sip : SemInstrParams asm_op syscall_state}.
++#[local] Existing Instance progUnit.
++#[local] Existing Instance indirect_c.
++
++Context {E E0 : Type -> Type} {wE : with_Error E E0} {rE : EventRels E0}.
++Variable (p1 p2 : uprog) (ev : extra_val_t).
++
++Notation gd := (p_globs p1).
++
++(* [safe_assert ii scs] leaves the state untouched and establishes that every
++   condition of [scs] holds, while the right-hand side does nothing. The
++   conditions are evaluated on the left, under [sm1]. *)
++Lemma safe_assertP {sm1 sm2 : SemMode} R spec ii scs :
++  wequiv_rec (sm1:=sm1) (sm2:=sm2) p1 p2 ev ev spec R (safe_assert ii scs) [::]
++    (fun s1 s2 => R s1 s2 /\ sem_eassert (sm:=sm1) gd s1 (aands scs) = ok true).
++Proof.
++  apply wkequiv_eq_pred => s1 s2 hR.
++  apply wequiv_weaken with (eq_init s1 s2)
++    (fun t1 t2 => eq_init s1 s2 t1 t2 /\ sem_eassert (sm:=sm1) gd s1 (aands scs) = ok true).
++  - by move=> ?? [].
++  - by move=> t1 t2 [[-> ->] h]; split.
++  elim: scs => [| sc scs hrec].
++  - by apply wequiv_nil => ?? [-> ->]; split.
++  rewrite /= -(cats0 [::]) -cat1s.
++  rewrite -/(aands (sc :: scs)).
++  apply wequiv_cat with
++    (fun t1 t2 => eq_init s1 s2 t1 t2 /\ sem_eassert (sm:=sm1) gd s1 sc = ok true).
++  - by apply wequiv_assert_left => _ ?? [-> ->] h; split.
++  apply wkequiv_eq_pred => t1 t2 [[-> ->] hsc].
++  apply wequiv_weaken with (eq_init s1 s2)
++    (fun u1 u2 => (u1 = s1 /\ u2 = s2) /\ sem_eassert (sm:=sm1) gd s1 (aands scs) = ok true).
++  - by move=> ?? [].
++  - move=> u1 u2 [[-> ->] h]; split; first by [].
++    by apply/(aandsE_cons (sm := sm1)); split; [exact hsc | exact h].
++  exact hrec.
++Qed.
++
++End SAFE_ASSERT.
++
++End LEMMAS.

@@ -31,7 +31,7 @@ batteries 3.11.0
 bigarray-compat 1.1.0
 bigstringaf 0.10.0
 biniou 1.2.2
-bitwuzla-cxx 0.9.0 easycrypt
+bitwuzla-cxx 0.9.1 easycrypt
 camlidl 1.13-1
 camlp-streams 5.0.1
 camlzip 1.14 easycrypt

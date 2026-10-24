@@ -13,6 +13,10 @@
 # --no-easycrypt, so the proof job is not selected there. The proof and
 # safety jobs run on Linux only, as ci/run.sh requires.
 #
+# The tests job compares with the independent implementations of
+# toolchain/baselines/PIN, which are built on the runner first and passed
+# as SHA2_BASELINES.
+#
 # Inputs select the two long jobs; both are off by default.
 
 name: ci
@@ -81,7 +85,14 @@ jobs:
             toolchain/build.sh --no-easycrypt all
           fi
 
+      - name: Build the pinned oracles
+        env:
+          JOBS: 4
+        run: toolchain/baselines/build.sh "$RUNNER_TEMP/baselines"
+
       - name: Run the local CI
+        env:
+          SHA2_BASELINES: ${{ runner.temp }}/baselines/install
         run: |
           set -eu
           eval "$(opam env --root="$PWD/toolchain/work/opam" --switch=nirapod-sha2 --set-root --set-switch)"

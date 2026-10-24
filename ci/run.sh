@@ -5,7 +5,7 @@
 # ci/run.sh
 # =========
 #
-# The local CI entry point of nirapod-sha2. It runs every gate of the
+# The local CI entry point of nirapod-sha2. It runs every check of the
 # project as a separate job, in order, each in its own process with its
 # own wall-clock limit, and prints one summary table at the end.
 #
@@ -13,7 +13,8 @@
 #     ci/run.sh --list
 #
 # Default jobs: toolchain build tests exports ct extraction on a host with
-# the pinned Jasmin (the analysis host).
+# the pinned Jasmin (the analysis host), and insn there when tests/insn has
+# an instruction table for the host's architecture.
 # Opt-in jobs: safety (long, Linux only) and proofs (long, Linux only).
 #
 # A job passes only when it exits zero and its log holds a line that
@@ -31,8 +32,9 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT" || exit 1
 
 ALL_JOBS="toolchain build tests exports ct extraction"
+INSN_JOBS="insn"
 OPT_JOBS="safety proofs"
-ORDER="toolchain build tests exports ct extraction safety proofs"
+ORDER="toolchain build tests exports ct extraction insn safety proofs"
 
 usage() {
   cat <<'EOF'
@@ -48,7 +50,8 @@ usage: ci/run.sh [options]
 
 Environment:
   CI_TIMEOUT_<JOB>   wall-clock limit per job in seconds
-  CI_SAFETY_TIMEOUT  limit of one safety-checker run, seconds
+  CI_SAFETY_TIMEOUT  limit of one safety-checker run (one export), seconds
+  CI_SAFETY_JOBS     safety-checker runs at a time (default: half the cores)
   CI_PROOF_JOBS      proof files checked at a time (default: cores, max 8)
   SHA2_TOOLCHAIN_WORK      toolchain work directory to verify
   SHA2_TOOLCHAIN_PROVENANCE  provenance file to verify
@@ -72,6 +75,7 @@ while [ $# -gt 0 ]; do
     --list)
       printf 'default: %s\n' "$ALL_JOBS"
       printf 'default without Jasmin: %s\n' "$NATIVE_JOBS"
+      printf 'default with Jasmin and an instruction table for the host: %s\n' "$INSN_JOBS"
       printf 'opt-in:  %s\n' "$OPT_JOBS"
       exit 0
       ;;
@@ -85,12 +89,15 @@ if [ -n "$only" ]; then
   selection=$(printf '%s' "$only" | tr ',' ' ')
 else
   selection=$ALL_JOBS
+  if [ -f "tests/insn/$(ci_host_arch).insn" ]; then
+    selection="$selection $INSN_JOBS"
+  fi
   [ "$safety" = 1 ] && selection="$selection safety"
   [ "$proofs" = 1 ] && selection="$selection proofs"
 fi
 
 for job in $selection; do
-  case " $ALL_JOBS $OPT_JOBS " in
+  case " $ALL_JOBS $INSN_JOBS $OPT_JOBS " in
     *" $job "*) ;;
     *) echo "ci/run.sh: unknown job: $job" >&2; exit 2 ;;
   esac
@@ -123,7 +130,7 @@ REV=$(git rev-parse HEAD)
 DIRTY=$(git status --porcelain | wc -l | tr -d ' ')
 
 case " $selection " in
-  *" proofs "*) export CI_NEED_EASYCRYPT=1 ;;
+  *" proofs "*|*" insn "*) export CI_NEED_EASYCRYPT=1 ;;
   *) export CI_NEED_EASYCRYPT=0 ;;
 esac
 
@@ -160,6 +167,7 @@ ci_timeout() {
     exports) printf '300\n' ;;
     ct) printf '3600\n' ;;
     extraction) printf '900\n' ;;
+    insn) printf '1800\n' ;;
     safety) printf '43200\n' ;;
     proofs) printf '28800\n' ;;
     *) printf '900\n' ;;

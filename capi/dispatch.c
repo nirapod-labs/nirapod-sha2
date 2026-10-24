@@ -206,15 +206,15 @@ unsigned nirapod_sha2_features_cache = 0;
  * aarch64 scalar unit is in no list: it is built and tested, and
  * selectable through the testing library only.
  *
- * A unit enters the default dispatch only when all its gates have passed:
+ * A unit enters the default dispatch only when all its checks have passed:
  * a correctness proof of its kernel against FIPS 180-4, a safety-checker
  * verdict, the constant-time and speculative constant-time checks, and
  * native tests. admitted marks the candidates that have. The portable unit
- * is admitted on other grounds: it is the fallback every CPU needs; its
- * gates are open like the others'. Today it is the only admitted unit, so
- * the public functions run the portable kernels on every CPU and read no
- * CPU features. Admitting a unit is a change of one admitted flag below,
- * made with the evidence for it.
+ * is admitted on other grounds: it is the fallback every CPU needs, and its
+ * checks are still open, as the others' are. Today it is the only admitted
+ * unit, so the public functions run the portable kernels on every CPU and
+ * read no CPU features. Admitting a unit is a change of one admitted flag
+ * below, made with the evidence for it.
  *
  * The candidates hold the units' addresses, not their indices: the usual
  * call then needs no bounds check and no call into units.c, and it walks

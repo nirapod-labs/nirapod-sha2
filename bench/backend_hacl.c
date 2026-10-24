@@ -254,9 +254,9 @@ static int hacl_run(const bench_variant *v, const bench_workload *w, uint8_t *ou
             return -1;
         }
         return streaming
-                   ? streaming_hmac(w->fn, out, bench_key(), BENCH_HMAC_KEY_LEN,
+                   ? streaming_hmac(w->fn, out, bench_key(), w->key_len,
                                     bench_msg(), w->len)
-                   : evercrypt_hmac(w->fn, out, bench_key(), BENCH_HMAC_KEY_LEN,
+                   : evercrypt_hmac(w->fn, out, bench_key(), w->key_len,
                                     bench_msg(), w->len);
     case BENCH_SHA256_X8:
         if (!streaming) {

@@ -6,8 +6,10 @@
  * timing.c
  * ========
  *
- * Data-independent timing mode around each Jasmin call: every export reads
- * a message, a key or a context, all secret.
+ * Data-independent timing mode around each Jasmin call that reads a
+ * message, a key or a context, all secret. That is every export except the
+ * init of a hash or of a multi-way hash, which only writes constants
+ * (api.c, nirapod_sha2_run_init) and runs without it.
  *
  * AArch64
  *

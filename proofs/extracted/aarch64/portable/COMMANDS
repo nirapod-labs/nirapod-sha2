@@ -1,0 +1,8 @@
+# The models of unit aarch64-portable, extracted from the repository root by
+# `make extract`. The entry requires src/nirapod_sha2.jinc
+# through the Hash root, with no namespace.
+# ArraySha2.ec and ArraySha2Safety.ec are the models of the array test unit.
+jasmin2ec --arch=armv8a -I Hash=src -I HashWord=src/aarch64 -I Sha256Kernel=src -I Sha512Kernel=src -I Sha256KernelX=src -I Sha512KernelX=src -o aarch64/portable/NirapodSha2.ec build/extract/nirapod_sha2.jazz
+jasmin2ec --arch=armv8a -m safety -I Hash=src -I HashWord=src/aarch64 -I Sha256Kernel=src -I Sha512Kernel=src -I Sha256KernelX=src -I Sha512KernelX=src -o aarch64/portable/NirapodSha2Safety.ec build/extract/nirapod_sha2.jazz
+jasmin2ec --arch=armv8a -I Hash=src -I HashWord=src/aarch64 -I Sha256Kernel=src -I Sha512Kernel=src -I Sha256KernelX=src -I Sha512KernelX=src -o aarch64/portable/ArraySha2.ec tests/array/array.jazz
+jasmin2ec --arch=armv8a -m safety -I Hash=src -I HashWord=src/aarch64 -I Sha256Kernel=src -I Sha512Kernel=src -I Sha256KernelX=src -I Sha512KernelX=src -o aarch64/portable/ArraySha2Safety.ec tests/array/array.jazz

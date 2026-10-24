@@ -30,6 +30,7 @@
 #define VALIDATION_MAX_ORACLES 4
 #define VALIDATION_MAX_DIGEST 64
 #define VALIDATION_GUARD 0xa5
+#define VALIDATION_FUZZ_SEED UINT64_C(0x5eed5a2e1f0d3c47)
 
 typedef struct validation_counts {
     unsigned long pass;
@@ -37,10 +38,19 @@ typedef struct validation_counts {
     unsigned long skip;
 } validation_counts;
 
+/*
+ * quiet is set only on the scratch suite of a negative control, whose
+ * failures are expected and are not printed. controls and missed count the
+ * negative controls run for the suite and those whose wrong answer the
+ * check did not reject.
+ */
 typedef struct validation_suite {
     const char *name;
     validation_counts kernel[VALIDATION_KERNELS];
     validation_counts public_api;
+    int quiet;
+    unsigned long controls;
+    unsigned long missed;
 } validation_suite;
 
 typedef union validation_ctx {
@@ -122,6 +132,8 @@ typedef struct validation_env {
     size_t large_bytes;
     int require_oracle;
     const char *write_xarch;
+    uint64_t seed;
+    size_t fuzz_cases;
     int oracle_count;
     const char *oracle[VALIDATION_MAX_ORACLES];
 } validation_env;
@@ -137,8 +149,24 @@ void count_skip(validation_suite *s, int kernel);
 void fail_case(validation_suite *s, int kernel, const char *fmt, ...)
     __attribute__((format(printf, 3, 4)));
 const char *kernel_label(int kernel);
+const char *kernel_base_label(int kernel);
 int kernel_built(int kernel);
 int validation_usable(validation_suite *s, int kernel, nirapod_sha2_testing_family family);
+
+/*
+ * Negative controls. A control runs a check of the suite on an answer
+ * known to be wrong and requires the check to reject it. control_begin
+ * makes a scratch suite for it, which counts like s but prints nothing;
+ * control_end records in s whether any check of the scratch suite failed.
+ * control_record records a control whose verdict the caller already has.
+ * Both return 1 when the wrong answer was rejected. A control that is not
+ * rejected is a failure of s, and suite_end reports the controls of s.
+ */
+void control_begin(validation_suite *scratch, const validation_suite *s);
+int control_end(validation_suite *s, const validation_suite *scratch, const char *fmt, ...)
+    __attribute__((format(printf, 3, 4)));
+int control_record(validation_suite *s, int rejected, const char *fmt, ...)
+    __attribute__((format(printf, 3, 4)));
 
 /* Operations on an explicit target: kernel >= 0 forces that kernel through
  * the testing interface, VALIDATION_PUBLIC uses the public functions. */
@@ -208,5 +236,7 @@ int suite_negative(void);
 int suite_multiway(void);
 int suite_oracle(void);
 int suite_xarch(void);
+int suite_long(void);
+int suite_fuzz(void);
 
 #endif /* NIRAPOD_SHA2_VALIDATION_H */

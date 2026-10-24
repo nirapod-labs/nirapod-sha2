@@ -75,7 +75,9 @@ from Hash require "sha512_k.jinc"
  * block's sixteen message words, already in native order, two per vector.
  */
 #[safety =
-   { requires = is_arr_init(k, 0, 640)
+   { requires = is_arr_init(s, 0, 64) && is_arr_init(m, 0, 128) && is_arr_init(k, 0, 640)
+   , res = { s_out, m_out }
+   , ensures = is_arr_init(s_out, 0, 80) && is_arr_init(m_out, 0, 128)
    }
  ]
 inline fn __sha512_block_a64(

@@ -1,0 +1,76 @@
+/*
+ * SPDX-FileCopyrightText: nirapod-sha2 contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * context_DSIZE.jinc
+ * ==================
+ *
+ * Final of a hash context for a digest of _DSIZE bytes. Instance file:
+ * context.jinc requires it once per hash function, inside a namespace that
+ * provides
+ *
+ *     param int _CTX     the context size, SHA256_CTX_BYTES or
+ *                        SHA512_CTX_BYTES
+ *     param int _DSIZE   the digest length of the function
+ *     __ctx_finalize     the function's finalize (sha256_DSIZE.jinc,
+ *                        sha512_DSIZE.jinc) run in place on the h and buf
+ *                        of the context, writing the digest
+ *
+ * so that the digest goes from the final chaining value straight to the
+ * caller's output at its exact length.
+ */
+
+/*
+ * Final: pad, finish, write the digest, clear.
+ *
+ *     ctx     a context of the function whose tag is expect
+ *     digest  _DSIZE bytes; receives the digest (__ctx_finalize)
+ *
+ * Result SHA2_STATUS_OK: digest is written, then every byte of ctx is set
+ * to zero, so the context holds no state and its tag no longer matches
+ * any function. SHA2_STATUS_STATE: neither ctx nor digest is written, and
+ * only the first 16 bytes of ctx are read.
+ *
+ * digest must not overlap ctx. The final state that the finalize and the
+ * kernel leave on the stack stays there until the export's stack clearing.
+ */
+#[sct = "{ ptr: public, val: secret } × { ptr: public, val: secret } × public × msf →
+         { ptr: public, val: secret } × { ptr: public, val: secret } × public × msf"]
+#[safety =
+   { requires = is_arr_init(ctx, 0, _CTX)
+   , res = { ctx_out, digest_out, status, ms_out }
+   , ensures = is_arr_init(ctx_out, 0, _CTX)
+       && is_arr_init(digest_out, 0, status == SHA2_STATUS_OK ? _DSIZE : 0)
+   }
+ ]
+fn _sha2_ctx_final(
+  reg mut ptr u8[_CTX] ctx,
+  reg mut ptr u8[_DSIZE] digest,
+  reg u64 expect,
+  reg u64 ms
+) -> reg ptr u8[_CTX], reg ptr u8[_DSIZE], reg u64, reg u64
+{
+  reg u64 tag total status z;
+  reg bool ok;
+  inline int i;
+
+  tag, total = __sha2_ctx_open(ctx[0:16], ms);
+  status = SHA2_STATUS_STATE;
+
+  ok = tag == expect;
+  if (ok) {
+    ms = #update_msf(ok, ms);
+
+    ctx, digest, ms = __ctx_finalize(ctx, digest, total, ms);
+
+    z = 0;
+    for i = 0 to _CTX / 8 {
+      ctx.[:u64 8 * i] = z;
+    }
+    status = SHA2_STATUS_OK;
+  } else {
+    ms = #update_msf(!ok, ms);
+  }
+
+  return ctx, digest, status, ms;
+}

@@ -20,6 +20,15 @@
 # are label.v (encoding of code labels: encode_label, decode_label and the
 # axiom decode_encode_label) and waes.v (MixColumns, InvMixColumns); they
 # appear in the assumption report (ASSUMPTIONS).
+#
+# Against the previous pin, e8f5979, with its series, eight entries are new,
+# all of the two kinds above: the section hypothesis call_kill_not_magic of
+# sem_one_varmap_facts.v (upstream, function symbols and -function-sections);
+# the section hypothesis get_global_arr_init of safety_proof.v, and the fields
+# get_raw, is_var_init, is_var_initE, get_totalE, getP_mode and get_eq_mode
+# of the varmap module type in varmap.v, implemented by its module Vm (the
+# safety pass and its soundness proof, patches/0023 to 0031). None was
+# removed.
 
 proofs/arch/arch_extra.v: Parameter mk
 proofs/arch/arch_extra.v: Parameter mk
@@ -165,7 +174,9 @@ proofs/lang/memory_model.v: Parameter free_stackP
 proofs/lang/memory_model.v: Parameter mem
 proofs/lang/memory_model.v: Parameter write_mem_stable
 proofs/lang/psem_facts.v: Hypothesis init_finalize_mem_equiv
+proofs/lang/safety_proof.v: Hypothesis get_global_arr_init
 proofs/lang/sem_one_varmap.v: Hypothesis HmkI
+proofs/lang/sem_one_varmap_facts.v: Hypothesis call_kill_not_magic
 proofs/lang/sem_one_varmap_facts.v: Hypothesis var_tmp_not_magic
 proofs/lang/tagged.v: Parameter cmp
 proofs/lang/tagged.v: Parameter cmpO
@@ -179,8 +190,14 @@ proofs/lang/tagged.v: Parameter tag
 proofs/lang/tagged.v: Parameter tagI
 proofs/lang/varmap.v: Parameter get
 proofs/lang/varmap.v: Parameter getP
+proofs/lang/varmap.v: Parameter getP_mode
+proofs/lang/varmap.v: Parameter get_eq_mode
+proofs/lang/varmap.v: Parameter get_raw
+proofs/lang/varmap.v: Parameter get_totalE
 proofs/lang/varmap.v: Parameter init
 proofs/lang/varmap.v: Parameter initP
+proofs/lang/varmap.v: Parameter is_var_init
+proofs/lang/varmap.v: Parameter is_var_initE
 proofs/lang/varmap.v: Parameter set
 proofs/lang/varmap.v: Parameter setP
 proofs/lang/varmap.v: Parameter setP_eq

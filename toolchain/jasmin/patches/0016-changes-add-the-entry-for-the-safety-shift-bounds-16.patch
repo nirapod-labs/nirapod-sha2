@@ -1,0 +1,21 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: H. M. Yousuf <hmyousuf@nirapod.org>
+Date: Thu, 22 Oct 2026 14:39:03 +0600
+Subject: [PATCH] changes: add the entry for the safety shift bounds (#1650)
+
+(cherry picked from commit 820a9b26f20d4fd766286f6d805d07d98bc80c9a)
+---
+ changes/02-bugfix/1650-safety-shift-bounds.md | 4 ++++
+ 1 file changed, 4 insertions(+)
+ create mode 100644 changes/02-bugfix/1650-safety-shift-bounds.md
+
+diff --git a/changes/02-bugfix/1650-safety-shift-bounds.md b/changes/02-bugfix/1650-safety-shift-bounds.md
+new file mode 100644
+index 0000000..24aa9b8
+--- /dev/null
++++ b/changes/02-bugfix/1650-safety-shift-bounds.md
+@@ -0,0 +1,4 @@
++- The safety checker now keeps the exact bounds of an unsigned right shift by
++  a constant, so it can prove the relation between a length and a block count
++  derived from it
++  ([PR #1650](https://github.com/jasmin-lang/jasmin/pull/1650)).

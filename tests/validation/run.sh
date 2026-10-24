@@ -8,10 +8,12 @@
 # Builds and runs the validation suite. With no arguments every suite
 # runs. The oracle install prefixes come from the environment:
 #
-#     ORACLE_OPENSSL, ORACLE_AWSLC, ORACLE_BORINGSSL
+#     ORACLE_OPENSSL, ORACLE_AWSLC, ORACLE_BORINGSSL, ORACLE_HACL
 #
-# each pointing at a prefix with include/openssl and lib/libcrypto.a.
-# Without one the differential suite reports SKIP.
+# the first three pointing at a prefix with include/openssl and
+# lib/libcrypto.a, the last at one with include/hacl and
+# lib/libhacl_static.a. Without one the differential, long and fuzz
+# suites report SKIP.
 
 set -eu
 

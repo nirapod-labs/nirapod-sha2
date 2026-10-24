@@ -16,6 +16,20 @@
  * files define it. The HMAC file's Mac field may be truncated to Tlen
  * bytes; the comparison is over those Tlen bytes, the prefix of the
  * computed tag.
+ *
+ * Every record of a file must be run: the number of cases each parser ran
+ * is compared with a plain count of the lines that end a record (MD, or
+ * Mac in HMAC.rsp), made separately from the parser, so a record the
+ * parser skips fails the suite. The files themselves are checked against
+ * their pinned SHA-256 (check-vectors.sh) before the runner starts.
+ *
+ * The record counts have negative controls: every parser runs once more,
+ * through the public functions, with one record left out as a parser that
+ * missed it would (the first record of a ShortMsg, LongMsg or HMAC file,
+ * the last checkpoint of a Monte Carlo file), and its count must disagree
+ * with the file. A parser takes the record to leave out as drop, 0 for
+ * none; with drop set it returns the verdict of the count instead of
+ * stopping the run.
  */
 
 #define _POSIX_C_SOURCE 200809L
@@ -41,6 +55,38 @@ static void rsp_open(struct rsp *r, const char *dir, const char *name)
     if (r->f == NULL) {
         die("cannot open %s", r->path);
     }
+}
+
+/* The lines of path whose first word, before any spaces and '=', is key. */
+static unsigned long count_lines(const char *path, const char *key)
+{
+    size_t len, n = strlen(key), i = 0;
+    char *text = read_file(path, &len);
+    unsigned long count = 0;
+
+    while (i < len) {
+        size_t j = i;
+
+        while (j < len && (text[j] == ' ' || text[j] == '\t')) {
+            j++;
+        }
+        if (len - j > n && memcmp(text + j, key, n) == 0) {
+            size_t k = j + n;
+
+            while (k < len && (text[k] == ' ' || text[k] == '\t')) {
+                k++;
+            }
+            if (k < len && text[k] == '=') {
+                count++;
+            }
+        }
+        while (i < len && text[i] != '\n') {
+            i++;
+        }
+        i++;
+    }
+    free(text);
+    return count;
 }
 
 static void rsp_close(struct rsp *r)
@@ -162,8 +208,8 @@ static const char *cavp_prefix(const hash_alg *alg)
     return "SHA512_256";
 }
 
-static void cavp_msg(validation_suite *s, int kernel, const hash_alg *alg, const char *dir,
-                     const char *kind)
+static int cavp_msg(validation_suite *s, int kernel, const hash_alg *alg, const char *dir,
+                    const char *kind, unsigned long drop)
 {
     struct rsp r;
     char name[64];
@@ -172,7 +218,7 @@ static void cavp_msg(validation_suite *s, int kernel, const hash_alg *alg, const
     int have_L = 0, have_len = 0, have_msg = 0;
     uint8_t *msg = NULL;
     size_t msglen = 0;
-    unsigned long cases = 0;
+    unsigned long cases = 0, records = 0;
 
     snprintf(name, sizeof name, "%s%s.rsp", cavp_prefix(alg), kind);
     rsp_open(&r, dir, name);
@@ -202,6 +248,11 @@ static void cavp_msg(validation_suite *s, int kernel, const hash_alg *alg, const
             size_t effective;
             int rc;
 
+            if (++records == drop) {
+                have_len = 0;
+                have_msg = 0;
+                continue;
+            }
             if (!have_L) {
                 die("%s: MD before [L]", r.path);
             }
@@ -236,9 +287,21 @@ static void cavp_msg(validation_suite *s, int kernel, const hash_alg *alg, const
     if (cases == 0) {
         die("%s/%s: no test cases", dir, name);
     }
+    {
+        char path[2200];
+        unsigned long lines;
+
+        snprintf(path, sizeof path, "%s/%s", dir, name);
+        lines = count_lines(path, "MD");
+        if (lines != cases && drop == 0) {
+            die("%s: %lu cases run, %lu MD lines in the file", path, cases, lines);
+        }
+        return lines == cases;
+    }
 }
 
-static void cavp_monte(validation_suite *s, int kernel, const hash_alg *alg, const char *dir)
+static int cavp_monte(validation_suite *s, int kernel, const hash_alg *alg, const char *dir,
+                      unsigned long drop)
 {
     struct rsp r;
     char name[64];
@@ -247,7 +310,7 @@ static void cavp_monte(validation_suite *s, int kernel, const hash_alg *alg, con
     int have_L = 0, have_seed = 0, have_count = 0;
     uint8_t seed[64];
     uint8_t md[3][64], m[3 * 64], out[64];
-    unsigned long cases = 0;
+    unsigned long cases = 0, records = 0;
 
     snprintf(name, sizeof name, "%sMonte.rsp", cavp_prefix(alg));
     rsp_open(&r, dir, name);
@@ -284,6 +347,10 @@ static void cavp_monte(validation_suite *s, int kernel, const hash_alg *alg, con
             unsigned long i;
             int failed = 0;
 
+            if (++records == drop) {
+                have_count = 0;
+                continue;
+            }
             if (!have_seed || !have_count) {
                 die("%s: MD without Seed or COUNT", r.path);
             }
@@ -326,12 +393,14 @@ static void cavp_monte(validation_suite *s, int kernel, const hash_alg *alg, con
         }
     }
     rsp_close(&r);
-    if (cases != 100) {
+    if (cases != 100 && drop == 0) {
         die("%s/%s: %lu Monte Carlo checkpoints, expected 100", dir, name, cases);
     }
+    return cases == 100;
 }
 
-static void cavp_hmac(validation_suite *s, int kernel, const hmac_alg *alg, const char *dir)
+static int cavp_hmac(validation_suite *s, int kernel, const hmac_alg *alg, const char *dir,
+                     unsigned long drop)
 {
     struct rsp r;
     char *key, *val;
@@ -339,7 +408,7 @@ static void cavp_hmac(validation_suite *s, int kernel, const hmac_alg *alg, cons
     int have_L = 0, have_count = 0, have_klen = 0, have_tlen = 0, have_msg = 0;
     uint8_t *keybuf = NULL, *msgbuf = NULL;
     size_t keylen = 0, msglen = 0;
-    unsigned long cases = 0, skipped = 0;
+    unsigned long cases = 0, skipped = 0, records = 0;
 
     rsp_open(&r, dir, "HMAC.rsp");
     while (rsp_next(&r, &key, &val)) {
@@ -373,6 +442,13 @@ static void cavp_hmac(validation_suite *s, int kernel, const hmac_alg *alg, cons
             uint8_t got[64];
             int rc;
 
+            if (++records == drop) {
+                have_count = 0;
+                have_klen = 0;
+                have_tlen = 0;
+                have_msg = 0;
+                continue;
+            }
             if (!have_L || !have_count || !have_klen || !have_tlen || !have_msg) {
                 die("%s: Mac before its header fields", r.path);
             }
@@ -412,9 +488,53 @@ static void cavp_hmac(validation_suite *s, int kernel, const hmac_alg *alg, cons
     if (cases == 0) {
         die("%s/HMAC.rsp: no HMAC cases for %s", dir, alg->name);
     }
-    if (skipped != 0 && kernel == 0) {
-        printf("  %s: HMAC.rsp %lu cases run, %lu records of other hashes not applicable\n",
-               alg->name, cases, skipped);
+    {
+        char path[2200];
+        unsigned long lines;
+
+        snprintf(path, sizeof path, "%s/HMAC.rsp", dir);
+        lines = count_lines(path, "Mac");
+        if (lines != cases + skipped && drop == 0) {
+            die("%s: %lu records read (%lu run, %lu other hashes), %lu Mac lines in the file",
+                path, cases + skipped, cases, skipped, lines);
+        }
+        if (skipped != 0 && kernel == 0 && drop == 0) {
+            printf("  %s: HMAC.rsp %lu cases run, %lu records of other hashes not applicable\n",
+                   alg->name, cases, skipped);
+        }
+        return lines == cases + skipped;
+    }
+}
+
+/*
+ * The negative controls of the record counts (see the top of the file).
+ * The cases of a control run in a scratch suite; only the verdict of the
+ * count is recorded.
+ */
+static void count_controls(validation_suite *s, const char *dir)
+{
+    validation_suite c;
+    size_t i;
+
+    for (i = 0; i < sizeof HASH_ALGS / sizeof HASH_ALGS[0]; i++) {
+        const hash_alg *a = &HASH_ALGS[i];
+
+        control_begin(&c, s);
+        control_record(s, !cavp_msg(&c, VALIDATION_PUBLIC, a, dir, "ShortMsg", 1),
+                       "%s: ShortMsg with its first record left out", a->name);
+        control_begin(&c, s);
+        control_record(s, !cavp_msg(&c, VALIDATION_PUBLIC, a, dir, "LongMsg", 1),
+                       "%s: LongMsg with its first record left out", a->name);
+        control_begin(&c, s);
+        control_record(s, !cavp_monte(&c, VALIDATION_PUBLIC, a, dir, 100),
+                       "%s: Monte with its last checkpoint left out", a->name);
+    }
+    for (i = 0; i < sizeof HMAC_ALGS / sizeof HMAC_ALGS[0]; i++) {
+        const hmac_alg *a = &HMAC_ALGS[i];
+
+        control_begin(&c, s);
+        control_record(s, !cavp_hmac(&c, VALIDATION_PUBLIC, a, dir, 1),
+                       "%s: HMAC.rsp with its first record left out", a->name);
     }
 }
 
@@ -436,9 +556,9 @@ int suite_cavp(void)
             if (!validation_usable(&s, target, a->family)) {
                 continue;
             }
-            cavp_msg(&s, target, a, dir, "ShortMsg");
-            cavp_msg(&s, target, a, dir, "LongMsg");
-            cavp_monte(&s, target, a, dir);
+            cavp_msg(&s, target, a, dir, "ShortMsg", 0);
+            cavp_msg(&s, target, a, dir, "LongMsg", 0);
+            cavp_monte(&s, target, a, dir, 0);
         }
         for (i = 0; i < sizeof HMAC_ALGS / sizeof HMAC_ALGS[0]; i++) {
             const hmac_alg *a = &HMAC_ALGS[i];
@@ -446,8 +566,9 @@ int suite_cavp(void)
             if (!validation_usable(&s, target, a->family)) {
                 continue;
             }
-            cavp_hmac(&s, target, a, dir);
+            cavp_hmac(&s, target, a, dir, 0);
         }
     }
+    count_controls(&s, dir);
     return suite_end(&s);
 }
