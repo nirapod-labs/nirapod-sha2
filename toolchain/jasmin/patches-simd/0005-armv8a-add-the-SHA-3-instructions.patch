@@ -1,0 +1,408 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: H. M. Yousuf <hmyousuf@nirapod.org>
+Date: Sun, 18 Oct 2026 18:50:40 +0600
+Subject: [PATCH] armv8a: add the SHA-3 instructions
+
+EOR3, BCAX, RAX1 and XAR (FEAT_SHA3) are added as intrinsics, under
+their assembly names like the SHA-2 ones. They compute the column
+parities, the theta and rho rotations and the chi step of
+Keccak-f[1600], with two 64-bit state words per register: EOR3 and
+BCAX work on the whole register, RAX1 and XAR on its two 64-bit
+elements. XAR rotates the XOR of its operands right by an immediate
+from 0 to 63, checked at assembly generation. So the rho rotation by r
+is XAR by 64 - r, as a lemma in armv8a_simd_lemmas.v states, or XAR by
+0 when r is 0.
+
+The semantics follow DDI 0487 M.d, C7.2, and all four are
+data-independent-time instructions (C5.2.4). FEAT_SHA3 is optional,
+and the compiler doesn't check that the target implements it (#505).
+
+---
+ compiler/scripts/check                        |  2 +-
+ compiler/tests/exec/exec_armv8a.expected      |  2 +
+ compiler/tests/exec/exec_armv8a.ml            |  5 ++
+ .../asmgen/armv8a/xar_rotation_range.jazz     |  9 ++
+ compiler/tests/negative.expected              | 10 +++
+ compiler/tests/success/armv8a/simd_exec.jazz  | 43 ++++++++-
+ compiler/tests/success/armv8a/simd_sha3.jazz  | 14 +++
+ eclib/JModel_armv8a.ec                        | 12 +++
+ proofs/compiler/armv8a_decl.v                 |  3 +-
+ proofs/compiler/armv8a_instr_decl.v           | 87 ++++++++++++++++++-
+ proofs/compiler/armv8a_simd.v                 | 12 +++
+ proofs/compiler/armv8a_simd_lemmas.v          | 22 ++++-
+ 12 files changed, 213 insertions(+), 8 deletions(-)
+ create mode 100644 compiler/tests/fail/asmgen/armv8a/xar_rotation_range.jazz
+ create mode 100644 compiler/tests/success/armv8a/simd_sha3.jazz
+
+diff --git a/compiler/scripts/check b/compiler/scripts/check
+index 5bba9d8..57b4c60 100755
+--- a/compiler/scripts/check
++++ b/compiler/scripts/check
+@@ -40,7 +40,7 @@ else
+ fi
+ 
+ # On every armv8a triple: +sha2 enables the SHA-256 instructions and +sha3
+-# the SHA-512 ones, both optional (LLVM puts SHA-512 under sha3)
++# the SHA-512 and SHA-3 ones, all optional (LLVM puts SHA-512 under sha3)
+ if [ $ARCH = "armv8a" ]
+ then
+     ASARGS="$ASARGS -mattr=+sha2,+sha3"
+diff --git a/compiler/tests/exec/exec_armv8a.expected b/compiler/tests/exec/exec_armv8a.expected
+index 8b5bf60..c449b2c 100644
+--- a/compiler/tests/exec/exec_armv8a.expected
++++ b/compiler/tests/exec/exec_armv8a.expected
+@@ -10,3 +10,5 @@ move_dup() = 0XA0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0; 0XB7B6B5B4B3B2B1B0B7B6B5B4B3B2B
+ move_ins() = 0XF0E0D0C0B0A0908A3A2A1A003020100; 0XF0E0D0C0B0A0908B7B6B5B4B3B2B1B0; 0XF0E0D0C0B0A090807060504031D0100; 0XF0E0D0C0B0A09081F1E1D1C03020100
+ move_umov_bh() = 0XD; 0X1D1C
+ move_umov_sd() = 0XB0A0908; 0X1F1E1D1C1B1A1918
++sha3_ops() = 0X28F56DBC7C0C9B90B2312278B64D09E3; 0X9356DFEFCA999FABE503AF8365D3A20; 0X3D4DB615773F35C419E53A58CF8FA279; 0X9C71F3766C1DE7CB0E25B550B045AC15
++sha3_xar() = 0X4F8A1E6F7B70D8FD06A03D7C155CFD12; 0XF53E2879BDEDC363481A80F5F05573F4; 0XF6E1B1FA9F143CDE2AB9FA240D407AF8; 0X3E2879BDEDC363F51A80F5F05573F448
+diff --git a/compiler/tests/exec/exec_armv8a.ml b/compiler/tests/exec/exec_armv8a.ml
+index 195ca30..f79d011 100644
+--- a/compiler/tests/exec/exec_armv8a.ml
++++ b/compiler/tests/exec/exec_armv8a.ml
+@@ -22,3 +22,8 @@ let () =
+     (fun f -> exec prog [] f [])
+     [ "perm_ext"; "perm_rev"; "perm_rev64_4s"; "perm_trn"; "perm_zip";
+       "perm_uzp"; "move_dup"; "move_ins"; "move_umov_bh"; "move_umov_sd" ]
++
++(* The SHA-3 instructions on the fixed inputs of simd_exec.jazz. *)
++let () =
++  let prog = load_file "../success/armv8a/simd_exec.jazz" in
++  List.iter (fun f -> exec prog [] f []) [ "sha3_ops"; "sha3_xar" ]
+diff --git a/compiler/tests/fail/asmgen/armv8a/xar_rotation_range.jazz b/compiler/tests/fail/asmgen/armv8a/xar_rotation_range.jazz
+new file mode 100644
+index 0000000..2843117
+--- /dev/null
++++ b/compiler/tests/fail/asmgen/armv8a/xar_rotation_range.jazz
+@@ -0,0 +1,9 @@
++/* XAR rotates by at most 63. */
++export
++fn xar_rotation_range(reg u64 p) {
++    reg u128 a b;
++    a = [:u128 p];
++    b = [:u128 p + 16];
++    a = #XAR(a, b, 64);
++    [:u128 p] = a;
++}
+diff --git a/compiler/tests/negative.expected b/compiler/tests/negative.expected
+index 11d3ec3..02a4d7f 100644
+--- a/compiler/tests/negative.expected
++++ b/compiler/tests/negative.expected
+@@ -961,6 +961,16 @@ Allowed args compatible with the input (except on immediate sizes) are:
+ All allowed args (regardless of the input) are:
+   [[xreg]; [xreg]; [imm 8 [1, 64]]]
+ 
++fail/asmgen/armv8a/xar_rotation_range.jazz:
++
++"fail/asmgen/armv8a/xar_rotation_range.jazz", line 7 (4-23):
++compilation error in function xar_rotation_range:
++asmgen: instruction XAR is given at least one too large immediate as an argument.
++Allowed args compatible with the input (except on immediate sizes) are:
++  [[xreg]; [xreg]; [xreg]; [imm 8 [0, 63]]]
++All allowed args (regardless of the input) are:
++  [[xreg]; [xreg]; [xreg]; [imm 8 [0, 63]]]
++
+ fail/asmgen/x86-64/incompatible_args.jazz:
+ 
+ "fail/asmgen/x86-64/incompatible_args.jazz", line 4 (2-14):
+diff --git a/compiler/tests/success/armv8a/simd_exec.jazz b/compiler/tests/success/armv8a/simd_exec.jazz
+index 6c570ff..93ccfc9 100644
+--- a/compiler/tests/success/armv8a/simd_exec.jazz
++++ b/compiler/tests/success/armv8a/simd_exec.jazz
+@@ -1,8 +1,9 @@
+ /*
+- * Fixed-input checks of the Advanced SIMD permutations and element moves,
+- * evaluated by tests/exec/exec_armv8a.ml. Byte i of the first input vector
+- * is i and byte i of the second is 16 + i, so that every element of a
+- * result names the element it comes from.
++ * Fixed-input checks of the Advanced SIMD permutations and element moves
++ * and of the SHA-3 instructions, evaluated by tests/exec/exec_armv8a.ml.
++ * Byte i of the first permutation input is i and byte i of the second is
++ * 16 + i, so that every element of a result names the element it comes
++ * from.
+  */
+ 
+ u128[2] PERM_IN = {
+@@ -139,3 +140,37 @@ fn move_umov_sd() -> reg u32, reg u64 {
+   r1 = #VUMOV_2u64(b, 1);
+   return r0, r1;
+ }
++
++/* SHA-3 instructions on three unrelated vectors. */
++u128[3] SHA3_IN = {
++  0x0123456789abcdeffedcba9876543210,
++  0x9e3779b97f4a7c15f39cc0605cedc834,
++  0xb7e151628aed2a6abf7158809cf4f3c7
++};
++
++export
++fn sha3_ops() -> reg u128, reg u128, reg u128, reg u128 {
++  reg u128 a b c r0 r1 r2 r3;
++  a = SHA3_IN[0];
++  b = SHA3_IN[1];
++  c = SHA3_IN[2];
++  r0 = #EOR3(a, b, c);
++  r1 = #BCAX(a, b, c);
++  r2 = #RAX1(a, b);
++  r3 = #RAX1(b, a);
++  return r0, r1, r2, r3;
++}
++
++/* XAR rotates right; a rotation by 32 is also one by 32 to the left, so
++   the others tell the direction. */
++export
++fn sha3_xar() -> reg u128, reg u128, reg u128, reg u128 {
++  reg u128 a b r0 r1 r2 r3;
++  a = SHA3_IN[0];
++  b = SHA3_IN[1];
++  r0 = #XAR(a, b, 1);
++  r1 = #XAR(a, b, 7);
++  r2 = #XAR(a, b, 32);
++  r3 = #XAR(a, b, 63);
++  return r0, r1, r2, r3;
++}
+diff --git a/compiler/tests/success/armv8a/simd_sha3.jazz b/compiler/tests/success/armv8a/simd_sha3.jazz
+new file mode 100644
+index 0000000..9ffc12f
+--- /dev/null
++++ b/compiler/tests/success/armv8a/simd_sha3.jazz
+@@ -0,0 +1,14 @@
++/* The SHA-3 cryptographic-extension instructions; XAR at both ends of its range. */
++export
++fn simd_sha3(reg u64 p) {
++    reg u128 a b c d e;
++    a = [:u128 p];
++    b = [:u128 p + 16];
++    c = [:u128 p + 32];
++    d = #EOR3(a, b, c);
++    e = #RAX1(d, a);
++    e = #XAR(e, b, 63);
++    e = #XAR(e, c, 0);
++    e = #BCAX(e, a, b);
++    [:u128 p + 48] = e;
++}
+diff --git a/eclib/JModel_armv8a.ec b/eclib/JModel_armv8a.ec
+index af329d7..f8f0fa0 100644
+--- a/eclib/JModel_armv8a.ec
++++ b/eclib/JModel_armv8a.ec
+@@ -667,3 +667,15 @@ op SHA512SU0 (d n: W128.t) : W128.t =
+ op SHA512SU1 (d n m: W128.t) : W128.t =
+   W2u64.pack2 [(d \bits64 0) + sha512sigma1 (n \bits64 0) + (m \bits64 0);
+                (d \bits64 1) + sha512sigma1 (n \bits64 1) + (m \bits64 1)].
++
++(* -------------------------------------------------------------------- *)
++(* SHA-3 (FEAT_SHA3). *)
++
++op EOR3 (n m a: W128.t) : W128.t = n +^ m +^ a.
++
++op BCAX (n m a: W128.t) : W128.t = n +^ (m `&` invw a).
++
++op RAX1 (n m: W128.t) : W128.t = n +^ W2u64.map (fun (e: W64.t) => e `|<<<|` 1) m.
++
++op XAR (n m: W128.t) (imm: W8.t) : W128.t =
++  W2u64.map (fun (e: W64.t) => e `|>>>|` to_uint imm) (n +^ m).
+diff --git a/proofs/compiler/armv8a_decl.v b/proofs/compiler/armv8a_decl.v
+index 7104b2d..27d229d 100644
+--- a/proofs/compiler/armv8a_decl.v
++++ b/proofs/compiler/armv8a_decl.v
+@@ -323,7 +323,8 @@ Notation xregister := vregister.
+      C6.2 shifted-register decode. The Advanced SIMD left shifts by an
+      immediate (SHL, SLI) use it with the element size [esize] of the
+      arrangement: their amount is in [0, esize - 1] (ARM DDI 0487 M.d,
+-     C7.2.298 SHL, operand description).
++     C7.2.298 SHL, operand description). XAR uses it with [U64] for its
++     right rotation, in [0, 63] (C7.2.460 XAR, <imm6>, a 6-bit field).
+    - [CAimmC_armv8a_halfword_shift] carries a [wsize]: the MOVZ/MOVN/MOVK
+      halfword shift (hw field, C6.2.192-C6.2.194) is a multiple of 16 below
+      the operand width, so 32 and 48 only exist in the X form.
+diff --git a/proofs/compiler/armv8a_instr_decl.v b/proofs/compiler/armv8a_instr_decl.v
+index 07aca79..3a919bf 100644
+--- a/proofs/compiler/armv8a_instr_decl.v
++++ b/proofs/compiler/armv8a_instr_decl.v
+@@ -220,7 +220,13 @@ Variant armv8a_mnemonic : Type :=
+ | SHA512H                        (* SHA-512 hash update, part 1 *)
+ | SHA512H2                       (* SHA-512 hash update, part 2 *)
+ | SHA512SU0                      (* SHA-512 schedule update 0 *)
+-| SHA512SU1.                     (* SHA-512 schedule update 1 *)
++| SHA512SU1                      (* SHA-512 schedule update 1 *)
++
++(* Cryptographic extension: SHA-3 (FEAT_SHA3). *)
++| EOR3                           (* Three-way exclusive-OR *)
++| BCAX                           (* Bit clear and exclusive-OR *)
++| RAX1                           (* Rotate and exclusive-OR *)
++| XAR.                           (* Exclusive-OR and rotate *)
+ 
+ #[ export ]
+ Instance eqTC_armv8a_mnemonic : eqTypeC armv8a_mnemonic :=
+@@ -252,6 +258,7 @@ Definition armv8a_mnemonics : seq armv8a_mnemonic :=
+     ; VDUP; VDUPE; VINS; VINSE; VUMOV
+     ; SHA256H; SHA256H2; SHA256SU0; SHA256SU1
+     ; SHA512H; SHA512H2; SHA512SU0; SHA512SU1
++    ; EOR3; BCAX; RAX1; XAR
+   ].
+ 
+ Lemma armv8a_mnemonic_fin_axiom : Finite.axiom armv8a_mnemonics.
+@@ -456,6 +463,10 @@ Definition string_of_armv8a_mnemonic (mn : armv8a_mnemonic) : string :=
+   | SHA512H2 => "SHA512H2"
+   | SHA512SU0 => "SHA512SU0"
+   | SHA512SU1 => "SHA512SU1"
++  | EOR3 => "EOR3"
++  | BCAX => "BCAX"
++  | RAX1 => "RAX1"
++  | XAR => "XAR"
+   end%string.
+ 
+ (* Assembly mnemonic of the Advanced SIMD instructions. *)
+@@ -509,6 +520,8 @@ Definition vector_esizes (mn : armv8a_mnemonic) : seq wsize :=
+   | VDUP | VDUPE | VINS | VINSE | VUMOV => [:: U8; U16; U32; U64 ]
+   | SHA256H | SHA256H2 | SHA256SU0 | SHA256SU1 => [:: U32 ]
+   | SHA512H | SHA512H2 | SHA512SU0 | SHA512SU1 => [:: U64 ]
++  | EOR3 | BCAX => [:: U8 ]
++  | RAX1 | XAR => [:: U64 ]
+   | _ => [::]
+   end.
+ 
+@@ -3985,6 +3998,74 @@ Definition armv8a_SHA512SU1_semi (wd wn wm : word U128) : ty_v :=
+ Definition armv8a_SHA512SU1_instr : instr_desc_t :=
+   mk_v3d_instr SHA512SU1 [:: U64; U64; U64 ] armv8a_SHA512SU1_semi.
+ 
++(* -------------------------------------------------------------------- *)
++(* SHA-3. EOR3 and BCAX use the 16B arrangement, RAX1 and XAR the 2D one.
++   The Operational information section of each one states that it is a
++   data-independent-time instruction, and ARM DDI 0487 M.d, C5.2.4
++   "DIT, Data Independent Timing", p. C5-958, lists all four. *)
++
++Let ak_vvvv := [:: [:: [:: CAxmm ]; [:: CAxmm ]; [:: CAxmm ]; [:: CAxmm ] ] ].
++
++(* Three vector sources. *)
++Definition mk_v3_instr mn (semi : word U128 -> word U128 -> word U128 -> ty_v) : instr_desc_t :=
++  let tin := [:: lvec; lvec; lvec ] in
++  {|
++    id_msb_flag := MSB_CLEAR;
++    id_tin := tin;
++    id_in := [:: Ea 1; Ea 2; Ea 3 ];
++    id_tout := [:: lvec ];
++    id_out := [:: Ea 0 ];
++    id_semi_total := semi;
++    id_nargs := 4;
++    id_args_kinds := ak_vvvv;
++    id_eq_size := refl_equal;
++    id_check_dest := refl_equal;
++    id_str_jas := armv8a_mn_str mn;
++    id_safe := [::];
++    id_err := ErrSemUndef;
++    id_init := [:: IBool true ];
++    id_doit := DOIT;
++    id_pp_asm := pp_armv8a_vop mn [:: esize; esize; esize; esize ];
++    id_valid := vvalid mn;
++    id_wf := refl_equal;
++  |}.
++
++(* [C7.2.42 EOR3] ARM DDI 0487 M.d, p. C7-3025
++   Syntax: EOR3 <Vd>.16B, <Vn>.16B, <Vm>.16B, <Va>.16B
++   Semantics: bitwise Vn XOR Vm XOR Va. *)
++Definition armv8a_EOR3_semi (wn wm wa : word U128) : ty_v :=
++  wxor (wxor wn wm) wa.
++
++Definition armv8a_EOR3_instr : instr_desc_t := mk_v3_instr EOR3 armv8a_EOR3_semi.
++
++(* [C7.2.12 BCAX] ARM DDI 0487 M.d, p. C7-2959
++   Syntax: BCAX <Vd>.16B, <Vn>.16B, <Vm>.16B, <Va>.16B
++   Semantics: bitwise Vn XOR (Vm AND NOT Va). *)
++Definition armv8a_BCAX_semi (wn wm wa : word U128) : ty_v :=
++  wxor wn (wand wm (wnot wa)).
++
++Definition armv8a_BCAX_instr : instr_desc_t := mk_v3_instr BCAX armv8a_BCAX_semi.
++
++(* [C7.2.260 RAX1] ARM DDI 0487 M.d, p. C7-3598
++   Syntax: RAX1 <Vd>.2D, <Vn>.2D, <Vm>.2D
++   Semantics: Vn XOR Vm with each 64-bit element of Vm first rotated left
++   by one. *)
++Definition armv8a_RAX1_semi (wn wm : word U128) : ty_v := rax1 wn wm.
++
++Definition armv8a_RAX1_instr : instr_desc_t := mk_v2_instr RAX1 armv8a_RAX1_semi.
++
++(* [C7.2.460 XAR] ARM DDI 0487 M.d, p. C7-4104
++   Syntax: XAR <Vd>.2D, <Vn>.2D, <Vm>.2D, #<imm6>
++   The immediate is a right rotation in [0, 63]
++   ([CAimmC_armv8a_shift_amount U64]).
++   Semantics: each 64-bit element of Vn XOR Vm rotated right by the
++   immediate. *)
++Definition armv8a_XAR_semi (wn wm : word U128) (imm : word U8) : ty_v :=
++  xar wn wm (wunsigned imm).
++
++Definition armv8a_XAR_instr : instr_desc_t :=
++  mk_v2_imm_instr XAR (CAimmC_armv8a_shift_amount U64) armv8a_XAR_semi.
++
+ (* -------------------------------------------------------------------- *)
+ (* Description of instructions. *)
+ 
+@@ -4105,6 +4186,10 @@ Definition mn_desc (mn : armv8a_mnemonic) : instr_desc_t :=
+   | SHA512H2 => armv8a_SHA512H2_instr
+   | SHA512SU0 => armv8a_SHA512SU0_instr
+   | SHA512SU1 => armv8a_SHA512SU1_instr
++  | EOR3 => armv8a_EOR3_instr
++  | BCAX => armv8a_BCAX_instr
++  | RAX1 => armv8a_RAX1_instr
++  | XAR => armv8a_XAR_instr
+   end.
+ 
+ End ARMV8A_INSTR.
+diff --git a/proofs/compiler/armv8a_simd.v b/proofs/compiler/armv8a_simd.v
+index 1e2fa62..9238e8a 100644
+--- a/proofs/compiler/armv8a_simd.v
++++ b/proofs/compiler/armv8a_simd.v
+@@ -202,3 +202,15 @@ Definition sha512su1 (w x y : u128) : u128 :=
+   let y0 := velem_at U64 y 0 in let y1 := velem_at U64 y 1 in
+   let w0 := velem_at U64 w 0 in let w1 := velem_at U64 w 1 in
+   make_vec U128 [:: w0 + sha512_sigma1 x0 + y0; w1 + sha512_sigma1 x1 + y1 ].
++
++(* -------------------------------------------------------------------- *)
++(* SHA-3 (FEAT_SHA3). *)
++
++(* RAX1: [n] XOR [m], each 64-bit element of [m] first rotated left by
++   one. *)
++Definition rax1 (n m : u128) : u128 :=
++  wxor n (lift1_vec U64 (fun x => wrol x 1) U128 m).
++
++(* XAR: each 64-bit element of [n] XOR [m] rotated right by [imm]. *)
++Definition xar (n m : u128) (imm : Z) : u128 :=
++  lift1_vec U64 (fun x => wror x imm) U128 (wxor n m).
+diff --git a/proofs/compiler/armv8a_simd_lemmas.v b/proofs/compiler/armv8a_simd_lemmas.v
+index 6bc4b0e..3add534 100644
+--- a/proofs/compiler/armv8a_simd_lemmas.v
++++ b/proofs/compiler/armv8a_simd_lemmas.v
+@@ -15,7 +15,8 @@
+      perform two SHA-512 rounds; [SHA512SU_schedule]: SHA512SU0 then
+      SHA512SU1 compute two message-schedule words;
+    - the [*_instr_*] lemmas: the same statements about the [id_semi] of the
+-     instruction descriptions, which fix the role of each operand.
++     instruction descriptions, which fix the role of each operand;
++   - [xar_rolE]: XAR by 64 - r is a left rotation by r of the XOR.
+    These are statements about the semantics as transcribed; they do not
+    validate the transcription against the architecture. *)
+ 
+@@ -353,3 +354,22 @@ Proof.
+ Qed.
+ 
+ End INSTR.
++
++(* -------------------------------------------------------------------- *)
++(* SHA-3: the Keccak-f[1600] steps of FIPS 202, 3.2, with each 64-bit word
++   A[x, y] of the state in a 64-bit element, so that a register holds the
++   same word of two states. With C[x] the column parities of θ:
++     θ:   D[x] = C[x - 1] XOR ROT(C[x + 1], 1)   = RAX1(C[x - 1], C[x + 1])
++     θ+ρ: ROT(A[x, y] XOR D[x], r)              = XAR(A[x, y], D[x], 64 - r)
++     χ:   A[x] XOR (NOT A[x + 1] AND A[x + 2])  = BCAX(A[x], A[x + 2], A[x + 1])
++   and the parities are folded with EOR3. The rotation of ρ is a left
++   rotation by r; XAR rotates right, by 64 - r, or by 0 when r = 0 (the
++   immediate is in [0, 63]). This correspondence is informal: only the
++   rotation identity below is proved here. *)
++
++Lemma xar_rolE (n m : u128) (r : Z) :
++  xar n m (64 - r) = lift1_vec U64 (fun x => wrol x r) U128 (wxor n m).
++Proof.
++  rewrite /xar /lift1_vec /lift1_vec'; congr make_vec.
++  by apply: eq_map => x; exact: (wror_opp x r).
++Qed.
