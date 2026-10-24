@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# ci/safety-config/table.tsv
+# ==========================
+#
+# Checker configurations and time limits of single exports, read by
+# ci/jobs/safety.sh. One row per entry, five tab-separated fields:
+#
+#   unit      a shell pattern over the unit names (x86_64-avx2, aarch64-*)
+#   export    an export of src/nirapod_sha2.jinc
+#   config    a JSON file of this directory passed with --config, or -
+#   limit     the time limit of the run in seconds, or - for
+#             CI_SAFETY_TIMEOUT
+#   reason    why the export needs it, with what it was measured on
+#
+# The first matching row applies. Every row must match an export of a
+# unit, and every configuration file must exist. The options the files
+# may set (array_track_max_bytes, congruence_reduction,
+# relational_loop_vars) can only add alarms, never remove one, so a
+# configuration changes what the checker can prove, never what a PASS
+# means. Exports without a row run with the checker's defaults.
+#
+# coarse.json  array_track_max_bytes 32 (cells of arrays over 32 bytes are
+#              not dimensions of the numerical state), congruence_reduction
+#              1 (congruences passed on only for the variables an operation
+#              writes)
+#
+# unit	export	config	limit	reason
+aarch64-sha2	sha512_x4_update	coarse.json	-	the default configuration reaches no verdict within the default limit; this one does, and the verdict names the lane reads

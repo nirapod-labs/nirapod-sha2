@@ -1,0 +1,426 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: H. M. Yousuf <hmyousuf@nirapod.org>
+Date: Thu, 22 Oct 2026 10:29:36 +0600
+Subject: [PATCH] safetylib: keep the exact bounds of an unsigned right shift
+
+The checker abstracts x = y >> k as y / 2^k and keeps a rounding
+interval, so it can prove neither 2^k x <= y nor y <= 2^k x + 2^k - 1.
+For a constant 0 <= k <= w, a destination of the shift's width and a
+shifted expression of that width, the change meets the exact bounds
+2^k x <= y <= 2^k x + 2^k - 1 after the assignment. They hold in every
+concrete state, so the change only adds constraints: it removes false
+alarms and never removes a true one. The shifted expression is copied
+into a fresh variable first, so a variable shifted by itself (n >>= 6)
+keeps its old value, and the copy is forgotten after the bounds are met.
+
+The tests cover a true relation that the checker now proves, a false one
+that stays reported, a narrower destination that gets no bounds, and a
+truncating cast that must not get them.
+
+(cherry picked from commit d125f312e74712194769a917fc2409abf4409da6)
+---
+ compiler/safetylib/domains/safetyProduct.ml   |  12 +-
+ compiler/safetylib/safetyAbsExpr.ml           |  76 +++++++-
+ .../tests/safety/fail/common/shiftcast.jazz   |  16 ++
+ .../tests/safety/fail/common/shiftfalse.jazz  |  11 ++
+ .../tests/safety/fail/common/shiftnarrow.jazz |  10 ++
+ compiler/tests/safety/run.expected            | 162 ++++++++++++++++++
+ .../safety/success/common/shiftbound.jazz     |  12 ++
+ .../safety/success/common/shiftcond.jazz      |  11 ++
+ 8 files changed, 304 insertions(+), 6 deletions(-)
+ create mode 100644 compiler/tests/safety/fail/common/shiftcast.jazz
+ create mode 100644 compiler/tests/safety/fail/common/shiftfalse.jazz
+ create mode 100644 compiler/tests/safety/fail/common/shiftnarrow.jazz
+ create mode 100644 compiler/tests/safety/success/common/shiftbound.jazz
+ create mode 100644 compiler/tests/safety/success/common/shiftcond.jazz
+
+diff --git a/compiler/safetylib/domains/safetyProduct.ml b/compiler/safetylib/domains/safetyProduct.ml
+index 4461a58..4c86632 100644
+--- a/compiler/safetylib/domains/safetyProduct.ml
++++ b/compiler/safetylib/domains/safetyProduct.ml
+@@ -539,9 +539,11 @@ module PIMake (Arch : SafetyArch.SafetyArch) (PW : ProgWrap with type extended_o
+         pp_rel_vars v_pt)
+ 
+   (* Arrays and array elements must always be non-relational. 
+-     We do not use the state in this heuristic *)
++     We do not use the state in this heuristic. A temporary can be
++     relational: the bounds of a right shift are stated on one. *)
+   let vdom v _ = match v with
+-    | Temp _ | WTemp _ -> assert false
++    | Temp _ -> Ppl 0
++    | WTemp _ -> assert false
+ 
+     | MNumInv _ -> Ppl 0        (* Numerical invariant must be relational *)
+ 
+@@ -741,9 +743,11 @@ module PIDynMake (Arch : SafetyArch.SafetyArch) (PW : ProgWrap with type extende
+       ) dom_st vs
+     
+   (* Arrays and array elements must always be non-relational. 
+-     We do not use the state in this heuristic *)
++     We do not use the state in this heuristic. A temporary can be
++     relational: the bounds of a right shift are stated on one. *)
+   let vdom (v : mvar) (dom_st : dom_st) = match v with
+-    | Temp _ | WTemp _ -> assert false
++    | Temp _ -> Ppl 0
++    | WTemp _ -> assert false
+ 
+     | MNumInv _ -> Ppl 0        (* Numerical invariant must be relational *)
+ 
+diff --git a/compiler/safetylib/safetyAbsExpr.ml b/compiler/safetylib/safetyAbsExpr.ml
+index 468359c..8424da9 100644
+--- a/compiler/safetylib/safetyAbsExpr.ml
++++ b/compiler/safetylib/safetyAbsExpr.ml
+@@ -1256,6 +1256,64 @@ module AbsExpr (Arch : SafetyArch.SafetyArch) (AbsDom : AbsNumBoolType) = struct
+     | MLvar (_, MvarOffset _) -> true
+     | _ -> false
+ 
++  (* The bounds of an unsigned right shift by a constant [k]. For
++     [x = y >> k] with [x] and [y] of the same width [w] and
++     [0 <= k <= w], every concrete state satisfies
++     [2^k x <= y <= 2^k x + 2^k - 1], and over the integers the two bounds
++     determine [x = floor(y / 2^k)]. The shifted expression must have the
++     shift's width: a wider operand is truncated before the shift, and the
++     bounds on the untruncated expression would be false. The numerical
++     abstraction of the shift, [y / 2^k] linearized with a rounding
++     interval, is looser: it
++     proves neither bound, so a loop counter derived from a length loses
++     the exact relation to that length. The bounds are linear, so they are
++     met exactly. The shifted expression is copied into a fresh variable
++     in [before], the state before the assignment; the assignment runs as
++     before, then the bounds between the destination and the copy are met,
++     and the copy is forgotten. Copying the value first keeps the old value
++     of a variable shifted by itself ([n >>= 6]) after the assignment has
++     projected it, and leaving the assignment's expression unchanged keeps
++     the symbolic value of the destination. A shifted expression with a
++     conditional has
++     no single linear form; the bounds are then not added and the
++     assignment keeps the abstraction [linearize_if_expr] gives it. A
++     destination narrower than the shift truncates the value, which the
++     width condition excludes. *)
++  let shift_bounds before out_ty mvar e =
++    match out_ty, remove_Owi e with
++    | Bty (U ws), Papp2 (Olsr ws', e1, e2) when ws = ws' ->
++      begin match aeval_cst_w_i before e2 with
++      | Some k when 0 <= k && k <= int_of_ws ws ->
++        begin match ty_expr e1, remove_if_expr e1 with
++        | Bty (U ws1), [([], e1)] when ws1 = ws ->
++          begin try
++            let tmp = Temp ("shift", 0, ty_mvar mvar) in
++            let tmp_e = Mtexpr.var tmp in
++            let y = linearize_wexpr before e1 in
++            let copy =
++              Mtcons.make (Mtexpr.binop Texpr1.Sub tmp_e y) Lincons0.EQ in
++            let pow = Mtexpr.cst (Coeff.s_of_mpqf (mpq_pow k)) in
++            let pow_x = Mtexpr.binop Texpr1.Mul pow (Mtexpr.var mvar) in
++            let lower = Mtexpr.binop Texpr1.Sub tmp_e pow_x in
++            let upper =
++              Mtexpr.binop Texpr1.Sub
++                (Mtexpr.binop Texpr1.Add pow_x
++                   (Mtexpr.cst (Coeff.s_of_mpqf (mpq_pow_minus k 1))))
++                tmp_e in
++            Some (tmp, [copy],
++                  [ Mtcons.make lower Lincons0.SUPEQ;
++                    Mtcons.make upper Lincons0.SUPEQ ])
++          with
++          | Aint_error _
++          | Unop_not_supported _
++          | Binop_not_supported _ -> None
++          end
++        | _ -> None
++        end
++      | _ -> None
++      end
++    | _ -> None
++
+   (* Abstract evaluation of an assignment.
+      Also handles variable initialization. *)
+   (* FIXME: allow batched assignments *)
+@@ -1272,9 +1330,23 @@ module AbsExpr (Arch : SafetyArch.SafetyArch) (AbsDom : AbsNumBoolType) = struct
+       | Bty (U _), MLvar (loc, mvar) ->
+         (* Numerical abstraction *)
+         let lv_s = wsize_of_ty out_ty in
+-        let s_expr = linearize_if_expr lv_s e abs in
+         let abs0 = abs in
+-        let abs = AbsDom.assign_sexpr abs (Some loc) [mvar, s_expr] in
++        let abs =
++          match shift_bounds abs0 out_ty mvar e with
++          | Some (tmp, pre, post) ->
++            let meet_cs abs cs =
++              List.fold_left
++                (fun abs c -> AbsDom.meet_btcons abs (BLeaf c))
++                abs cs in
++            let abs = meet_cs abs pre in
++            let s_expr = linearize_if_expr lv_s e abs in
++            let abs = AbsDom.assign_sexpr abs (Some loc) [mvar, s_expr] in
++            let abs = meet_cs abs post in
++            AbsDom.forget_list abs [tmp]
++          | None ->
++            let s_expr = linearize_if_expr lv_s e abs in
++            AbsDom.assign_sexpr abs (Some loc) [mvar, s_expr]
++        in
+ 
+         (* Points-to abstraction *)
+         let ptr_expr = ptr_expr_of_expr abs0 e in
+diff --git a/compiler/tests/safety/fail/common/shiftcast.jazz b/compiler/tests/safety/fail/common/shiftcast.jazz
+new file mode 100644
+index 0000000..1f11595
+--- /dev/null
++++ b/compiler/tests/safety/fail/common/shiftcast.jazz
+@@ -0,0 +1,16 @@
++/* The cast truncates x to u8 before the shift. The exact bounds of the
++   shift apply to the truncated value, not to x, so the read of buf[x]
++   must stay reported. */
++export fn f(reg u64 x) -> reg u64
++{
++  stack u8[300] buf;
++  reg u8 n i;
++  reg u64 r;
++  inline int k;
++
++  for k = 0 to 300 { buf[k] = 0; }
++  n = ((8u) x) >> 0;
++  i = buf[x];
++  r = (64u) i;
++  return r;
++}
+diff --git a/compiler/tests/safety/fail/common/shiftfalse.jazz b/compiler/tests/safety/fail/common/shiftfalse.jazz
+new file mode 100644
+index 0000000..7d7f181
+--- /dev/null
++++ b/compiler/tests/safety/fail/common/shiftfalse.jazz
+@@ -0,0 +1,11 @@
++/* The assertion is false: n is inlen divided by 64, so 64 n + 64 is
++   strictly greater than inlen. The checker must still report it. */
++export fn shift(reg u64 inlen) -> reg u64
++{
++  reg u64 n;
++
++  n = inlen;
++  n >>= 6;
++  assert("too far", n * 64 + 64 <= inlen);
++  return n;
++}
+diff --git a/compiler/tests/safety/fail/common/shiftnarrow.jazz b/compiler/tests/safety/fail/common/shiftnarrow.jazz
+new file mode 100644
+index 0000000..f31be14
+--- /dev/null
++++ b/compiler/tests/safety/fail/common/shiftnarrow.jazz
+@@ -0,0 +1,10 @@
++/* The destination is narrower than the shift. The value is truncated, so
++   the exact bounds of the shift do not apply. */
++export fn narrow(reg u64 x) -> reg u32
++{
++  reg u32 n;
++
++  n = x >> 6;
++  assert("narrow", (64u) n * 64 <= x);
++  return n;
++}
+diff --git a/compiler/tests/safety/run.expected b/compiler/tests/safety/run.expected
+index a8b31d1..881a6e1 100644
+--- a/compiler/tests/safety/run.expected
++++ b/compiler/tests/safety/run.expected
+@@ -544,6 +544,168 @@ mem_t ∊ [0; 0]
+ 
+ 
+ 
++Program is not safe!
++
++File fail/common/shiftcast.jazz (on arch x86-64):
++Analyzing function f
++
++
++*** Possible Safety Violation(s):
++  "fail/common/shiftcast.jazz", line 13 (2-13): in_bound: buf[x] (length 300 U8)
++  
++Memory ranges:
++  mem_x: [0; 0]
++  
++* Rel:
++{inv_x ≥ 0, inv_x ≤ 18446744073709551615, mem_x = 0}
++mem_x ∊ [0; 0]
++
++
++
++Program is not safe!
++
++File fail/common/shiftcast.jazz (on arch arm-m4):
++Analyzing function f
++
++
++*** Possible Safety Violation(s):
++  "fail/common/shiftcast.jazz", line 13 (2-13): in_bound: buf[x] (length 300 U8)
++  
++Memory ranges:
++  mem_x: [0; 0]
++  
++* Rel:
++{inv_x ≥ 0, inv_x ≤ 18446744073709551615, mem_x = 0}
++mem_x ∊ [0; 0]
++
++
++
++Program is not safe!
++
++File fail/common/shiftcast.jazz (on arch riscv):
++Analyzing function f
++
++
++*** Possible Safety Violation(s):
++  "fail/common/shiftcast.jazz", line 13 (2-13): in_bound: buf[x] (length 300 U8)
++  
++Memory ranges:
++  mem_x: [0; 0]
++  
++* Rel:
++{inv_x ≥ 0, inv_x ≤ 18446744073709551615, mem_x = 0}
++mem_x ∊ [0; 0]
++
++
++
++Program is not safe!
++
++File fail/common/shiftfalse.jazz (on arch x86-64):
++Analyzing function shift
++
++
++*** Possible Safety Violation(s):
++  "fail/common/shiftfalse.jazz", line 9 (2-42): n *64u (64u) 64 +64u (64u) 64 <=u inlen
++  
++Memory ranges:
++  mem_inlen: [0; 0]
++  
++* Rel:
++{inv_inlen ≤ 18446744073709551615, inv_inlen ≥ 0, mem_inlen = 0}
++mem_inlen ∊ [0; 0]
++
++
++
++Program is not safe!
++
++File fail/common/shiftfalse.jazz (on arch arm-m4):
++Analyzing function shift
++
++
++*** Possible Safety Violation(s):
++  "fail/common/shiftfalse.jazz", line 9 (2-42): n *64u (64u) 64 +64u (64u) 64 <=u inlen
++  
++Memory ranges:
++  mem_inlen: [0; 0]
++  
++* Rel:
++{inv_inlen ≤ 18446744073709551615, inv_inlen ≥ 0, mem_inlen = 0}
++mem_inlen ∊ [0; 0]
++
++
++
++Program is not safe!
++
++File fail/common/shiftfalse.jazz (on arch riscv):
++Analyzing function shift
++
++
++*** Possible Safety Violation(s):
++  "fail/common/shiftfalse.jazz", line 9 (2-42): n *64u (64u) 64 +64u (64u) 64 <=u inlen
++  
++Memory ranges:
++  mem_inlen: [0; 0]
++  
++* Rel:
++{inv_inlen ≤ 18446744073709551615, inv_inlen ≥ 0, mem_inlen = 0}
++mem_inlen ∊ [0; 0]
++
++
++
++Program is not safe!
++
++File fail/common/shiftnarrow.jazz (on arch x86-64):
++Analyzing function narrow
++
++
++*** Possible Safety Violation(s):
++  "fail/common/shiftnarrow.jazz", line 8 (2-38): (64u) n *64u (64u) 64 <=u x
++  
++Memory ranges:
++  mem_x: [0; 0]
++  
++* Rel:
++{inv_x ≥ 0, inv_x ≤ 18446744073709551615, mem_x = 0}
++mem_x ∊ [0; 0]
++
++
++
++Program is not safe!
++
++File fail/common/shiftnarrow.jazz (on arch arm-m4):
++Analyzing function narrow
++
++
++*** Possible Safety Violation(s):
++  "fail/common/shiftnarrow.jazz", line 8 (2-38): (64u) n *64u (64u) 64 <=u x
++  
++Memory ranges:
++  mem_x: [0; 0]
++  
++* Rel:
++{inv_x ≥ 0, inv_x ≤ 18446744073709551615, mem_x = 0}
++mem_x ∊ [0; 0]
++
++
++
++Program is not safe!
++
++File fail/common/shiftnarrow.jazz (on arch riscv):
++Analyzing function narrow
++
++
++*** Possible Safety Violation(s):
++  "fail/common/shiftnarrow.jazz", line 8 (2-38): (64u) n *64u (64u) 64 <=u x
++  
++Memory ranges:
++  mem_x: [0; 0]
++  
++* Rel:
++{inv_x ≥ 0, inv_x ≤ 18446744073709551615, mem_x = 0}
++mem_x ∊ [0; 0]
++
++
++
+ Program is not safe!
+ 
+ File fail/common/wint_overflow.jazz (on arch x86-64):
+diff --git a/compiler/tests/safety/success/common/shiftbound.jazz b/compiler/tests/safety/success/common/shiftbound.jazz
+new file mode 100644
+index 0000000..560703e
+--- /dev/null
++++ b/compiler/tests/safety/success/common/shiftbound.jazz
+@@ -0,0 +1,12 @@
++/* The block count is the input length shifted right by 6. The bounds of
++   the shift also give the block count a lower bound, so the end of the
++   last whole block is known to stay within the length. */
++export fn bound(reg u64 inlen) -> reg u64
++{
++  reg u64 n;
++
++  n = inlen;
++  n >>= 6;
++  assert("upper", inlen <= n * 64 + 63);
++  return n;
++}
+diff --git a/compiler/tests/safety/success/common/shiftcond.jazz b/compiler/tests/safety/success/common/shiftcond.jazz
+new file mode 100644
+index 0000000..332a4e4
+--- /dev/null
++++ b/compiler/tests/safety/success/common/shiftcond.jazz
+@@ -0,0 +1,11 @@
++/* A shifted value that is a conditional expression has no single linear
++   form. The bounds of the shift cannot be stated on it, and the
++   assignment keeps the conditional abstraction instead of failing. */
++export fn cond(reg u64 inlen, reg bool b) -> reg u64
++{
++  reg u64 n y;
++
++  y = 0;
++  n = (b ? inlen : y) >> 6;
++  return n;
++}

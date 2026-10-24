@@ -253,3 +253,42 @@ int oracle_hmac(oracle *o, unsigned alg, const uint8_t *key, size_t key_len,
     }
     return response(o, out, out_len);
 }
+
+int oracle_stream(oracle *o, unsigned alg, uint64_t len, uint8_t *out, size_t *out_len)
+{
+    uint8_t head[ORACLE_HEADER_BYTES];
+
+    if (alg > 5 || !ORACLE_SUPPORTS_STREAM(o->mask, alg)) {
+        *out_len = 0;
+        return 0;
+    }
+    memset(head, 0, sizeof head);
+    head[0] = ORACLE_OP_STREAM;
+    head[1] = (uint8_t)alg;
+    put32(head + 4, (uint32_t)len);
+    put32(head + 8, (uint32_t)(len >> 32));
+    if (send_all(o->to, head, sizeof head) != 0) {
+        return -1;
+    }
+    return response(o, out, out_len);
+}
+
+int oracle_consensus(const uint8_t *answer, size_t stride, const int *answered, size_t n,
+                     size_t len, uint8_t *agreed, size_t *first)
+{
+    size_t o;
+    int count = 0;
+
+    for (o = 0; o < n; o++) {
+        if (!answered[o]) {
+            continue;
+        }
+        if (count > 0 && memcmp(agreed, answer + o * stride, len) != 0) {
+            *first = o;
+            return -1;
+        }
+        memcpy(agreed, answer + o * stride, len);
+        count++;
+    }
+    return count;
+}

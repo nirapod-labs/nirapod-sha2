@@ -1,0 +1,394 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Benjamin Gregoire <Benjamin.Gregoire@inria.fr>
+Date: Wed, 23 Sep 2026 14:47:49 +0200
+Subject: [PATCH] The total mode in the operators and the instructions
+
+check_safe takes the SemMode of PR4: in the partial mode, the default
+instance, it checks the safety conditions as before; in the total mode it
+checks nothing. mk_sem_op and mk_semi inherit the mode, and so do
+sem_sop1_typed, sem_sop2_typed, sem_opN_typed, id_semi, semi, sopn_sem_,
+sopn_sem, sem_sop1, sem_sop2, sem_opN and exec_sopn: a definition in a
+section with a SemMode in context follows that instance, everything else
+keeps its meaning. mk_semi keeps the init mask in both modes: the total mode
+removes the failures, not the undefined outputs.
+
+mk_sem_op2E is stated for any mode.
+
+No downstream proof changes. The OCaml side is unchanged: no OCaml code
+calls exec_sopn or sem_sop*, and the extracted descriptors pass the
+instance themselves.
+
+(cherry picked from commit e8482e727ce2dafb1aafcdf2741a9be20df59067)
+---
+ proofs/arch/arch_decl.v          |  2 +-
+ proofs/compiler/arm_extra.v      |  2 +-
+ proofs/compiler/armv8a_extra.v   |  4 ++--
+ proofs/compiler/riscv_extra.v    |  2 +-
+ proofs/lang/psem_defs.v          |  8 ++++----
+ proofs/lang/safety_cond.v        | 16 ++++++++-------
+ proofs/lang/safety_cond_facts.v  |  2 +-
+ proofs/lang/sem_op_typed.v       | 18 ++++++++---------
+ proofs/lang/sem_op_typed_facts.v |  4 ++--
+ proofs/lang/sopn.v               | 34 ++++++++++++++++----------------
+ proofs/lang/sopn_facts.v         |  4 ++--
+ proofs/lang/sopn_semi.v          |  4 ++--
+ 12 files changed, 51 insertions(+), 49 deletions(-)
+
+diff --git a/proofs/arch/arch_decl.v b/proofs/arch/arch_decl.v
+index 2d1069e..5ea28f3 100644
+--- a/proofs/arch/arch_decl.v
++++ b/proofs/arch/arch_decl.v
+@@ -517,7 +517,7 @@ Record instr_desc_t := {
+ (* Semantics of an instruction (only deals with values): the safety conditions
+    are checked on the arguments, then the total semantics is filtered by the
+    initialisation conditions, one per output. *)
+-Definition id_semi (d : instr_desc_t) :
++Definition id_semi {sm : SemMode} (d : instr_desc_t) :
+     sem_lprod d.(id_tin) (exec (sem_ltuple d.(id_tout))) :=
+   mk_semi d.(id_safe) d.(id_err) d.(id_init) d.(id_semi_total).
+ 
+diff --git a/proofs/compiler/arm_extra.v b/proofs/compiler/arm_extra.v
+index 154aff2..cb2fbb8 100644
+--- a/proofs/compiler/arm_extra.v
++++ b/proofs/compiler/arm_extra.v
+@@ -59,7 +59,7 @@ Definition Oarm_add_large_imm_instr : instruction_desc :=
+    ; i_doit := DOIT
+    ; i_wf := refl_equal
+    ; semu   := @values.vuincl_app_sopn_v ctin [:: cty]
+-                 (@mk_semi ctin [:: cty] [::] ErrSemUndef [:: IBool true ] semi) refl_equal
++                 (@mk_semi _ ctin [:: cty] [::] ErrSemUndef [:: IBool true ] semi) refl_equal
+  |}.
+ 
+ Definition smart_li_instr (ws : wsize) : instruction_desc :=
+diff --git a/proofs/compiler/armv8a_extra.v b/proofs/compiler/armv8a_extra.v
+index c960508..c7257cc 100644
+--- a/proofs/compiler/armv8a_extra.v
++++ b/proofs/compiler/armv8a_extra.v
+@@ -66,7 +66,7 @@ Definition Oarmv8a_add_large_imm_instr : instruction_desc :=
+    ; i_doit := DOIT
+    ; i_wf := refl_equal
+    ; semu   := @values.vuincl_app_sopn_v ctin [:: cty]
+-                 (@mk_semi ctin [:: cty] [::] ErrSemUndef [:: IBool true ] semi) refl_equal
++                 (@mk_semi _ ctin [:: cty] [::] ErrSemUndef [:: IBool true ] semi) refl_equal
+  |}.
+ 
+ Definition smart_li_instr (ws : wsize) : instruction_desc :=
+@@ -114,7 +114,7 @@ Definition Oarmv8a_SLHupdate_instr : instruction_desc :=
+    ; i_wf := refl_equal
+    ; semu   :=
+        @values.vuincl_app_sopn_v ctin ctout
+-         (@mk_semi ctin ctout [::] ErrSemUndef [:: IBool true; IBool true ]
++         (@mk_semi _ ctin ctout [::] ErrSemUndef [:: IBool true; IBool true ]
+             armv8a_se_update_sem)
+          refl_equal
+  |}.
+diff --git a/proofs/compiler/riscv_extra.v b/proofs/compiler/riscv_extra.v
+index 0e7a567..49f14ba 100644
+--- a/proofs/compiler/riscv_extra.v
++++ b/proofs/compiler/riscv_extra.v
+@@ -52,7 +52,7 @@ Definition Oriscv_add_large_imm_instr : instruction_desc :=
+    ; i_doit := DOIT
+    ; i_wf := refl_equal
+    ; semu   := @values.vuincl_app_sopn_v ctin [:: cty]
+-                 (@mk_semi ctin [:: cty] [::] ErrSemUndef [:: IBool true ] semi) refl_equal
++                 (@mk_semi _ ctin [:: cty] [::] ErrSemUndef [:: IBool true ] semi) refl_equal
+  |}.
+ 
+ Definition get_instr_desc (o: riscv_extra_op) : instruction_desc :=
+diff --git a/proofs/lang/psem_defs.v b/proofs/lang/psem_defs.v
+index 33ba44c..e9b96ee 100644
+--- a/proofs/lang/psem_defs.v
++++ b/proofs/lang/psem_defs.v
+@@ -16,19 +16,19 @@ Open Scope vm_scope.
+ (* ** Parameter expressions
+  * -------------------------------------------------------------------- *)
+ 
+-Definition sem_sop1 (o: sop1) (v: value) : exec value :=
++Definition sem_sop1 {sm : SemMode} (o: sop1) (v: value) : exec value :=
+   Let x := of_val _ v in
+   Let r := sem_sop1_typed o x in
+   ok (to_val r).
+ 
+-Definition sem_sop2 (o: sop2) (v1 v2: value) : exec value :=
++Definition sem_sop2 {sm : SemMode} (o: sop2) (v1 v2: value) : exec value :=
+   Let x1 := of_val _ v1 in
+   Let x2 := of_val _ v2 in
+   Let r  := sem_sop2_typed o x1 x2 in
+   ok (to_val r).
+ 
+ Definition sem_opN
+-  {cfcd : FlagCombinationParams} (op: opN) (vs: values) : exec value :=
++  {cfcd : FlagCombinationParams} {sm : SemMode} (op: opN) (vs: values) : exec value :=
+   Let w := app_sopn _ (sem_opN_typed op) vs in
+   ok (to_val w).
+ 
+@@ -244,7 +244,7 @@ Context
+   {spp : SemPexprParams}
+   {asmop : asmOp asm_op}.
+ 
+-Definition exec_sopn (o:sopn) (vs:values) : exec values :=
++Definition exec_sopn {sm : SemMode} (o:sopn) (vs:values) : exec values :=
+   Let semi := sopn_sem o in
+   Let t := app_sopn _ semi vs in
+   ok (list_ltuple t).
+diff --git a/proofs/lang/safety_cond.v b/proofs/lang/safety_cond.v
+index 3287ca9..92312e6 100644
+--- a/proofs/lang/safety_cond.v
++++ b/proofs/lang/safety_cond.v
+@@ -152,10 +152,12 @@ Proof. by apply: sub_all => c; apply: safety_cond_wt_cat. Qed.
+ (* -------------------------------------------------------------------- *)
+ (* ** Checking the conditions                                            *)
+ 
+-(* The safety check: if one of the conditions fails, the operation raises the
+-   error it declares. *)
+-Definition check_safe (vs : values) (safe : seq safety_cond) (err : error) : exec unit :=
+-  if all (safety_cond_holds vs) safe then ok tt else Error err.
++(* The safety check: in the [partial] mode, if one of the conditions fails,
++   the operation raises the error it declares; in the [total] mode nothing is
++   checked. *)
++Definition check_safe {sm : SemMode} (vs : values) (safe : seq safety_cond) (err : error) :
++    exec unit :=
++  if is_total || all (safety_cond_holds vs) safe then ok tt else Error err.
+ 
+ (* The arguments are collected, as values, in [vs] along the [sem_prod], and
+    [P] is applied to them and to the result. *)
+@@ -172,10 +174,10 @@ Arguments mk_semi_aux {T T'} P vs tin _ : assert.
+ 
+ (* An operation with exactly one output: the conditions are checked on the
+    arguments, then the total semantics is returned. *)
+-Definition mk_sem_op (tin : seq ctype) (t : ctype) (safe : seq safety_cond) (err : error)
+-    (f : sem_prod tin (sem_t t)) : sem_prod tin (exec (sem_t t)) :=
++Definition mk_sem_op {sm : SemMode} (tin : seq ctype) (t : ctype) (safe : seq safety_cond)
++    (err : error) (f : sem_prod tin (sem_t t)) : sem_prod tin (exec (sem_t t)) :=
+   mk_semi_aux (fun vs r => Let _ := check_safe vs safe err in ok r) [::] tin f.
+-Arguments mk_sem_op {tin t} safe err f : assert.
++Arguments mk_sem_op {sm tin t} safe err f : assert.
+ 
+ (* -------------------------------------------------------------------- *)
+ (* ** The library of conditions                                          *)
+diff --git a/proofs/lang/safety_cond_facts.v b/proofs/lang/safety_cond_facts.v
+index d504e2c..0f6b181 100644
+--- a/proofs/lang/safety_cond_facts.v
++++ b/proofs/lang/safety_cond_facts.v
+@@ -55,7 +55,7 @@ Proof. by move=> h; elim: tin vs f => /= [vs f | t tin ih vs f v]; [apply h | ap
+ 
+ (* Without condition, [mk_sem_op] is the total semantics. *)
+ Lemma mk_sem_op_nil tin t err f :
+-  sem_prod_eq tin (@mk_sem_op tin t [::] err f) (sem_prod_ok tin f).
++  sem_prod_eq tin (@mk_sem_op _ tin t [::] err f) (sem_prod_ok tin f).
+ Proof. by apply: mk_semi_aux_id. Qed.
+ 
+ (* -------------------------------------------------------------------- *)
+diff --git a/proofs/lang/sem_op_typed.v b/proofs/lang/sem_op_typed.v
+index 0e803b9..77a26c1 100644
+--- a/proofs/lang/sem_op_typed.v
++++ b/proofs/lang/sem_op_typed.v
+@@ -15,35 +15,35 @@ Import Utf8.
+ Local Open Scope Z_scope.
+ Local Open Scope seq_scope.
+ 
+-Definition sem_sop1_typed (o : sop1) :
++Definition sem_sop1_typed {sm : SemMode} (o : sop1) :
+   let t := type_of_op1 o in
+   let t := (eval_atype t.1, eval_atype t.2) in
+   sem_t t.1 → exec (sem_t t.2) :=
+-  @mk_sem_op [:: eval_atype (type_of_op1 o).1] (eval_atype (type_of_op1 o).2)
++  @mk_sem_op sm [:: eval_atype (type_of_op1 o).1] (eval_atype (type_of_op1 o).2)
+     (op1_safe o) ErrArith (sem_sop1_total o).
+ 
+-Arguments sem_sop1_typed : clear implicits.
++Arguments sem_sop1_typed {sm} o.
+ 
+-Definition sem_sop2_typed (o : sop2) :
++Definition sem_sop2_typed {sm : SemMode} (o : sop2) :
+   let t := type_of_op2 o in
+   let t := (eval_atype t.1.1, eval_atype t.1.2, eval_atype t.2) in
+   sem_t t.1.1 → sem_t t.1.2 → exec (sem_t t.2) :=
+-  @mk_sem_op [:: eval_atype (type_of_op2 o).1.1; eval_atype (type_of_op2 o).1.2]
++  @mk_sem_op sm [:: eval_atype (type_of_op2 o).1.1; eval_atype (type_of_op2 o).1.2]
+     (eval_atype (type_of_op2 o).2) (op2_safe o) ErrArith (sem_sop2_total o).
+ 
+-Arguments sem_sop2_typed : clear implicits.
++Arguments sem_sop2_typed {sm} o.
+ 
+ Section WITH_PARAMS.
+ 
+ Context {cfcd : FlagCombinationParams}.
+ 
+-Definition sem_opN_typed (o : opN) :
++Definition sem_opN_typed {sm : SemMode} (o : opN) :
+   let t := type_of_opN o in
+   let t := (map eval_atype t.1, eval_atype t.2) in
+   sem_prod t.1 (exec (sem_t t.2)) :=
+-  @mk_sem_op (map eval_atype (type_of_opN o).1) (eval_atype (type_of_opN o).2)
++  @mk_sem_op sm (map eval_atype (type_of_opN o).1) (eval_atype (type_of_opN o).2)
+     (opN_safe o) ErrArith (sem_opN_total o).
+ 
+-Arguments sem_opN_typed : clear implicits.
++Arguments sem_opN_typed {sm} o.
+ 
+ End WITH_PARAMS.
+diff --git a/proofs/lang/sem_op_typed_facts.v b/proofs/lang/sem_op_typed_facts.v
+index 402f83a..e72705b 100644
+--- a/proofs/lang/sem_op_typed_facts.v
++++ b/proofs/lang/sem_op_typed_facts.v
+@@ -16,8 +16,8 @@ Local Open Scope seq_scope.
+ (* -------------------------------------------------------------------- *)
+ (* ** [mk_sem_op] on the signature of a binary operator                  *)
+ 
+-Lemma mk_sem_op2E t1 t2 t safe err (f : sem_t t1 -> sem_t t2 -> sem_t t) v1 v2 :
+-  @mk_sem_op [:: t1; t2] t safe err f v1 v2 =
++Lemma mk_sem_op2E {sm : SemMode} t1 t2 t safe err (f : sem_t t1 -> sem_t t2 -> sem_t t) v1 v2 :
++  @mk_sem_op sm [:: t1; t2] t safe err f v1 v2 =
+   (Let _ := check_safe [:: to_val v1; to_val v2] safe err in ok (f v1 v2)).
+ Proof. by []. Qed.
+ 
+diff --git a/proofs/lang/sopn.v b/proofs/lang/sopn.v
+index 5013dd5..795a093 100644
+--- a/proofs/lang/sopn.v
++++ b/proofs/lang/sopn.v
+@@ -80,10 +80,10 @@ Record instruction_desc := mkInstruction {
+ (* The semantics of an instruction: the safety conditions are checked on the
+    arguments, then the total semantics is filtered by the initialisation
+    conditions. *)
+-Definition semi (i : instruction_desc) :
++Definition semi {sm : SemMode} (i : instruction_desc) :
+     sem_prod (map eval_atype i.(tin)) (exec (sem_tuple (map eval_atype i.(tout)))) :=
+   mk_semi i.(i_safe) i.(i_err) i.(i_init) i.(i_semi_total).
+-Arguments semi !i /.
++Arguments semi {sm} !i /.
+ 
+ Arguments semu _ [vs vs' v] _ _.
+ 
+@@ -102,7 +102,7 @@ Notation mk_instr_desc str tin i_in tout i_out semi_total safe err init valid do
+      i_doit       := doit;
+      i_wf         := refl_equal;
+      semu         := @vuincl_app_sopn_v (map eval_atype tin) (map eval_atype tout)
+-                       (@mk_semi (map eval_atype tin) (map eval_atype tout)
++                       (@mk_semi _ (map eval_atype tin) (map eval_atype tout)
+                           safe err init semi_total) refl_equal;
+   |}.
+ 
+@@ -245,11 +245,11 @@ Qed.
+ 
+ Lemma copy_semu ws p vs vs' v :
+   values_uincl vs vs' ->
+-  app_sopn_v (@mk_semi [:: carr (arr_size ws p)] [:: carr (arr_size ws p)]
++  app_sopn_v (@mk_semi _ [:: carr (arr_size ws p)] [:: carr (arr_size ws p)]
+                 [:: sc_all_init ws p 0] ErrAddrUndef [:: IBool true] (@copy_total ws p)) vs
+     = ok v ->
+   exists2 v' : values,
+-    app_sopn_v (@mk_semi [:: carr (arr_size ws p)] [:: carr (arr_size ws p)]
++    app_sopn_v (@mk_semi _ [:: carr (arr_size ws p)] [:: carr (arr_size ws p)]
+                   [:: sc_all_init ws p 0] ErrAddrUndef [:: IBool true] (@copy_total ws p)) vs'
+       = ok v'
+     & values_uincl v v'.
+@@ -315,9 +315,9 @@ Qed.
+    and declassify instructions. *)
+ Lemma const_semu tys (vs vs' : seq value) (v : values) :
+   values_uincl vs vs' ->
+-  app_sopn_v (@mk_semi tys [::] [::] ErrSemUndef [::] (sem_prod_const tys tt)) vs = ok v ->
++  app_sopn_v (@mk_semi _ tys [::] [::] ErrSemUndef [::] (sem_prod_const tys tt)) vs = ok v ->
+   exists2 v' : values,
+-    app_sopn_v (@mk_semi tys [::] [::] ErrSemUndef [::] (sem_prod_const tys tt)) vs' = ok v'
++    app_sopn_v (@mk_semi _ tys [::] [::] ErrSemUndef [::] (sem_prod_const tys tt)) vs' = ok v'
+     & values_uincl v v'.
+ Proof.
+ move=> huv; rewrite /app_sopn_v /mk_semi; t_xrbindP => u hu <-.
+@@ -421,10 +421,10 @@ Proof. by case: ty z z'. Qed.
+ 
+ Lemma swap_semu ty (vs vs' : seq value) (v : values) :
+   values_uincl vs vs' ->
+-  app_sopn_v (@mk_semi [:: ty; ty] [:: ty; ty] [::] ErrSemUndef
++  app_sopn_v (@mk_semi _ [:: ty; ty] [:: ty; ty] [::] ErrSemUndef
+                 [:: IBool true; IBool true] (fun x y => (y, x))) vs = ok v ->
+   exists2 v' : values,
+-    app_sopn_v (@mk_semi [:: ty; ty] [:: ty; ty] [::] ErrSemUndef
++    app_sopn_v (@mk_semi _ [:: ty; ty] [:: ty; ty] [::] ErrSemUndef
+                   [:: IBool true; IBool true] (fun x y => (y, x))) vs' = ok v'
+     & values_uincl v v'.
+ Proof.
+@@ -528,10 +528,10 @@ Definition SLHprotect_instr ws :=
+ 
+ Lemma protect_ptr_semu n vs vs' v:
+   values_uincl vs vs' ->
+-  app_sopn_v (@mk_semi [:: carr n; cty_msf ] [:: carr n] [::] ErrSemUndef [:: IBool true ]
++  app_sopn_v (@mk_semi _ [:: carr n; cty_msf ] [:: carr n] [::] ErrSemUndef [:: IBool true ]
+                 (@se_protect_ptr_sem n)) vs = ok v ->
+   exists2 v' : values,
+-    app_sopn_v (@mk_semi [:: carr n; cty_msf ] [:: carr n] [::] ErrSemUndef [:: IBool true ]
++    app_sopn_v (@mk_semi _ [:: carr n; cty_msf ] [:: carr n] [::] ErrSemUndef [:: IBool true ]
+                   (@se_protect_ptr_sem n)) vs' = ok v'
+     & values_uincl v v'.
+ Proof.
+@@ -565,10 +565,10 @@ Definition SLHprotect_ptr_instr ws n :=
+ 
+ Lemma protect_ptr_fail_semu n vs vs' v:
+   values_uincl vs vs' ->
+-  app_sopn_v (@mk_semi [:: carr n; cty_msf ] [:: carr n] [:: sc_is_zero msf_size 1] ErrSemUndef
++  app_sopn_v (@mk_semi _ [:: carr n; cty_msf ] [:: carr n] [:: sc_is_zero msf_size 1] ErrSemUndef
+                 [:: IBool true ] (fun (t : WArray.array n) (_ : wmsf) => t)) vs = ok v ->
+   exists2 v' : values,
+-    app_sopn_v (@mk_semi [:: carr n; cty_msf ] [:: carr n] [:: sc_is_zero msf_size 1] ErrSemUndef
++    app_sopn_v (@mk_semi _ [:: carr n; cty_msf ] [:: carr n] [:: sc_is_zero msf_size 1] ErrSemUndef
+                   [:: IBool true ] (fun (t : WArray.array n) (_ : wmsf) => t)) vs' = ok v'
+     & values_uincl v v'.
+ Proof.
+@@ -633,8 +633,8 @@ Definition string_of_sopn o : string := str (get_instr_desc o) tt.
+ Definition sopn_tin o : list atype := tin (get_instr_desc o).
+ Definition sopn_tout o : list atype := tout (get_instr_desc o).
+ 
+-Definition sopn_sem_ o := semi (get_instr_desc o).
+-Definition sopn_sem o : exec _ :=
++Definition sopn_sem_ {sm : SemMode} o := semi (get_instr_desc o).
++Definition sopn_sem {sm : SemMode} o : exec _ :=
+   Let _ := assert (get_instr_desc o).(i_valid) ErrType in
+   ok (sopn_sem_ o).
+ 
+@@ -675,5 +675,5 @@ Instance asmOp_sopn : asmOp sopn :=
+ 
+ End WITH_PARAMS.
+ 
+-Arguments sopn_sem_ {asm_op pd msfsz asmop} !o /.
+-Arguments sopn_sem {asm_op pd msfsz asmop} !o /.
++Arguments sopn_sem_ {asm_op pd msfsz asmop sm} !o /.
++Arguments sopn_sem {asm_op pd msfsz asmop sm} !o /.
+diff --git a/proofs/lang/sopn_facts.v b/proofs/lang/sopn_facts.v
+index c8c857c..81241ea 100644
+--- a/proofs/lang/sopn_facts.v
++++ b/proofs/lang/sopn_facts.v
+@@ -87,11 +87,11 @@ Qed.
+ 
+ Lemma array_copy_semi_eq ws p :
+   sem_prod_eq [:: carr (arr_size ws p)] (@WArray.copy partial ws p)
+-    (@mk_semi [:: carr (arr_size ws p)] [:: carr (arr_size ws p)]
++    (@mk_semi _ [:: carr (arr_size ws p)] [:: carr (arr_size ws p)]
+        [:: sc_all_init ws p 0] ErrAddrUndef [:: IBool true] (@copy_total ws p)).
+ Proof.
+ move=> t.
+-have -> : @mk_semi [:: carr (arr_size ws p)] [:: carr (arr_size ws p)]
++have -> : @mk_semi _ [:: carr (arr_size ws p)] [:: carr (arr_size ws p)]
+             [:: sc_all_init ws p 0] ErrAddrUndef [:: IBool true] (@copy_total ws p) t
+         = (Let _ := check_safe [:: Varr t] [:: sc_all_init ws p 0] ErrAddrUndef in
+            ok (@copy_total ws _ t)) by [].
+diff --git a/proofs/lang/sopn_semi.v b/proofs/lang/sopn_semi.v
+index e958b31..a47af08 100644
+--- a/proofs/lang/sopn_semi.v
++++ b/proofs/lang/sopn_semi.v
+@@ -86,14 +86,14 @@ Definition is_ErrType (e : error) : bool := if e is ErrType then true else false
+ (* The semantics of an instruction: the safety conditions are checked on the
+    arguments, then the total semantics is filtered by the initialisation
+    conditions, one per output. *)
+-Definition mk_semi (tin tout : seq ctype) (safe : seq safety_cond) (err : error)
++Definition mk_semi {sm : SemMode} (tin tout : seq ctype) (safe : seq safety_cond) (err : error)
+     (init : seq safety_cond)
+     (f : sem_prod tin (sem_tuple_t tout)) : sem_prod tin (exec (sem_tuple tout)) :=
+   mk_semi_aux
+     (fun vs t => Let _ := check_safe vs safe err in
+                  ok (filter_tuple tout (map (safety_cond_holds vs) init) t))
+     [::] tin f.
+-Arguments mk_semi {!tin tout} safe err init f / : assert.
++Arguments mk_semi {sm !tin tout} safe err init f / : assert.
+ 
+ (* -------------------------------------------------------------------- *)
+ (* ** Guarded conditions                                                 *)

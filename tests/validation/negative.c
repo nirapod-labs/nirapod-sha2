@@ -20,6 +20,13 @@
  * one of the documented codes, a failed call must leave the context as it
  * was, and a final that succeeds must zero it.
  *
+ * Each of those checks has a negative control: the same forged rounds,
+ * through the public functions, with a fault injected after the call
+ * (see forged_fault), must be rejected. The faults are a write one byte
+ * past the context, an undocumented result, a failed update that changes
+ * the context, a successful final that leaves the context nonzero, a
+ * failed final that writes output, and a write one byte past the output.
+ *
  * The context total limit is tested by writing the total field of a
  * context directly, at byte offset 8 as src/context.jinc lays it out.
  * That field is not part of the API; this is the only place the suite
@@ -766,6 +773,70 @@ static int documented(int rc)
            rc == NIRAPOD_SHA2_EOVERLAP || rc == NIRAPOD_SHA2_ESTATE;
 }
 
+/*
+ * The negative controls of the forged-context checks. A fault rewrites the
+ * result and the memory of one call after it returns, as a defective
+ * implementation would have left them; FORGED_FAULT_NONE leaves both.
+ * The rounds of a control are FORGED_CONTROL_ROUNDS, one per range of the
+ * forged total.
+ */
+enum forged_fault {
+    FORGED_FAULT_NONE,
+    FORGED_FAULT_UPDATE_PAST_CONTEXT,
+    FORGED_FAULT_UPDATE_UNDOCUMENTED,
+    FORGED_FAULT_UPDATE_FAILED_CHANGED,
+    FORGED_FAULT_FINAL_NOT_ZEROED,
+    FORGED_FAULT_FINAL_FAILED_WROTE,
+    FORGED_FAULT_FINAL_PAST_OUTPUT,
+    FORGED_FAULTS
+};
+
+#define FORGED_CONTROL_ROUNDS 3
+
+static const char *const forged_fault_name[FORGED_FAULTS] = {
+    "none",
+    "an update that writes one byte past the context",
+    "an update that returns an undocumented code",
+    "a failed update that changes the context",
+    "a final that succeeds and leaves the context nonzero",
+    "a failed final that writes output",
+    "a final that writes one byte past the output",
+};
+
+static int fault_update(int fault, int rc, uint8_t *ctx, size_t ctx_len)
+{
+    switch (fault) {
+    case FORGED_FAULT_UPDATE_PAST_CONTEXT:
+        ctx[ctx_len] ^= 0xff;
+        return rc;
+    case FORGED_FAULT_UPDATE_UNDOCUMENTED:
+        return 99;
+    case FORGED_FAULT_UPDATE_FAILED_CHANGED:
+        ctx[ctx_len - 1] ^= 0x01;
+        return NIRAPOD_SHA2_ESTATE;
+    default:
+        return rc;
+    }
+}
+
+static int fault_final(int fault, int rc, uint8_t *ctx, size_t ctx_len, uint8_t *out,
+                       size_t out_len)
+{
+    switch (fault) {
+    case FORGED_FAULT_FINAL_NOT_ZEROED:
+        ctx[ctx_len - 1] |= 0x01;
+        return NIRAPOD_SHA2_OK;
+    case FORGED_FAULT_FINAL_FAILED_WROTE:
+        out[0] ^= 0xff;
+        return NIRAPOD_SHA2_ESTATE;
+    case FORGED_FAULT_FINAL_PAST_OUTPUT:
+        out[out_len] ^= 0xff;
+        return rc;
+    default:
+        return rc;
+    }
+}
+
 static void forge(validation_rng *rng, uint8_t *ctx, size_t ctx_len, const uint8_t *tag,
                   size_t round)
 {
@@ -784,8 +855,10 @@ static void forge(validation_rng *rng, uint8_t *ctx, size_t ctx_len, const uint8
 
 /*
  * kind 0: hash index i, 1: HMAC index i, 2: sha256_x8, 3: sha512_x4.
+ * Returns 0 when init failed and no round ran, else 1.
  */
-static void forged_one(validation_suite *s, int kind, size_t i, int kernel, validation_rng *rng)
+static int forged_one(validation_suite *s, int kind, size_t i, int kernel, validation_rng *rng,
+                       int fault, size_t rounds)
 {
     static uint64_t store[(2 * FORGED_GUARD + sizeof(validation_ctx)) / 8];
     static uint8_t msg[700];
@@ -821,11 +894,11 @@ static void forged_one(validation_suite *s, int kind, size_t i, int kernel, vali
         (kind == 1 && hmac_init(&HMAC_ALGS[i], kernel, ctx, msg, 100) != NIRAPOD_SHA2_OK) ||
         (kind >= 2 && multiway_init(x4, kernel, ctx) != NIRAPOD_SHA2_OK)) {
         fail_case(s, kernel, "%s: forged context: init failed", name);
-        return;
+        return 0;
     }
     memcpy(tag, ctx, 8);
 
-    for (round = 0; round < FORGED_CASES; round++) {
+    for (round = 0; round < rounds; round++) {
         size_t len = rng_below(rng, kind >= 2 ? 600 : sizeof msg);
         int rc;
 
@@ -840,6 +913,7 @@ static void forged_one(validation_suite *s, int kind, size_t i, int kernel, vali
         } else {
             rc = multiway_update(x4, kernel, ctx, lanes, len);
         }
+        rc = fault_update(fault, rc, ctx, ctx_len);
         check(s, kernel, documented(rc), "%s: forged update returned %d", name, rc);
         if (rc != NIRAPOD_SHA2_OK) {
             check(s, kernel, memcmp(ctx, before, ctx_len) == 0,
@@ -858,6 +932,7 @@ static void forged_one(validation_suite *s, int kind, size_t i, int kernel, vali
         } else {
             rc = multiway_final(x4, kernel, ctx, out + FORGED_GUARD);
         }
+        rc = fault_final(fault, rc, ctx, ctx_len, out + FORGED_GUARD, out_len);
         check(s, kernel, documented(rc), "%s: forged final returned %d", name, rc);
         if (rc == NIRAPOD_SHA2_OK) {
             size_t z;
@@ -879,6 +954,7 @@ static void forged_one(validation_suite *s, int kind, size_t i, int kernel, vali
               "%s: forged final wrote outside the context or the output (case %zu)", name,
               round);
     }
+    return 1;
 }
 
 static void forged_contexts(validation_suite *s, int kernel)
@@ -889,19 +965,51 @@ static void forged_contexts(validation_suite *s, int kernel)
     rng_seed(&rng, UINT64_C(0xf0f9ed00) + (uint64_t)(kernel + 1));
     for (i = 0; i < sizeof HASH_ALGS / sizeof HASH_ALGS[0]; i++) {
         if (validation_usable(s, kernel, HASH_ALGS[i].family)) {
-            forged_one(s, 0, i, kernel, &rng);
+            forged_one(s, 0, i, kernel, &rng, FORGED_FAULT_NONE, FORGED_CASES);
         }
     }
     for (i = 0; i < sizeof HMAC_ALGS / sizeof HMAC_ALGS[0]; i++) {
         if (validation_usable(s, kernel, HMAC_ALGS[i].family)) {
-            forged_one(s, 1, i, kernel, &rng);
+            forged_one(s, 1, i, kernel, &rng, FORGED_FAULT_NONE, FORGED_CASES);
         }
     }
     if (validation_usable(s, kernel, NIRAPOD_SHA2_TESTING_FAMILY_X8)) {
-        forged_one(s, 2, 0, kernel, &rng);
+        forged_one(s, 2, 0, kernel, &rng, FORGED_FAULT_NONE, FORGED_CASES);
     }
     if (validation_usable(s, kernel, NIRAPOD_SHA2_TESTING_FAMILY_X4)) {
-        forged_one(s, 3, 0, kernel, &rng);
+        forged_one(s, 3, 0, kernel, &rng, FORGED_FAULT_NONE, FORGED_CASES);
+    }
+}
+
+/*
+ * Every fault on every kind of context (SHA-256, HMAC-SHA-256, sha256_x8,
+ * sha512_x4), through the public functions, each in a scratch suite whose
+ * checks must fail.
+ */
+static void forged_controls(validation_suite *s)
+{
+    static const char *const kind_name[4] = { "SHA-256", "HMAC-SHA-256", "sha256_x8",
+                                              "sha512_x4" };
+    static const size_t kind_index[4] = { 1, 0, 0, 0 };
+    validation_rng rng;
+    int kind, fault;
+
+    rng_seed(&rng, UINT64_C(0xf0f9edc0));
+    for (fault = FORGED_FAULT_NONE + 1; fault < FORGED_FAULTS; fault++) {
+        for (kind = 0; kind < 4; kind++) {
+            validation_suite c;
+
+            control_begin(&c, s);
+            if (forged_one(&c, kind, kind_index[kind], VALIDATION_PUBLIC, &rng, fault,
+                           FORGED_CONTROL_ROUNDS)) {
+                control_end(s, &c, "%s: forged context: %s", kind_name[kind],
+                            forged_fault_name[fault]);
+            } else {
+                /* An init that failed is not a rejection of the fault. */
+                control_record(s, 0, "%s: forged context: %s (init failed)", kind_name[kind],
+                               forged_fault_name[fault]);
+            }
+        }
     }
 }
 
@@ -1034,5 +1142,6 @@ int suite_negative(void)
         cross_contexts(&s, target);
         forged_contexts(&s, target);
     }
+    forged_controls(&s);
     return suite_end(&s);
 }

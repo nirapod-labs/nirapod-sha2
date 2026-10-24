@@ -9,5 +9,47 @@
 # refuses a file whose hash differs, and refuses any *.patch file in
 # patches/ or patches-simd/ that is not listed.
 #
-# PATCHES.md explains each patch.
+# PATCHES.md explains each patch, PATCHES-SIMD.md those of patches-simd/.
 
+patches-simd/0001-armv8a-add-the-SIMD-FP-registers.patch 8e62afe66cc22a6a391e1282b70b92f6490b13cab528b163da4f9f07b8fb5600
+patches-simd/0002-armv8a-add-the-basic-Advanced-SIMD-instructions.patch c760ac085505f3d63e732d6ac6b72f50332453b4d756eea5e9cc5fed1a5719f5
+patches-simd/0003-armv8a-add-Advanced-SIMD-permutations-and-element-mo.patch 0d83bbe6e76c277e560802720ab6d75041c90f241d38b9243e0564dd6578c034
+patches-simd/0004-armv8a-add-the-SHA-256-and-SHA-512-instructions.patch 02a6b6b844c362860752a8c8a8492a725a223d0e48671f3ae1559d04f2c9f685
+patches-simd/0005-armv8a-add-the-SHA-3-instructions.patch 5936f1fac7fd75620da44a1e06ae88006228267d7b62a71fd04ae7364ad9e44e
+patches-simd/0006-armv8a-changelog-entries-for-the-vector-registers-an.patch 07a9a4a7788d5c314ba41a01db64b598650e749bfb9d95981288cbe61f8c702c
+patches-simd/0007-armv8a-add-the-bitwise-selections-BSL-and-BIT.patch 9023eed6405cc479613bc08a30b47e4a1cf4c8dce78d3a9bcf6535e359d9fd5d
+patches/0001-armv8a-print-Mach-O-relocation-operators-on-macOS.patch 6d09ffefee8b37187cb690852756d5b99abfb0e79eb5af489f83e99e165f2c36
+patches/0002-armv8a-changelog-entry-for-the-Mach-O-relocation-fix.patch f5114b6934328a9bb02307c1adfccb44bb04d4dc811efeb71e8f11506fe0bdcd
+patches/0003-safetylib-make-the-CallTopHeuristic-call-policy-usab.patch 1cc97da02ba82b9f1e4166c313d652883c8fb7a784bed5f38cd1faca98bc8f9c
+patches/0004-safetylib-analyze-CallTop-callees-with-pointer-argum.patch 061af0f69c2fdc8ed7459d5c49959fe12543587bf6d6d872e8cd25b2ddcbbe0a
+patches/0005-safetylib-loop-stability-also-compares-initializatio.patch a20ddac5c18c71bfabd738a3d6f3ced73316ade4c0840f187eaf042f14e3b45e
+patches/0006-safetylib-initialization-of-slice-copies-at-unknown-.patch 4383bc0222e57db06f6a8dbe8521f3701c5a6815a951f19fdcd388b903b9ea85
+patches/0007-safetylib-report-unbounded-memory-ranges.patch 5266df7baf3df535b5304d4188885e27b17b7de73a3d7aa5a36bccbf5b09d481
+patches/0008-safetylib-for-loop-counters-point-to-no-memory-regio.patch 2933a38a1bcf99a25c9f4f292eae0e584f4bf34c5f45cb406543de75508e92a4
+patches/0009-safetylib-faster-start-up-with-large-global-tables.patch 103d398d4ad5d6d7cfdea17349e0d37b465d0ae6bfa1a8b933af9512d894b293
+patches/0010-changes-changelog-entry-for-the-safety-checker-fixes.patch 3feafadee43045c146bc1eb77cce02621104f3c8086196769338067745575eb1
+patches/0011-safetylib-implement-the-safety-checker-for-ARMv8-A.patch 48aa65bd933b826a52c70a7e37670fc5bb4c56524af74ce031b7a5a91256da28
+patches/0012-linearization-report-invalid-operands-as-errors.patch 3ad6f0fce85a446fc9b8d25adda5d9535c38857b215bfe777451a3162f79808f
+patches/0013-linearization-changelog-entry-for-invalid-operands.patch 122ea4a7a4ddf8a8be7f08dd2c1d7a53b274cf1411e94b0ff36ca4c575342f15
+patches/0014-armv8a-store-an-immediate-through-a-scratch-register.patch a18451b2aed984daf62268b5386f383385c12c44e4eb989137374743910ceae2
+patches/0015-safetylib-keep-the-exact-bounds-of-an-unsigned-right.patch a8c86cdf73494303e3fbaed7189f0e3b8ec31b51257b5e11ed8ad12f22537507
+patches/0016-changes-add-the-entry-for-the-safety-shift-bounds-16.patch afd2e7be0bac820bc2f88540574071e3eb7845c17f529de4e15bceb748c10dc5
+patches/0017-armv8a-load-a-32-bit-word-zero-extended-to-64-bits.patch d77c66e44eaa27728ebd37f10f7c3ba90c8760ad590cf1a1d84cea2084e57523
+patches/0018-safetylib-reuse-abstract-values-and-environments-tha.patch 1ddd83fa85821c690f236ef6df8e8243339a6b2786532af125859698ee121c64
+patches/0019-safetylib-option-to-leave-large-arrays-out-of-the-nu.patch 22b23959d61973bd464cae910b83b343376e662790799de2cad3787a875646b1
+patches/0020-safetylib-option-to-pass-on-congruences-for-written-.patch e7c3579f01d07d9c0758bbd0e760d223c126777e1e9c8a1bdd3ef1d9eddfdfba
+patches/0021-armv8a-keep-x29-the-frame-pointer-out-of-register-al.patch f6a1b6ea7e9f650e3bd2c60855033286e6759994d4f9c5bb28cdccb65f85555c
+patches/0022-safetylib-options-to-keep-fewer-loop-variables-relat.patch f2701b564838581d2bce86f38c1b863f0968b2ac55051cc1b5df7e32bfb4e23a
+patches/0023-Memory-and-array-accesses-in-two-modes-with-errors-o.patch 3a5670671b03a85ff5ec42448a229d84abf045f22ef686da54f7c1f1d2cc1fb3
+patches/0024-The-total-mode-in-the-operators-and-the-instructions.patch bb1cf8e83d5d044cf34aefdbc853b76a07c89076e68ffae57a328fa4f937931d
+patches/0025-The-total-mode-of-the-varmap-an-uninitialised-variab.patch 9f45e05e5c31526d45637a05a5abc31b3d1354956d267706157c5cc7d5f4e6d9
+patches/0026-sem_pexpr-takes-the-mode-the-initialisation-tests-ob.patch 4788234c8e285d4dd8669d5de145bc3062285df13ac5c660b9a64c1f399d28d8
+patches/0027-The-mode-in-the-program-semantics-and-the-relational.patch 68cda65f1c3de21c90857e376d6ec30536fd3e5825d1bf7e99db4255ef0d5e6b
+patches/0028-From-conditions-on-argument-values-to-assertions-on-.patch 84c79092d3e2006b7995bc360f79a1bd13406f051826aaf4da30ffb03de733b5
+patches/0029-Safety-conditions-of-the-array-and-memory-accesses.patch cf863371ccc0f8e637a11bc92e52baa1db077565d637a2c02ac8c1109e8c5d56
+patches/0030-The-safety-pass-the-conditions-of-the-semantics-as-a.patch fa5e750964d905f06257faa993e8452037515114a31028aaa14bdc2742c980c3
+patches/0031-The-safety-pass-is-sound-its-assertions-imply-the-sa.patch fa099e15808ed326a64f478dc8bd18bc55b9fbd23b0cea50803299f7eff7ad66
+patches/0032-eclib-lemmas-for-the-safety-model.patch 28222f62991537bc433f6c2e0c5f22ad41fad47660ee716038f79297247a2aaf
+patches/0033-jasmin2ec-the-safety-model.patch 8c822d90c47e3fabf7d36a36303b25ae08a7cb717571ee4aa09674089ee1a2de
+patches/0034-armv8a-one-CSDB-for-a-run-of-protects.patch e1f135811304053e1c67bcd93038d83bfbdd7737c86b9d4c7fa8e28de2a3fc9b
+patches/0035-tests-expected-outputs-of-the-combined-series.patch 3f9cb7bc0f61ac1d626b79fcedc6e70f2ea3939decfb2c3c41c6f8b56431cf4e

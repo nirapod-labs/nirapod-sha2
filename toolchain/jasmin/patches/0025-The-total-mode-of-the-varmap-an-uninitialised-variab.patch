@@ -1,0 +1,148 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Benjamin Gregoire <Benjamin.Gregoire@inria.fr>
+Date: Wed, 23 Sep 2026 15:20:09 +0200
+Subject: [PATCH] The total mode of the varmap: an uninitialised variable reads
+ as a default
+
+Vm.get takes the SemMode: in the partial mode, the default instance, it is
+unchanged (get_raw, the raw entry of the table); in the total mode an
+undefined scalar reads as dfl_val of its type (false, 0, 0, the empty
+array). Vm.is_var_init observes the raw entry, independently of the mode,
+for Pis_var_init; Vm.is_var_initE relates it to the partial read. get_var
+takes the mode as well: in the total mode its definedness check always
+holds. The OCaml evaluator passes the partial mode to get_var.
+
+(cherry picked from commit 43ecaaf2ee28855099d02388c4b3b43a793bf7a1)
+---
+ compiler/src/evaluator.ml |  2 +-
+ proofs/lang/values.v      | 10 ++++++++++
+ proofs/lang/varmap.v      | 38 +++++++++++++++++++++++++++++++-------
+ 3 files changed, 42 insertions(+), 8 deletions(-)
+
+diff --git a/compiler/src/evaluator.ml b/compiler/src/evaluator.ml
+index 240bd5f..417dba3 100644
+--- a/compiler/src/evaluator.ml
++++ b/compiler/src/evaluator.ml
+@@ -74,7 +74,7 @@ let init_estate ep spp p ii fn scs0 m vargs =
+ 
+ let finalize_estate ep spp p ii f vargs (s: _ estate) =
+   let gd = p.p_globs in
+-  let vres = exn_exec ii (mapM (fun (x:var_i) -> get_var nosubword true s.evm x.v_var) f.f_res) in
++  let vres = exn_exec ii (mapM (fun (x:var_i) -> get_var nosubword Utils0.partial true s.evm x.v_var) f.f_res) in
+   let vres = exn_exec ii (mapM2 ErrType truncate_val (List.map Type.eval_atype f.f_tyout) vres) in
+   BatOption.may (fun fc -> exec_post ep spp ii fc gd s.escs s.emem vargs vres) f.f_contract;
+   s.escs, s.emem, vres
+diff --git a/proofs/lang/values.v b/proofs/lang/values.v
+index 739d60e..c6eabdb 100644
+--- a/proofs/lang/values.v
++++ b/proofs/lang/values.v
+@@ -88,6 +88,16 @@ Definition undef_addr t :=
+   | t0 => undef_v t0 erefl
+   end.
+ 
++(* The default value of a type: what an uninitialised variable reads as in
++   the [total] mode. *)
++Definition dfl_val (t : ctype) : value :=
++  match t with
++  | cbool => Vbool false
++  | cint => Vint 0
++  | cword ws => Vword (0%R : word ws)
++  | carr n => Varr (WArray.empty n)
++  end.
++
+ Definition values := seq value.
+ 
+ Definition is_defined v := if v is Vundef _ _ then false else true.
+diff --git a/proofs/lang/varmap.v b/proofs/lang/varmap.v
+index c39b85c..120fbe4 100644
+--- a/proofs/lang/varmap.v
++++ b/proofs/lang/varmap.v
+@@ -442,7 +442,13 @@ Module Type VM.
+ 
+   Parameter init : forall {wsw:WithSubWord}, t.
+ 
+-  Parameter get : forall {wsw:WithSubWord}, t -> var -> value.
++  (* The entry of the table, as it has been written. *)
++  Parameter get_raw : forall {wsw:WithSubWord}, t -> var -> value.
++
++  Parameter get : forall {wsw:WithSubWord} {sm : SemMode}, t -> var -> value.
++
++  (* Whether the variable holds a defined value, whatever the mode. *)
++  Parameter is_var_init : forall {wsw:WithSubWord}, t -> var -> bool.
+ 
+   Parameter set : forall {wsw:WithSubWord}, t -> var -> value -> t.
+ 
+@@ -452,6 +458,9 @@ Module Type VM.
+   Parameter getP : forall {wsw:WithSubWord} vm x,
+     compat_val (eval_atype (vtype x)) (get vm x).
+ 
++  Parameter is_var_initE : forall {wsw:WithSubWord} vm x,
++    is_var_init vm x = is_defined (get vm x).
++
+   Parameter setP : forall {wsw:WithSubWord} vm x v y,
+     get (set vm x v) y = if x == y then vm_truncate_val (eval_atype (vtype x)) v else get vm y.
+ 
+@@ -477,7 +486,16 @@ Module Vm : VM.
+ 
+   Definition init := {| prop := init_prop |}.
+ 
+-  Definition get (vm:t) (x:var) := odflt (undef_addr (eval_atype (vtype x))) (Mvar.get vm x).
++  Definition get_raw (vm : t) (x : var) : value :=
++    odflt (undef_addr (eval_atype (vtype x))) (Mvar.get vm x).
++
++  (* In the [total] mode an uninitialised scalar reads as the default value
++     of its type; the [partial] mode, the default instance, is unchanged. *)
++  Definition get {sm : SemMode} (vm : t) (x : var) : value :=
++    let v := get_raw vm x in
++    if is_total && ~~ is_defined v then dfl_val (eval_atype (vtype x)) else v.
++
++  Definition is_var_init (vm : t) (x : var) : bool := is_defined (get_raw vm x).
+ 
+   Lemma set_prop (vm:t) x v : wf (Mvar.set vm x (vm_truncate_val (eval_atype (vtype x)) v)).
+   Proof.
+@@ -492,11 +510,17 @@ Module Vm : VM.
+   Proof. done. Qed.
+ 
+   Lemma getP vm x : compat_val (eval_atype (vtype x)) (get vm x).
+-  Proof. rewrite /get; case h : Mvar.get => [ v | ] /=;[apply: prop h | apply compat_val_undef_addr]. Qed.
++  Proof.
++    rewrite /get /= /get_raw.
++    case h : Mvar.get => [ v | ] /=;[apply: prop h | apply compat_val_undef_addr].
++  Qed.
++
++  Lemma is_var_initE vm x : is_var_init vm x = is_defined (get vm x).
++  Proof. by []. Qed.
+ 
+   Lemma setP vm x v y :
+     get (set vm x v) y = if x == y then vm_truncate_val (eval_atype (vtype x)) v else get vm y.
+-  Proof. by rewrite /get /set Mvar.setP; case: eqP => [<- | hne]. Qed.
++  Proof. by rewrite /get /= /get_raw /set Mvar.setP; case: eqP => [<- | hne]. Qed.
+ 
+   Lemma setP_eq vm x v : get (set vm x v) x = vm_truncate_val (eval_atype (vtype x)) v.
+   Proof. by rewrite setP eqxx. Qed.
+@@ -510,7 +534,7 @@ End Vm.
+ 
+ Declare Scope vm_scope.
+ Delimit Scope vm_scope with vm.
+-Notation "vm .[ x ]" := (@Vm.get _ vm x) : vm_scope.
++Notation "vm .[ x ]" := (@Vm.get _ _ vm x) : vm_scope.
+ Notation "vm .[ x <- v ]" := (@Vm.set _ vm x v) : vm_scope.
+ Open Scope vm_scope.
+ 
+@@ -539,7 +563,7 @@ Definition set_var wdb vm x v :=
+   ok vm.[x <- v].
+ 
+ (* Ensure that the variable is defined *)
+-Definition get_var wdb vm x :=
++Definition get_var {sm : SemMode} wdb vm x :=
+   let v := vm.[x]%vm in
+   Let _ := assert (~~wdb || is_defined v) ErrAddrUndef in
+   ok v.
+@@ -1178,6 +1202,6 @@ End REL_EQUIV.
+ #[export] Existing Instance po_uincl_ex.
+ #[export] Existing Instance uincl_ex_trans.
+ 
+-#[ global ]Arguments get_var {wsw} wdb vm%_vm_scope x.
++#[ global ]Arguments get_var {wsw sm} wdb vm%_vm_scope x.
+ #[ global ]Arguments set_var {wsw} wdb vm%_vm_scope x v.
+ 

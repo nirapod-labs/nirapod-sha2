@@ -40,7 +40,8 @@ namespace A1 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     { requires = (64u) off <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
      , res = { out_out }
      , ensures = is_arr_init(out_out, 0, 32)
      }
@@ -74,7 +75,8 @@ namespace A1 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     { requires = (64u) off <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
      , res = { out_out }
      , ensures = is_arr_init(out_out, 0, 64)
      }
@@ -108,7 +110,8 @@ namespace A1 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient × transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + 7 * (64u) stride + (64u) len <= _ASIZE
+     { requires = (64u) off <= _ASIZE && (64u) stride <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + 7 * (64u) stride + (64u) len <= _ASIZE
          && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
@@ -151,7 +154,8 @@ namespace A1 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient × transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + 3 * (64u) stride + (64u) len <= _ASIZE
+     { requires = (64u) off <= _ASIZE && (64u) stride <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + 3 * (64u) stride + (64u) len <= _ASIZE
          && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
@@ -198,7 +202,8 @@ namespace A64 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     { requires = (64u) off <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
      , res = { out_out }
      , ensures = is_arr_init(out_out, 0, 32)
      }
@@ -232,7 +237,8 @@ namespace A64 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     { requires = (64u) off <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
      , res = { out_out }
      , ensures = is_arr_init(out_out, 0, 64)
      }
@@ -266,7 +272,8 @@ namespace A64 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient × transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + 7 * (64u) stride + (64u) len <= _ASIZE
+     { requires = (64u) off <= _ASIZE && (64u) stride <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + 7 * (64u) stride + (64u) len <= _ASIZE
          && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
@@ -309,7 +316,8 @@ namespace A64 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient × transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + 3 * (64u) stride + (64u) len <= _ASIZE
+     { requires = (64u) off <= _ASIZE && (64u) stride <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + 3 * (64u) stride + (64u) len <= _ASIZE
          && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
@@ -356,7 +364,8 @@ namespace A128 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     { requires = (64u) off <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
      , res = { out_out }
      , ensures = is_arr_init(out_out, 0, 32)
      }
@@ -390,7 +399,8 @@ namespace A128 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     { requires = (64u) off <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
      , res = { out_out }
      , ensures = is_arr_init(out_out, 0, 64)
      }
@@ -424,7 +434,8 @@ namespace A128 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient × transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + 7 * (64u) stride + (64u) len <= _ASIZE
+     { requires = (64u) off <= _ASIZE && (64u) stride <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + 7 * (64u) stride + (64u) len <= _ASIZE
          && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
@@ -467,7 +478,8 @@ namespace A128 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient × transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + 3 * (64u) stride + (64u) len <= _ASIZE
+     { requires = (64u) off <= _ASIZE && (64u) stride <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + 3 * (64u) stride + (64u) len <= _ASIZE
          && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
@@ -514,7 +526,8 @@ namespace A333 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     { requires = (64u) off <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
      , res = { out_out }
      , ensures = is_arr_init(out_out, 0, 32)
      }
@@ -548,7 +561,8 @@ namespace A333 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
+     { requires = (64u) off <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + (64u) len <= _ASIZE && is_arr_init(a, (64u) off, (64u) len)
      , res = { out_out }
      , ensures = is_arr_init(out_out, 0, 64)
      }
@@ -582,7 +596,8 @@ namespace A333 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient × transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + 7 * (64u) stride + (64u) len <= _ASIZE
+     { requires = (64u) off <= _ASIZE && (64u) stride <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + 7 * (64u) stride + (64u) len <= _ASIZE
          && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)
@@ -625,7 +640,8 @@ namespace A333 {
   #[sct = "{ ptr: transient, val: secret } × { ptr: transient, val: secret } × transient ×
            transient × transient → { ptr: transient, val: secret }"]
   #[safety =
-     { requires = (64u) off + 3 * (64u) stride + (64u) len <= _ASIZE
+     { requires = (64u) off <= _ASIZE && (64u) stride <= _ASIZE && (64u) len <= _ASIZE
+         && (64u) off + 3 * (64u) stride + (64u) len <= _ASIZE
          && is_arr_init(a, (64u) off + 0 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 1 * (64u) stride, (64u) len)
          && is_arr_init(a, (64u) off + 2 * (64u) stride, (64u) len)

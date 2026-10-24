@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# .github/CODEOWNERS
+# ==================
+#
+# Review ownership by area. The first owner named maintains the area; the
+# others review it. Every change is approved by a maintainer other than its
+# author, which is why each area names more than one.
+
+*                @hm-yousuf @rifatweb3
+
+/src/            @hm-yousuf @rifatweb3
+/capi/           @hm-yousuf @rifatweb3
+/include/        @hm-yousuf @rifatweb3
+/tests/          @hm-yousuf @rifatweb3
+/bench/          @hm-yousuf @rifatweb3
+/ci/             @hm-yousuf @rifatweb3
+/toolchain/      @hm-yousuf @rifatweb3
+/Makefile        @hm-yousuf @rifatweb3
+/.github/        @hm-yousuf @rifatweb3
+
+/proofs/         @rifatweb3 @hm-yousuf
+/third_party/    @rifatweb3 @hm-yousuf
