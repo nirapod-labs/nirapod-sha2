@@ -17,6 +17,7 @@ patches-simd/0003-armv8a-add-Advanced-SIMD-permutations-and-element-mo.patch 0d8
 patches-simd/0004-armv8a-add-the-SHA-256-and-SHA-512-instructions.patch 02a6b6b844c362860752a8c8a8492a725a223d0e48671f3ae1559d04f2c9f685
 patches-simd/0005-armv8a-add-the-SHA-3-instructions.patch 5936f1fac7fd75620da44a1e06ae88006228267d7b62a71fd04ae7364ad9e44e
 patches-simd/0006-armv8a-changelog-entries-for-the-vector-registers-an.patch 07a9a4a7788d5c314ba41a01db64b598650e749bfb9d95981288cbe61f8c702c
+patches-simd/0007-armv8a-add-the-bitwise-selections-BSL-and-BIT.patch 9023eed6405cc479613bc08a30b47e4a1cf4c8dce78d3a9bcf6535e359d9fd5d
 patches/0001-armv8a-print-Mach-O-relocation-operators-on-macOS.patch 6d09ffefee8b37187cb690852756d5b99abfb0e79eb5af489f83e99e165f2c36
 patches/0002-armv8a-changelog-entry-for-the-Mach-O-relocation-fix.patch f5114b6934328a9bb02307c1adfccb44bb04d4dc811efeb71e8f11506fe0bdcd
 patches/0003-safetylib-make-the-CallTopHeuristic-call-policy-usab.patch 1cc97da02ba82b9f1e4166c313d652883c8fb7a784bed5f38cd1faca98bc8f9c

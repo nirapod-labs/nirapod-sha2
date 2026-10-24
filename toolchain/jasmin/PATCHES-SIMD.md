@@ -15,14 +15,18 @@ fill them in for AArch64 and add the instructions.
 
 ## Series
 
-The six patches are the last six commits of jasmin-lang/jasmin pull request
-#1643, at its head `06eae3de97487e0ac8bd4e0847dddaa7c9ac5d44`, which is
-based on upstream `main` at `b1a56f315`, rebased on the pin. The pull
-request is open, not merged (head checked on 2026-10-23). Its first commit,
-"Do not assume that system calls preserve the vector registers", was merged
-upstream separately as #1640 (`b413b9b`) and is in the pin; so are the
-shared BIC recogniser of #1633 and the save-slot test of #1639, which the
-series builds on.
+Patches 0001 to 0006 are the last six commits of jasmin-lang/jasmin pull
+request #1643, at its head `06eae3de97487e0ac8bd4e0847dddaa7c9ac5d44`,
+which is based on upstream `main` at `b1a56f315`, rebased on the pin. The
+pull request is open, not merged (head checked on 2026-10-23). Its first
+commit, "Do not assume that system calls preserve the vector registers",
+was merged upstream separately as #1640 (`b413b9b`) and is in the pin; so
+are the shared BIC recogniser of #1633 and the save-slot test of #1639,
+which the series builds on.
+
+Patch 0007 is this project's. It comes after the pull request's commits,
+is written in the same form, and is meant to be proposed as an addition
+to it; it has not been proposed yet.
 
 | Patch | Content | Proof status |
 |---|---|---|
@@ -32,6 +36,7 @@ series builds on.
 | 0004 | SHA256H, SHA256H2, SHA256SU0, SHA256SU1, SHA512H, SHA512H2, SHA512SU0, SHA512SU1; lemmas relating them to FIPS 180-4; a known-answer test | instruction semantics trusted; the FIPS 180-4 lemmas are proved about those semantics |
 | 0005 | EOR3, BCAX, RAX1, XAR; a lemma relating XAR to the ρ rotation of FIPS 202 | instruction semantics trusted; the lemma is proved about the semantics |
 | 0006 | changelog entries | none |
+| 0007 | BSL and BIT (bitwise select, insert if true), as intrinsics; lemmas that they select bits and that they compute Ch and Maj | instruction semantics trusted; the lemmas are proved about the semantics |
 
 Intrinsic names: the bitwise instructions, moves and Q-register loads and
 stores are `V` followed by the mnemonic, with no suffix (`#VEOR`, `#VLDR`);
@@ -146,7 +151,7 @@ Trusted, as for every instruction of the target:
   and macOS).
 
 Proved about the semantics, in `proofs/compiler/armv8a_simd_lemmas.v`: a
-file outside the compiler, which nothing extracted depends on. Its 27
+file outside the compiler, which nothing extracted depends on. Its 31
 lemmas are each closed under the global context (`Print Assumptions`). They
 state that the elements of a packed vector are the packed words; that the
 SHA-2 functions of the Arm pseudocode are those of FIPS 180-4; that SHA256H
@@ -155,7 +160,10 @@ SHA256SU0 followed by SHA256SU1 computes four message-schedule words (step
 1); that SHA512H, SHA512H2 and an element-wise addition perform two SHA-512
 rounds and SHA512SU0 followed by SHA512SU1 computes two message-schedule
 words (6.4.2); and that XAR by 64 - r rotates each 64-bit element left by r
-(the ρ step of Keccak-f[1600], FIPS 202, 3.2.2; XAR by 0 when r is 0). The
+(the ρ step of Keccak-f[1600], FIPS 202, 3.2.2; XAR by 0 when r is 0);
+and that BSL and BIT select bits, BIT(g, f, e) computing the Ch(e, f, g)
+and BSL(b XOR c, a, b) the Maj(a, b, c) of FIPS 180-4 (4.1.2, 4.1.3) on
+the whole register, hence in every element. The
 SHA-2 statements are made both about the helper functions and about the
 `id_semi` of the instruction descriptions, so the role of each operand is
 part of what is proved. The SHA-512 pair packs the state as `[a; b]`,
@@ -230,7 +238,12 @@ In the Jasmin tree:
   element moves must give the values of `exec_armv8a.expected`;
 - 0005: `success/armv8a/simd_sha3.jazz`, `fail/asmgen/armv8a/xar_rotation_range.jazz`,
   and the SHA-3 instructions of `simd_exec.jazz` in the same
-  evaluation.
+  evaluation;
+- 0007: BSL and BIT in `success/armv8a/simd_ops.jazz`, and
+  `bitsel_ops` of `simd_exec.jazz` in the same evaluation, on inputs in
+  which every combination of three bits occurs; its expected values were
+  produced by the two instructions on an Apple M4, not by the semantics
+  under test.
 
 `toolchain/build.sh test` runs the negative suite, which checks that the
 fail tests are rejected as `negative.expected` records, and the evaluation
@@ -279,4 +292,6 @@ of this repository:
 
 These runs used upstream `main` at `b1a56f315` with the seven commits of
 the pull request, not this pin, and have not been repeated on it; on this
-pin the patches differ by the adaptations above.
+pin the patches differ by the adaptations above. They do not cover 0007,
+whose instruction semantics and EasyCrypt operators are trusted in the
+same way.
