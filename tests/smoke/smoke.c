@@ -716,19 +716,26 @@ static void test_misuse(void)
 #ifdef SMOKE_TESTING
 /*
  * The dispatch rule (capi/dispatch.c) for feature sets other than the
- * host's: today's default dispatch (gated) is the portable kernel on any
- * CPU; the target selection (ungated) follows the table there.
+ * host's. Every candidate there is admitted, so the default dispatch
+ * (gated) is the target selection (ungated) on every set of the nine
+ * feature bits in use; the target follows the table there.
  */
 static void test_dispatch(void)
 {
     const char *kn = "dispatch";
-    unsigned all = ~0u;
+    unsigned s;
     int f;
 
     for (f = 0; f < 4; f++) {
-        check(nirapod_sha2_testing_select_for((nirapod_sha2_testing_family)f, all, 1) ==
-              NIRAPOD_SHA2_TESTING_PORTABLE, "default dispatch is portable", kn);
-        check(nirapod_sha2_testing_select_for((nirapod_sha2_testing_family)f, 0, 0) ==
+        nirapod_sha2_testing_family fam = (nirapod_sha2_testing_family)f;
+        int same = 1;
+
+        for (s = 0; s < 0x200u; s++) {
+            same &= nirapod_sha2_testing_select_for(fam, s, 1) ==
+                    nirapod_sha2_testing_select_for(fam, s, 0);
+        }
+        check(same, "default dispatch is the target selection", kn);
+        check(nirapod_sha2_testing_select_for(fam, 0, 0) ==
               NIRAPOD_SHA2_TESTING_PORTABLE, "no features: portable", kn);
     }
 #if defined(__aarch64__)

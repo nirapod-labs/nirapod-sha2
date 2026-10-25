@@ -207,14 +207,13 @@ unsigned nirapod_sha2_features_cache = 0;
  * selectable through the testing library only.
  *
  * A unit enters the default dispatch only when all its checks have passed:
- * a correctness proof of its kernel against FIPS 180-4, a safety-checker
- * verdict, the constant-time and speculative constant-time checks, and
- * native tests. admitted marks the candidates that have. The portable unit
- * is admitted on other grounds: it is the fallback every CPU needs, and its
- * checks are still open, as the others' are. Today it is the only admitted
- * unit, so the public functions run the portable kernels on every CPU and
- * read no CPU features. Admitting a unit is a change of one admitted flag
- * below, made with the evidence for it.
+ * a correctness proof of its kernels against FIPS 180-4, a proof of the
+ * safety contracts of its code, the constant-time and speculative
+ * constant-time checks, and native tests. admitted marks the candidates
+ * that have. Every unit in the lists below has passed them, so every
+ * candidate is admitted. A kernel added later enters a list with admitted
+ * 0 and is selectable through the testing library until its own checks
+ * pass.
  *
  * The candidates hold the units' addresses, not their indices: the usual
  * call then needs no bounds check and no call into units.c, and it walks
@@ -234,17 +233,17 @@ typedef struct candidate {
 
 #if defined(__aarch64__)
 static const candidate candidates[NIRAPOD_SHA2_FAMILIES][3] = {
-    /* SHA256 */ { { &nirapod_sha2_units[2], 0 }, PORTABLE, PORTABLE },
-    /* SHA512 */ { { &nirapod_sha2_units[2], 0 }, PORTABLE, PORTABLE },
-    /* X8     */ { { &nirapod_sha2_units[2], 0 }, PORTABLE, PORTABLE },
-    /* X4     */ { { &nirapod_sha2_units[2], 0 }, PORTABLE, PORTABLE },
+    /* SHA256 */ { UNIT(2), PORTABLE, PORTABLE },
+    /* SHA512 */ { UNIT(2), PORTABLE, PORTABLE },
+    /* X8     */ { UNIT(2), PORTABLE, PORTABLE },
+    /* X4     */ { UNIT(2), PORTABLE, PORTABLE },
 };
 #elif defined(__x86_64__)
 static const candidate candidates[NIRAPOD_SHA2_FAMILIES][3] = {
-    /* SHA256 */ { { &nirapod_sha2_units[1], 0 }, { &nirapod_sha2_units[2], 0 }, PORTABLE },
-    /* SHA512 */ { { &nirapod_sha2_units[2], 0 }, PORTABLE, PORTABLE },
-    /* X8     */ { { &nirapod_sha2_units[1], 0 }, { &nirapod_sha2_units[2], 0 }, PORTABLE },
-    /* X4     */ { { &nirapod_sha2_units[2], 0 }, PORTABLE, PORTABLE },
+    /* SHA256 */ { UNIT(1), UNIT(2), PORTABLE },
+    /* SHA512 */ { UNIT(2), PORTABLE, PORTABLE },
+    /* X8     */ { UNIT(1), UNIT(2), PORTABLE },
+    /* X4     */ { UNIT(2), PORTABLE, PORTABLE },
 };
 #endif
 
