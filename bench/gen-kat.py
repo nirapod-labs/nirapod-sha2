@@ -67,9 +67,11 @@ def c_array(name, data):
 
 def main():
     out = []
+    # REUSE-IgnoreStart
     out.append("/*")
     out.append(" * SPDX-FileCopyrightText: nirapod-sha2 contributors")
     out.append(" * SPDX-License-Identifier: Apache-2.0")
+    # REUSE-IgnoreEnd
     out.append(" *")
     out.append(" * bench_kat.c")
     out.append(" * ===========")

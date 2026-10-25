@@ -418,6 +418,7 @@ THEOREMS_aarch64-portable += $(THEOREMS_ARRAY)
 inventory_file = inventory/$(call unit_arch,$(1))/$(call unit_variant,$(1))/inventory.txt
 
 # The inventory of a unit with no claimed theorem, $(1) its <arch>/<variant>.
+# REUSE-IgnoreStart
 empty_inventory = printf '%s\n' \
   '\# SPDX-FileCopyrightText: nirapod-sha2 contributors' \
   '\# SPDX-License-Identifier: Apache-2.0' \
@@ -431,6 +432,7 @@ empty_inventory = printf '%s\n' \
   '\# Regenerate: make -C proofs inventory   (check: make -C proofs check-inventory)' \
   '' \
   'theorems 0'
+# REUSE-IgnoreEnd
 
 .PHONY: inventory check-inventory check-inventory-files inventory-unit
 inventory:

@@ -36,3 +36,10 @@ SPDX-License-Identifier = "Apache-2.0"
 path = ["proofs/extracted/**"]
 SPDX-FileCopyrightText = "nirapod-sha2 contributors"
 SPDX-License-Identifier = "Apache-2.0"
+
+# The digest manifest tests/xarch writes, which cannot carry a comment of
+# its own.
+[[annotations]]
+path = "tests/vectors/xarch/manifest.txt"
+SPDX-FileCopyrightText = "nirapod-sha2 contributors"
+SPDX-License-Identifier = "Apache-2.0"
