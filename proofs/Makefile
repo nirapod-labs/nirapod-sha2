@@ -304,12 +304,116 @@ compile-files:
 # hand-written theories. The committed file is the reviewed list;
 # check-inventory regenerates it and fails on any difference.
 #
-# No theorem is claimed for any unit yet: the proofs carried into this tree
-# are claimed again as they check on the current source. A unit with no
-# claimed theorem has a fixed inventory that says so, and EasyCrypt is not
-# run for it.
+# Every unit claims the theorems of correctness/Theorems.ec outside its
+# abstract ArrayTheorems theory: the representation equations and the total
+# correctness theorem of every layer and export. The two portable units also
+# claim the array-form theorems of their four checked sizes
+# (units/<unit>/ArrayInst.ec). A unit with no claimed theorem would have a
+# fixed inventory that says so.
 
-$(foreach u,$(ALL_UNITS),$(eval THEOREMS_$(u) ?=))
+THEOREMS_COMMON := \
+  Theorems.words256E Theorems.words512E Theorems.sha256_stateE \
+  Theorems.sha512_stateE Theorems.sha256_compress_total \
+  Theorems.sha256_compress_blocks_total Theorems.sha512_compress_total \
+  Theorems.sha512_compress_blocks_total Theorems.sha256_absorb_mem_total \
+  Theorems.sha256_init_total Theorems.sha224_init_total \
+  Theorems.sha512_init_total Theorems.sha384_init_total \
+  Theorems.sha512_224_init_total Theorems.sha512_256_init_total \
+  Theorems.sha256_finalize_total Theorems.sha224_finalize_total \
+  Theorems.sha512_absorb_mem_total Theorems.sha512_finalize_total \
+  Theorems.sha384_finalize_total Theorems.sha512_224_finalize_total \
+  Theorems.sha512_256_finalize_total Theorems.sha256_mem_from_total \
+  Theorems.sha224_mem_from_total Theorems.sha512_mem_from_total \
+  Theorems.sha384_mem_from_total Theorems.sha512_224_mem_from_total \
+  Theorems.sha512_256_mem_from_total Theorems.sha256_mem_total \
+  Theorems.sha224_mem_total Theorems.sha512_mem_total \
+  Theorems.sha384_mem_total Theorems.sha512_224_mem_total \
+  Theorems.sha512_256_mem_total Theorems.hmac_sha256_keyblock_total \
+  Theorems.hmac_sha512_keyblock_total Theorems.hmac_sha256_mem_total \
+  Theorems.hmac_sha512_mem_total Theorems.sha256_ctxE Theorems.sha512_ctxE \
+  Theorems.hmac256_ctxE Theorems.hmac512_ctxE Theorems.hmac256_tagE \
+  Theorems.hmac512_tagE Theorems.sha256_ctx_init_total \
+  Theorems.sha256_ctx_update_total Theorems.sha224_ctx_final_total \
+  Theorems.sha256_ctx_final_total Theorems.sha512_ctx_init_total \
+  Theorems.sha512_ctx_update_total Theorems.sha512_ctx_final_total \
+  Theorems.sha384_ctx_final_total Theorems.sha512_224_ctx_final_total \
+  Theorems.sha512_256_ctx_final_total Theorems.hmac_sha256_ctx_init_total \
+  Theorems.hmac_sha256_ctx_final_total Theorems.hmac_sha512_ctx_init_total \
+  Theorems.hmac_sha512_ctx_final_total Theorems.lane256E Theorems.lane512E \
+  Theorems.sha256_x8_stateE Theorems.sha512_x4_stateE \
+  Theorems.sha256_x8_ctxE Theorems.sha512_x4_ctxE Theorems.sha2_tagE \
+  Theorems.tag2E Theorems.tag9E Theorems.tag4E Theorems.tag10E \
+  Theorems.sha256_x8_init_total Theorems.sha256_x8_from_total \
+  Theorems.sha256_x8_absorb_total Theorems.sha256_x8_finalize_total \
+  Theorems.sha256_x8_lanes_total Theorems.sha256_x8_ctx_init_total \
+  Theorems.sha256_x8_ctx_from_total Theorems.sha256_x8_ctx_update_total \
+  Theorems.sha256_x8_ctx_final_total Theorems.sha512_x4_init_total \
+  Theorems.sha512_x4_from_total Theorems.sha512_x4_absorb_total \
+  Theorems.sha512_x4_finalize_total Theorems.sha512_x4_lanes_total \
+  Theorems.sha512_x4_ctx_init_total Theorems.sha512_x4_ctx_from_total \
+  Theorems.sha512_x4_ctx_update_total Theorems.sha512_x4_ctx_final_total \
+  Theorems.sha224_export_total Theorems.sha256_export_total \
+  Theorems.sha384_export_total Theorems.sha512_export_total \
+  Theorems.sha512_224_export_total Theorems.sha512_256_export_total \
+  Theorems.sha224_init_export_total Theorems.sha224_update_export_total \
+  Theorems.sha224_final_export_total Theorems.sha256_init_export_total \
+  Theorems.sha256_update_export_total Theorems.sha256_final_export_total \
+  Theorems.sha384_init_export_total Theorems.sha384_update_export_total \
+  Theorems.sha384_final_export_total Theorems.sha512_init_export_total \
+  Theorems.sha512_update_export_total Theorems.sha512_final_export_total \
+  Theorems.sha512_224_init_export_total \
+  Theorems.sha512_224_update_export_total \
+  Theorems.sha512_224_final_export_total \
+  Theorems.sha512_256_init_export_total \
+  Theorems.sha512_256_update_export_total \
+  Theorems.sha512_256_final_export_total Theorems.hmac_sha256_export_total \
+  Theorems.hmac_sha256_init_export_total \
+  Theorems.hmac_sha256_update_export_total \
+  Theorems.hmac_sha256_final_export_total Theorems.hmac_sha512_export_total \
+  Theorems.hmac_sha512_init_export_total \
+  Theorems.hmac_sha512_update_export_total \
+  Theorems.hmac_sha512_final_export_total Theorems.sha256_x8_export_total \
+  Theorems.sha256_x8_init_export_total \
+  Theorems.sha256_x8_init_from_export_total \
+  Theorems.sha256_x8_update_export_total \
+  Theorems.sha256_x8_final_export_total Theorems.sha512_x4_export_total \
+  Theorems.sha512_x4_init_export_total \
+  Theorems.sha512_x4_init_from_export_total \
+  Theorems.sha512_x4_update_export_total \
+  Theorems.sha512_x4_final_export_total
+
+THEOREMS_ARRAY := \
+  ArrayInst.a1_fill64_array_total ArrayInst.a1_fill128_array_total \
+  ArrayInst.a1_sha256_absorb_array_total \
+  ArrayInst.a1_sha512_absorb_array_total \
+  ArrayInst.a1_sha256_x8_absorb_array_total \
+  ArrayInst.a1_sha512_x4_absorb_array_total ArrayInst.a1_sha256_total \
+  ArrayInst.a1_sha512_total ArrayInst.a1_sha256_x8_total \
+  ArrayInst.a1_sha512_x4_total ArrayInst.a64_fill64_array_total \
+  ArrayInst.a64_fill128_array_total ArrayInst.a64_sha256_absorb_array_total \
+  ArrayInst.a64_sha512_absorb_array_total \
+  ArrayInst.a64_sha256_x8_absorb_array_total \
+  ArrayInst.a64_sha512_x4_absorb_array_total ArrayInst.a64_sha256_total \
+  ArrayInst.a64_sha512_total ArrayInst.a64_sha256_x8_total \
+  ArrayInst.a64_sha512_x4_total ArrayInst.a128_fill64_array_total \
+  ArrayInst.a128_fill128_array_total \
+  ArrayInst.a128_sha256_absorb_array_total \
+  ArrayInst.a128_sha512_absorb_array_total \
+  ArrayInst.a128_sha256_x8_absorb_array_total \
+  ArrayInst.a128_sha512_x4_absorb_array_total ArrayInst.a128_sha256_total \
+  ArrayInst.a128_sha512_total ArrayInst.a128_sha256_x8_total \
+  ArrayInst.a128_sha512_x4_total ArrayInst.a333_fill64_array_total \
+  ArrayInst.a333_fill128_array_total \
+  ArrayInst.a333_sha256_absorb_array_total \
+  ArrayInst.a333_sha512_absorb_array_total \
+  ArrayInst.a333_sha256_x8_absorb_array_total \
+  ArrayInst.a333_sha512_x4_absorb_array_total ArrayInst.a333_sha256_total \
+  ArrayInst.a333_sha512_total ArrayInst.a333_sha256_x8_total \
+  ArrayInst.a333_sha512_x4_total
+
+$(foreach u,$(ALL_UNITS),$(eval THEOREMS_$(u) ?= $(THEOREMS_COMMON)))
+THEOREMS_x86_64-portable  += $(THEOREMS_ARRAY)
+THEOREMS_aarch64-portable += $(THEOREMS_ARRAY)
 
 inventory_file = inventory/$(call unit_arch,$(1))/$(call unit_variant,$(1))/inventory.txt
 
