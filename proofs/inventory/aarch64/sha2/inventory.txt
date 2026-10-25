@@ -3,10 +3,3037 @@
 #
 # GENERATED FILE. DO NOT EDIT.
 #
-# Inventory of the aarch64/sha2 proofs. No theorem is claimed for this unit, so
-# no axiom, theorem statement or definition is listed.
+# Axioms in scope of the aarch64/sha2 proofs, the statements of the claimed
+# theorems, and the definitions of the hand-written theories, as the
+# pinned EasyCrypt prints them after requiring every theory checked for
+# this pair. One axiom per line: theory, name, first 16 hex digits of the
+# SHA-256 of its statement; one definition per line: qualified name,
+# kind, the same digest of its printed definition.
 #
-# Generator: proofs/Makefile, target inventory
+# Generator: proofs/tools/inventory.py
 # Regenerate: make -C proofs inventory   (check: make -C proofs check-inventory)
 
-theorems 0
+axioms 848
+
+AlgTactic.Requires Cn_eq0 bdecb18de0dc9f6d
+AlgTactic.Requires Cp_idp 80a851cbf22ee9d6
+AlgTactic.Requires addr0 9c5f7f00ee22bda6
+AlgTactic.Requires addrA 024efa5f56c42e83
+AlgTactic.Requires addrC 1c1ee12b406c7dcb
+AlgTactic.Requires addrK 8165d99e0fd9d76f
+AlgTactic.Requires addrN 84f783bcd40f28f0
+AlgTactic.Requires divrE 9b66af7c9b94063d
+AlgTactic.Requires expr0 941269591e2dd516
+AlgTactic.Requires exprN d44cea1bf33c5112
+AlgTactic.Requires exprS 8a06c4a402849a40
+AlgTactic.Requires mulr1 64541b94acddb019
+AlgTactic.Requires mulrA 98d03c877ec1ce5d
+AlgTactic.Requires mulrC 8cee11a92c92f2e0
+AlgTactic.Requires mulrDl c023b27e36e5bd0a
+AlgTactic.Requires mulrK 1e6a2ce5fbad2146
+AlgTactic.Requires mulrV 8790265ea26e8c29
+AlgTactic.Requires ofint0 b03224615fa4e5e7
+AlgTactic.Requires ofint1 c814767a16ee6175
+AlgTactic.Requires ofintN 88806a079da33dc4
+AlgTactic.Requires ofintS d0777023779f970d
+AlgTactic.Requires oner_neq0 9fe0aa7626f8e188
+AlgTactic.Requires oppr_id 616c50179382a318
+AlgTactic.Requires subrE d46c4d8f5f87eae2
+BArray112 ext_eq 95c54b72b15dda55
+BArray112 fillE d05dde13ca0398c1
+BArray112 get128dE ef77bcda55667b84
+BArray112 get16dE 66f3cdb7b7936085
+BArray112 get256dE ad640000e7b8b40a
+BArray112 get32dE 306057a4c2c6ba52
+BArray112 get64dE 0a3e36287b12864e
+BArray112 get_out 246ee4ba673bf454
+BArray112 initE a74934c56351400d
+BArray112 map2E cb78c2b4e820bd7b
+BArray112 mapE 3dbf697d25899328
+BArray112 of_listE 8ad4a902543a34dd
+BArray112 set128dE aad04fc145b52320
+BArray112 set16dE 93acb400e3f9c3b2
+BArray112 set256dE ea8539b328f82673
+BArray112 set32dE 093dc773f8115473
+BArray112 set64dE 72a1328a91ce659e
+BArray112 setE 4e0a335b0af4daa4
+BArray112 to_listE 064455ad8264c07a
+BArray128 ext_eq 8da5701f83273c19
+BArray128 fillE d05dde13ca0398c1
+BArray128 get128dE ef77bcda55667b84
+BArray128 get16dE 66f3cdb7b7936085
+BArray128 get256dE ad640000e7b8b40a
+BArray128 get32dE 306057a4c2c6ba52
+BArray128 get64dE 0a3e36287b12864e
+BArray128 get_out 45b489dd0156b47d
+BArray128 initE 3ace537c987504db
+BArray128 map2E cb78c2b4e820bd7b
+BArray128 mapE 3dbf697d25899328
+BArray128 of_listE 8ad4a902543a34dd
+BArray128 set128dE aad04fc145b52320
+BArray128 set16dE 93acb400e3f9c3b2
+BArray128 set256dE ea8539b328f82673
+BArray128 set32dE 093dc773f8115473
+BArray128 set64dE 72a1328a91ce659e
+BArray128 setE 4e0a335b0af4daa4
+BArray128 to_listE 9b581d158e912280
+BArray144 ext_eq 1e65040584849ddc
+BArray144 fillE d05dde13ca0398c1
+BArray144 get128dE ef77bcda55667b84
+BArray144 get16dE 66f3cdb7b7936085
+BArray144 get256dE ad640000e7b8b40a
+BArray144 get32dE 306057a4c2c6ba52
+BArray144 get64dE 0a3e36287b12864e
+BArray144 get_out 8b8183ff93a080b2
+BArray144 initE 904879f25d623aee
+BArray144 map2E cb78c2b4e820bd7b
+BArray144 mapE 3dbf697d25899328
+BArray144 of_listE 8ad4a902543a34dd
+BArray144 set128dE aad04fc145b52320
+BArray144 set16dE 93acb400e3f9c3b2
+BArray144 set256dE ea8539b328f82673
+BArray144 set32dE 093dc773f8115473
+BArray144 set64dE 72a1328a91ce659e
+BArray144 setE 4e0a335b0af4daa4
+BArray144 to_listE 9a8f4b27134073b7
+BArray16 ext_eq 89120544800bfc2b
+BArray16 fillE d05dde13ca0398c1
+BArray16 get128dE ef77bcda55667b84
+BArray16 get16dE 66f3cdb7b7936085
+BArray16 get256dE ad640000e7b8b40a
+BArray16 get32dE 306057a4c2c6ba52
+BArray16 get64dE 0a3e36287b12864e
+BArray16 get_out cf4a8fb2718e40bf
+BArray16 initE fd8b2d3d46bbf924
+BArray16 map2E cb78c2b4e820bd7b
+BArray16 mapE 3dbf697d25899328
+BArray16 of_listE 8ad4a902543a34dd
+BArray16 set128dE aad04fc145b52320
+BArray16 set16dE 93acb400e3f9c3b2
+BArray16 set256dE ea8539b328f82673
+BArray16 set32dE 093dc773f8115473
+BArray16 set64dE 72a1328a91ce659e
+BArray16 setE 4e0a335b0af4daa4
+BArray16 to_listE 3e3d3c202dfd9db5
+BArray160 ext_eq a304c2f435c4577d
+BArray160 fillE d05dde13ca0398c1
+BArray160 get128dE ef77bcda55667b84
+BArray160 get16dE 66f3cdb7b7936085
+BArray160 get256dE ad640000e7b8b40a
+BArray160 get32dE 306057a4c2c6ba52
+BArray160 get64dE 0a3e36287b12864e
+BArray160 get_out 7555d6a816a91f29
+BArray160 initE 8a46bfd2fb3b6551
+BArray160 map2E cb78c2b4e820bd7b
+BArray160 mapE 3dbf697d25899328
+BArray160 of_listE 8ad4a902543a34dd
+BArray160 set128dE aad04fc145b52320
+BArray160 set16dE 93acb400e3f9c3b2
+BArray160 set256dE ea8539b328f82673
+BArray160 set32dE 093dc773f8115473
+BArray160 set64dE 72a1328a91ce659e
+BArray160 setE 4e0a335b0af4daa4
+BArray160 to_listE aeffa8aeca848bde
+BArray208 ext_eq 79bc2166bb4dfe21
+BArray208 fillE d05dde13ca0398c1
+BArray208 get128dE ef77bcda55667b84
+BArray208 get16dE 66f3cdb7b7936085
+BArray208 get256dE ad640000e7b8b40a
+BArray208 get32dE 306057a4c2c6ba52
+BArray208 get64dE 0a3e36287b12864e
+BArray208 get_out 0ef0750ffd62fd02
+BArray208 initE 010b828b29dc1bb0
+BArray208 map2E cb78c2b4e820bd7b
+BArray208 mapE 3dbf697d25899328
+BArray208 of_listE 8ad4a902543a34dd
+BArray208 set128dE aad04fc145b52320
+BArray208 set16dE 93acb400e3f9c3b2
+BArray208 set256dE ea8539b328f82673
+BArray208 set32dE 093dc773f8115473
+BArray208 set64dE 72a1328a91ce659e
+BArray208 setE 4e0a335b0af4daa4
+BArray208 to_listE b91e8771cf1dde04
+BArray256 ext_eq 2c96922ddf1df059
+BArray256 fillE d05dde13ca0398c1
+BArray256 get128dE ef77bcda55667b84
+BArray256 get16dE 66f3cdb7b7936085
+BArray256 get256dE ad640000e7b8b40a
+BArray256 get32dE 306057a4c2c6ba52
+BArray256 get64dE 0a3e36287b12864e
+BArray256 get_out 21a3ec3bc40120c1
+BArray256 initE 758b1b36f51676cd
+BArray256 map2E cb78c2b4e820bd7b
+BArray256 mapE 3dbf697d25899328
+BArray256 of_listE 8ad4a902543a34dd
+BArray256 set128dE aad04fc145b52320
+BArray256 set16dE 93acb400e3f9c3b2
+BArray256 set256dE ea8539b328f82673
+BArray256 set32dE 093dc773f8115473
+BArray256 set64dE 72a1328a91ce659e
+BArray256 setE 4e0a335b0af4daa4
+BArray256 to_listE 7170dd64afb01ac6
+BArray272 ext_eq 0f203a36539704b0
+BArray272 fillE d05dde13ca0398c1
+BArray272 get128dE ef77bcda55667b84
+BArray272 get16dE 66f3cdb7b7936085
+BArray272 get256dE ad640000e7b8b40a
+BArray272 get32dE 306057a4c2c6ba52
+BArray272 get64dE 0a3e36287b12864e
+BArray272 get_out d2ec5e34d3ee3312
+BArray272 initE d930f5c3746f601c
+BArray272 map2E cb78c2b4e820bd7b
+BArray272 mapE 3dbf697d25899328
+BArray272 of_listE 8ad4a902543a34dd
+BArray272 set128dE aad04fc145b52320
+BArray272 set16dE 93acb400e3f9c3b2
+BArray272 set256dE ea8539b328f82673
+BArray272 set32dE 093dc773f8115473
+BArray272 set64dE 72a1328a91ce659e
+BArray272 setE 4e0a335b0af4daa4
+BArray272 to_listE 7212ab79bcfb16c3
+BArray28 ext_eq 2441031b57bcd30a
+BArray28 fillE d05dde13ca0398c1
+BArray28 get128dE ef77bcda55667b84
+BArray28 get16dE 66f3cdb7b7936085
+BArray28 get256dE ad640000e7b8b40a
+BArray28 get32dE 306057a4c2c6ba52
+BArray28 get64dE 0a3e36287b12864e
+BArray28 get_out 52a52322c4e52f46
+BArray28 initE 7481bf8d15adcdf5
+BArray28 map2E cb78c2b4e820bd7b
+BArray28 mapE 3dbf697d25899328
+BArray28 of_listE 8ad4a902543a34dd
+BArray28 set128dE aad04fc145b52320
+BArray28 set16dE 93acb400e3f9c3b2
+BArray28 set256dE ea8539b328f82673
+BArray28 set32dE 093dc773f8115473
+BArray28 set64dE 72a1328a91ce659e
+BArray28 setE 4e0a335b0af4daa4
+BArray28 to_listE 7b8f77e44aca1257
+BArray32 ext_eq 53e52d9576b81330
+BArray32 fillE d05dde13ca0398c1
+BArray32 get128dE ef77bcda55667b84
+BArray32 get16dE 66f3cdb7b7936085
+BArray32 get256dE ad640000e7b8b40a
+BArray32 get32dE 306057a4c2c6ba52
+BArray32 get64dE 0a3e36287b12864e
+BArray32 get_out fb1b1e74cc42eefc
+BArray32 initE 20e731f59d0de7ac
+BArray32 map2E cb78c2b4e820bd7b
+BArray32 mapE 3dbf697d25899328
+BArray32 of_listE 8ad4a902543a34dd
+BArray32 set128dE aad04fc145b52320
+BArray32 set16dE 93acb400e3f9c3b2
+BArray32 set256dE ea8539b328f82673
+BArray32 set32dE 093dc773f8115473
+BArray32 set64dE 72a1328a91ce659e
+BArray32 setE 4e0a335b0af4daa4
+BArray32 to_listE bc66cf26599b94d8
+BArray48 ext_eq 71b01a0604f5e745
+BArray48 fillE d05dde13ca0398c1
+BArray48 get128dE ef77bcda55667b84
+BArray48 get16dE 66f3cdb7b7936085
+BArray48 get256dE ad640000e7b8b40a
+BArray48 get32dE 306057a4c2c6ba52
+BArray48 get64dE 0a3e36287b12864e
+BArray48 get_out 6e952b2762a1f780
+BArray48 initE 6e14c96b572c9969
+BArray48 map2E cb78c2b4e820bd7b
+BArray48 mapE 3dbf697d25899328
+BArray48 of_listE 8ad4a902543a34dd
+BArray48 set128dE aad04fc145b52320
+BArray48 set16dE 93acb400e3f9c3b2
+BArray48 set256dE ea8539b328f82673
+BArray48 set32dE 093dc773f8115473
+BArray48 set64dE 72a1328a91ce659e
+BArray48 setE 4e0a335b0af4daa4
+BArray48 to_listE a35b773272ba0c42
+BArray512 ext_eq 18eae363f147011a
+BArray512 fillE d05dde13ca0398c1
+BArray512 get128dE ef77bcda55667b84
+BArray512 get16dE 66f3cdb7b7936085
+BArray512 get256dE ad640000e7b8b40a
+BArray512 get32dE 306057a4c2c6ba52
+BArray512 get64dE 0a3e36287b12864e
+BArray512 get_out a351372104b9413a
+BArray512 initE bbc9588138484213
+BArray512 map2E cb78c2b4e820bd7b
+BArray512 mapE 3dbf697d25899328
+BArray512 of_listE 8ad4a902543a34dd
+BArray512 set128dE aad04fc145b52320
+BArray512 set16dE 93acb400e3f9c3b2
+BArray512 set256dE ea8539b328f82673
+BArray512 set32dE 093dc773f8115473
+BArray512 set64dE 72a1328a91ce659e
+BArray512 setE 4e0a335b0af4daa4
+BArray512 to_listE e0933e4ac7712f69
+BArray64 ext_eq 9d9d2d0ef8259788
+BArray64 fillE d05dde13ca0398c1
+BArray64 get128dE ef77bcda55667b84
+BArray64 get16dE 66f3cdb7b7936085
+BArray64 get256dE ad640000e7b8b40a
+BArray64 get32dE 306057a4c2c6ba52
+BArray64 get64dE 0a3e36287b12864e
+BArray64 get_out f0e874e379f00f1b
+BArray64 initE 08fb2a37939b2f7e
+BArray64 map2E cb78c2b4e820bd7b
+BArray64 mapE 3dbf697d25899328
+BArray64 of_listE 8ad4a902543a34dd
+BArray64 set128dE aad04fc145b52320
+BArray64 set16dE 93acb400e3f9c3b2
+BArray64 set256dE ea8539b328f82673
+BArray64 set32dE 093dc773f8115473
+BArray64 set64dE 72a1328a91ce659e
+BArray64 setE 4e0a335b0af4daa4
+BArray64 to_listE 554ed178febd6fd8
+BArray640 ext_eq 17b1ab332265de00
+BArray640 fillE d05dde13ca0398c1
+BArray640 get128dE ef77bcda55667b84
+BArray640 get16dE 66f3cdb7b7936085
+BArray640 get256dE ad640000e7b8b40a
+BArray640 get32dE 306057a4c2c6ba52
+BArray640 get64dE 0a3e36287b12864e
+BArray640 get_out c42dd145aced00da
+BArray640 initE c903b38175fc44b9
+BArray640 map2E cb78c2b4e820bd7b
+BArray640 mapE 3dbf697d25899328
+BArray640 of_listE 8ad4a902543a34dd
+BArray640 set128dE aad04fc145b52320
+BArray640 set16dE 93acb400e3f9c3b2
+BArray640 set256dE ea8539b328f82673
+BArray640 set32dE 093dc773f8115473
+BArray640 set64dE 72a1328a91ce659e
+BArray640 setE 4e0a335b0af4daa4
+BArray640 to_listE 03b33a476ed51589
+BArray784 ext_eq 0155a7a6a7a722d0
+BArray784 fillE d05dde13ca0398c1
+BArray784 get128dE ef77bcda55667b84
+BArray784 get16dE 66f3cdb7b7936085
+BArray784 get256dE ad640000e7b8b40a
+BArray784 get32dE 306057a4c2c6ba52
+BArray784 get64dE 0a3e36287b12864e
+BArray784 get_out 88e97581d0581f05
+BArray784 initE 24766b691e172fb6
+BArray784 map2E cb78c2b4e820bd7b
+BArray784 mapE 3dbf697d25899328
+BArray784 of_listE 8ad4a902543a34dd
+BArray784 set128dE aad04fc145b52320
+BArray784 set16dE 93acb400e3f9c3b2
+BArray784 set256dE ea8539b328f82673
+BArray784 set32dE 093dc773f8115473
+BArray784 set64dE 72a1328a91ce659e
+BArray784 setE 4e0a335b0af4daa4
+BArray784 to_listE fabadf024b7373bc
+BArray80 ext_eq b18b54b4c7dab062
+BArray80 fillE d05dde13ca0398c1
+BArray80 get128dE ef77bcda55667b84
+BArray80 get16dE 66f3cdb7b7936085
+BArray80 get256dE ad640000e7b8b40a
+BArray80 get32dE 306057a4c2c6ba52
+BArray80 get64dE 0a3e36287b12864e
+BArray80 get_out 9a0ffd859f2a479d
+BArray80 initE 7560fce49c7b6aff
+BArray80 map2E cb78c2b4e820bd7b
+BArray80 mapE 3dbf697d25899328
+BArray80 of_listE 8ad4a902543a34dd
+BArray80 set128dE aad04fc145b52320
+BArray80 set16dE 93acb400e3f9c3b2
+BArray80 set256dE ea8539b328f82673
+BArray80 set32dE 093dc773f8115473
+BArray80 set64dE 72a1328a91ce659e
+BArray80 setE 4e0a335b0af4daa4
+BArray80 to_listE 9205fc262f402187
+CoreInt intind f1864f8d2b7255c1
+Distr distrW 1885c7b3af74995a
+Distr massK af280687efab7c55
+Distr mu_mass 4633a3c366615897
+Distr mu_or b0605c94915a0238
+FSet elemsK c3f38efd36df4b35
+FSet fset_eq 529952e8c5e1d53c
+FSet oflistK 77aabea56eea6a96
+Int.IterOp iteri0 3391e26f893e70c4
+Int.IterOp iteriS 127397a3566941da
+JMemory allocated8_setE bd2dff5ab1df7503
+JMemory get_setE c3c708fb130c47fe
+JMemory mem_eq_ext c5dbb49429bba565
+JMemory storeW128E 7ca5cdb107bb1361
+JMemory storeW16E ed5babc5e155f4c1
+JMemory storeW256E 2e4db00a69fd8d5d
+JMemory storeW32E bc4341ba06a7f268
+JMemory storeW64E f4937ef831472a47
+JMemory storeW8E 1e5bbb3ea6b13b6f
+JMemory storesE b230d6d14b644675
+JUtils iotaredE f763f55f4c3bb036
+JWord.W128 addE bf51be6b168c9b61
+JWord.W128 addcE f9f6c3728d3cce52
+JWord.W128 all_wordsE eeae388486d179cb
+JWord.W128 andE 9cad5dbfc6ba3087
+JWord.W128 bits2wE fdd5ea705971ba4e
+JWord.W128 ext_eq 59b42d9a3e2edd4c
+JWord.W128 fillE 8cfdb084c00b3798
+JWord.W128 get_out c3880f80b80c386e
+JWord.W128 initE 2a3c9126295300eb
+JWord.W128 invE 2be169562371f2c0
+JWord.W128 map2E 0bba360d54e2ecb0
+JWord.W128 mapE 906ac4651f13e139
+JWord.W128 mulE 924420a2e3a8ddd5
+JWord.W128 muluE 592a079bd049b373
+JWord.W128 of_intE 1c81f483a7aab9ec
+JWord.W128 oneE 75ff81f1aea1985b
+JWord.W128 oppE f1498c0ea43ee566
+JWord.W128 orE 7d4d7e419002c78d
+JWord.W128 rolE 2583b8cc7277b311
+JWord.W128 rorE a49b9467f240ddd1
+JWord.W128 sarE 2e46eee70972b4e4
+JWord.W128 sdivE c17d068cd7589760
+JWord.W128 setE ce2a65ce32647558
+JWord.W128 sleE 2cd8105836c9ec91
+JWord.W128 sltE db73d8fb61024c42
+JWord.W128 smodE cad42596ff78d557
+JWord.W128 subcE 9e709e52346ad266
+JWord.W128 to_sintE 58101a6d75efa8e6
+JWord.W128 to_uintE 9ebbe6b9950f2b28
+JWord.W128 udivE 5ff3e94eec08be50
+JWord.W128 uleE 00926144894f8632
+JWord.W128 ultE d1948baff2125f29
+JWord.W128 umodE 791b2f2c3124c693
+JWord.W128 w2bitsE 139c65fed4d96873
+JWord.W128 wlslE 84f60ecd1cbd3233
+JWord.W128 wlsrE 1bf6bc8d231924ec
+JWord.W128 xorE 8776051358ebd8f5
+JWord.W128.Alphabet enum_spec 8a1fd988066cffac
+JWord.W128.SHIFT ROL_128_E 2959d2144453aa27
+JWord.W128.SHIFT ROR_128_E 31f00fcc4780b685
+JWord.W16 addE bf51be6b168c9b61
+JWord.W16 addcE 68695f1ab2ad0410
+JWord.W16 all_wordsE eeae388486d179cb
+JWord.W16 andE 9cad5dbfc6ba3087
+JWord.W16 bits2wE fdd5ea705971ba4e
+JWord.W16 ext_eq 8a1194410ab3bfd9
+JWord.W16 fillE e25df8045f247a1c
+JWord.W16 get_out ba2a70512eb858b2
+JWord.W16 initE c2a1ff9658ded9cc
+JWord.W16 invE 2be169562371f2c0
+JWord.W16 map2E 9c52ca1821be9ff7
+JWord.W16 mapE 3b9c2759e5b3c3e7
+JWord.W16 mulE 924420a2e3a8ddd5
+JWord.W16 muluE dd2de997b3ced48f
+JWord.W16 of_intE 380f58ac0fef92a3
+JWord.W16 oneE 75ff81f1aea1985b
+JWord.W16 oppE f1498c0ea43ee566
+JWord.W16 orE 7d4d7e419002c78d
+JWord.W16 rolE 5bb1475c45b4d261
+JWord.W16 rorE f1ed0a5029c893a4
+JWord.W16 sarE c44226801d01ba8e
+JWord.W16 sdivE c17d068cd7589760
+JWord.W16 setE 65325785c3d3d6f8
+JWord.W16 sleE ec7562dec7ee34ca
+JWord.W16 sltE 8190bfffe39fdb45
+JWord.W16 smodE cad42596ff78d557
+JWord.W16 subcE 376a2aba1dcf34bf
+JWord.W16 to_sintE 2faf075ae9eefcec
+JWord.W16 to_uintE cfb03ed38c67f23b
+JWord.W16 udivE 5ff3e94eec08be50
+JWord.W16 uleE bb92cd275faa80b3
+JWord.W16 ultE 11954adc12f7d9bb
+JWord.W16 umodE 791b2f2c3124c693
+JWord.W16 w2bitsE 198179d98517d4a5
+JWord.W16 wlslE 55676c8c1b1ea4c5
+JWord.W16 wlsrE b55d0b984a54884c
+JWord.W16 xorE 8776051358ebd8f5
+JWord.W16.Alphabet enum_spec 8a1fd988066cffac
+JWord.W16.SHIFT ROL_16_E 133d3f09948fa8ea
+JWord.W16.SHIFT ROR_16_E babb19fcc412567d
+JWord.W16u16 bits16E 149e4f1e0dc1b81b
+JWord.W16u16 map2E 0cdd1edc27678782
+JWord.W16u16 mapE 1f66a3a0aa9b5464
+JWord.W16u16 pack16E 59cd8b514eca35b6
+JWord.W16u16 unpack16E 836c105dcf7b4b5f
+JWord.W16u16.Pack ext_eq 2ef4c598b67a8bdd
+JWord.W16u16.Pack fillE e6ee73ed3a320a27
+JWord.W16u16.Pack get_out 949b215cb0651f41
+JWord.W16u16.Pack initE dc313b1f936373b3
+JWord.W16u16.Pack map2E 65342c4923873be2
+JWord.W16u16.Pack mapE 568003ef32156207
+JWord.W16u16.Pack of_listE 6d56757a060eb6cb
+JWord.W16u16.Pack setE 444d4375bb7b413e
+JWord.W16u16.Pack to_listE e025baeba401021a
+JWord.W16u8 bits8E a0cb852d05230abc
+JWord.W16u8 map2E 5545026f8f82da84
+JWord.W16u8 mapE 5fb68546cc49546a
+JWord.W16u8 pack16E 783f6312127efe1f
+JWord.W16u8 unpack8E 989d0a278286a9f4
+JWord.W16u8.Pack ext_eq 2ef4c598b67a8bdd
+JWord.W16u8.Pack fillE d52b394730f0dc78
+JWord.W16u8.Pack get_out 949b215cb0651f41
+JWord.W16u8.Pack initE b3e3419932b613e6
+JWord.W16u8.Pack map2E eef5cc7cbe28405d
+JWord.W16u8.Pack mapE 1c786b80abeb1ea8
+JWord.W16u8.Pack of_listE 739dc605d1153aa8
+JWord.W16u8.Pack setE 78379a30ae246211
+JWord.W16u8.Pack to_listE e025baeba401021a
+JWord.W256 addE bf51be6b168c9b61
+JWord.W256 addcE 5f103ea99e7cd7ed
+JWord.W256 all_wordsE eeae388486d179cb
+JWord.W256 andE 9cad5dbfc6ba3087
+JWord.W256 bits2wE fdd5ea705971ba4e
+JWord.W256 ext_eq 83202c9a0014800c
+JWord.W256 fillE 22751c95b276f0b8
+JWord.W256 get_out 7bebb1637c022bec
+JWord.W256 initE e0ad5f2891f2d04f
+JWord.W256 invE 2be169562371f2c0
+JWord.W256 map2E 56facb55749099c9
+JWord.W256 mapE 505c5b0f3290ff17
+JWord.W256 mulE 924420a2e3a8ddd5
+JWord.W256 muluE 50113025b87b75a5
+JWord.W256 of_intE fae459d7ead68e1d
+JWord.W256 oneE 75ff81f1aea1985b
+JWord.W256 oppE f1498c0ea43ee566
+JWord.W256 orE 7d4d7e419002c78d
+JWord.W256 rolE 11a9a6dd3c621f23
+JWord.W256 rorE 90650de999b573ca
+JWord.W256 sarE 2f46ea47c1948c6c
+JWord.W256 sdivE c17d068cd7589760
+JWord.W256 setE 4dc5c9d6e68f4913
+JWord.W256 sleE e93d31c9e19d9232
+JWord.W256 sltE 147eb99b3654d5b4
+JWord.W256 smodE cad42596ff78d557
+JWord.W256 subcE 6beeac5029104a69
+JWord.W256 to_sintE 3a4f05efe2dc9414
+JWord.W256 to_uintE 2b03cf809203ed7a
+JWord.W256 udivE 5ff3e94eec08be50
+JWord.W256 uleE af0728e75f9d9562
+JWord.W256 ultE 737bfd1e152075a4
+JWord.W256 umodE 791b2f2c3124c693
+JWord.W256 w2bitsE 58a952dca3afd4ac
+JWord.W256 wlslE 85c7dbe5083f359a
+JWord.W256 wlsrE 20d1f510c814e306
+JWord.W256 xorE 8776051358ebd8f5
+JWord.W256.Alphabet enum_spec 8a1fd988066cffac
+JWord.W256.SHIFT ROL_256_E ccd448cabab0a7e5
+JWord.W256.SHIFT ROR_256_E 319c4f47dae547ad
+JWord.W2u128 bits128E d1434e902132ff61
+JWord.W2u128 map2E 170d838550f6af76
+JWord.W2u128 mapE dfc2f6aa6bb08507
+JWord.W2u128 pack2E 05471581491eacf8
+JWord.W2u128 unpack128E 2656ac53597082a6
+JWord.W2u128.Pack ext_eq ef539f3932ead460
+JWord.W2u128.Pack fillE 6fd4daccfbef05da
+JWord.W2u128.Pack get_out 77ef9e0b7f758935
+JWord.W2u128.Pack initE 96d5c339a3775250
+JWord.W2u128.Pack map2E ff691becc970cdab
+JWord.W2u128.Pack mapE e27f0098584fa085
+JWord.W2u128.Pack of_listE 36a8174c481f74bd
+JWord.W2u128.Pack setE c1456a0cc5116f80
+JWord.W2u128.Pack to_listE 801ab3544bc41285
+JWord.W2u16 bits16E 110305c30158b81a
+JWord.W2u16 map2E edcd75660062553e
+JWord.W2u16 mapE f9d61c050993ad59
+JWord.W2u16 pack2E dd1596df88749e29
+JWord.W2u16 unpack16E 6a2fb77be9f7fb0a
+JWord.W2u16.Pack ext_eq ef539f3932ead460
+JWord.W2u16.Pack fillE e6ee73ed3a320a27
+JWord.W2u16.Pack get_out 77ef9e0b7f758935
+JWord.W2u16.Pack initE 3c2b25c911651a22
+JWord.W2u16.Pack map2E 65342c4923873be2
+JWord.W2u16.Pack mapE 568003ef32156207
+JWord.W2u16.Pack of_listE 6d56757a060eb6cb
+JWord.W2u16.Pack setE 444d4375bb7b413e
+JWord.W2u16.Pack to_listE 801ab3544bc41285
+JWord.W2u32 bits32E ced8bff2eb61969e
+JWord.W2u32 map2E c79bb4a64aec912d
+JWord.W2u32 mapE 6771b832d1c6aa1b
+JWord.W2u32 pack2E 29eaf6ac66447d7d
+JWord.W2u32 unpack32E 347d8022cd3d361c
+JWord.W2u32.Pack ext_eq ef539f3932ead460
+JWord.W2u32.Pack fillE 728c54aaf3150a62
+JWord.W2u32.Pack get_out 77ef9e0b7f758935
+JWord.W2u32.Pack initE 1ddd24369ffe2caa
+JWord.W2u32.Pack map2E f160287f965c90c2
+JWord.W2u32.Pack mapE d7a9f28a43dd8e4f
+JWord.W2u32.Pack of_listE f7ef573d430b0397
+JWord.W2u32.Pack setE 4a9ec32530329935
+JWord.W2u32.Pack to_listE 801ab3544bc41285
+JWord.W2u64 bits64E 6a4fc8ad165cda42
+JWord.W2u64 map2E f6016dce5c8182a9
+JWord.W2u64 mapE 10d603ed7ec21749
+JWord.W2u64 pack2E 0a20a99588a7225a
+JWord.W2u64 unpack64E c88b34355e11f16a
+JWord.W2u64.Pack ext_eq ef539f3932ead460
+JWord.W2u64.Pack fillE 4e6c7e31671f3484
+JWord.W2u64.Pack get_out 77ef9e0b7f758935
+JWord.W2u64.Pack initE 60d1f725a68dd38a
+JWord.W2u64.Pack map2E 734727899c3a0a24
+JWord.W2u64.Pack mapE a58930d526b5c1a0
+JWord.W2u64.Pack of_listE 457a0898f3f5fec4
+JWord.W2u64.Pack setE 2792e7b42fba0bda
+JWord.W2u64.Pack to_listE 801ab3544bc41285
+JWord.W2u8 bits8E 0129316a86ae7061
+JWord.W2u8 map2E 16aa6564422d228a
+JWord.W2u8 mapE 4841bdbed337fa30
+JWord.W2u8 pack2E a9f769794754f0df
+JWord.W2u8 unpack8E 5673a0e14af3222b
+JWord.W2u8.Pack ext_eq 9bdf352a063ab43f
+JWord.W2u8.Pack fillE 2e494f07fe1730e3
+JWord.W2u8.Pack get_out be15f40de5b41b9c
+JWord.W2u8.Pack initE a87920907a817e05
+JWord.W2u8.Pack map2E 7a5c72f826c335b6
+JWord.W2u8.Pack mapE 7d5a9e9a1269fa1f
+JWord.W2u8.Pack of_listE 739dc605d1153aa8
+JWord.W2u8.Pack setE 2dba79db0641789c
+JWord.W2u8.Pack to_listE 70f88bfb5597ff79
+JWord.W32 addE bf51be6b168c9b61
+JWord.W32 addcE 6cbfcf6b34cca8cd
+JWord.W32 all_wordsE eeae388486d179cb
+JWord.W32 andE 9cad5dbfc6ba3087
+JWord.W32 bits2wE fdd5ea705971ba4e
+JWord.W32 ext_eq 913d64322bc733ff
+JWord.W32 fillE f83735e3f1c1443a
+JWord.W32 get_out 75b8c6296e2e17cb
+JWord.W32 initE 65781af9a8699039
+JWord.W32 invE 2be169562371f2c0
+JWord.W32 map2E 02a3428de5820f77
+JWord.W32 mapE 28adfdd733dc9507
+JWord.W32 mulE 924420a2e3a8ddd5
+JWord.W32 muluE c315023534f5147e
+JWord.W32 of_intE 7bac9137faee56cb
+JWord.W32 oneE 75ff81f1aea1985b
+JWord.W32 oppE f1498c0ea43ee566
+JWord.W32 orE 7d4d7e419002c78d
+JWord.W32 rolE 889cac94f69e4caf
+JWord.W32 rorE 66b0aeaec2315d75
+JWord.W32 sarE 3c956c4d4bbd2d9e
+JWord.W32 sdivE c17d068cd7589760
+JWord.W32 setE 2ad2457f50ad7768
+JWord.W32 sleE 68893fbdf115e0b1
+JWord.W32 sltE 7d2ea4607a16ac54
+JWord.W32 smodE cad42596ff78d557
+JWord.W32 subcE 4db9a93827906306
+JWord.W32 to_sintE 1ae8d0eecc344400
+JWord.W32 to_uintE dced10e5cfeb828c
+JWord.W32 udivE 5ff3e94eec08be50
+JWord.W32 uleE 54a7461e3ef4be90
+JWord.W32 ultE 3580a6f7c1ec7d9e
+JWord.W32 umodE 791b2f2c3124c693
+JWord.W32 w2bitsE 882f16e368cfacc1
+JWord.W32 wlslE 259b39800fb8e475
+JWord.W32 wlsrE 5531d33091c224af
+JWord.W32 xorE 8776051358ebd8f5
+JWord.W32.Alphabet enum_spec 8a1fd988066cffac
+JWord.W32.SHIFT ROL_32_E 187be57d393f6be1
+JWord.W32.SHIFT ROR_32_E 230d7038c26480f6
+JWord.W32u8 bits8E 4ac2119c00a6a784
+JWord.W32u8 map2E d4f31dc9325c0b23
+JWord.W32u8 mapE 9258ef85a50cf7dc
+JWord.W32u8 pack32E ae83c8605fa7dfac
+JWord.W32u8 unpack8E ddc0fff544ab833c
+JWord.W32u8.Pack ext_eq 987f5b86ba271cf0
+JWord.W32u8.Pack fillE d52b394730f0dc78
+JWord.W32u8.Pack get_out 4c9e9ff9e0976efb
+JWord.W32u8.Pack initE 7fe72457c7b8e595
+JWord.W32u8.Pack map2E eef5cc7cbe28405d
+JWord.W32u8.Pack mapE 1c786b80abeb1ea8
+JWord.W32u8.Pack of_listE 739dc605d1153aa8
+JWord.W32u8.Pack setE 78379a30ae246211
+JWord.W32u8.Pack to_listE 46891013f07c5a7d
+JWord.W4u16 bits16E c3ad9088061f6654
+JWord.W4u16 map2E cc3402b8fa38a29e
+JWord.W4u16 mapE d322a1b1f87b61c2
+JWord.W4u16 pack4E 2a874630a212a1b0
+JWord.W4u16 unpack16E e449fe9b63c2cf91
+JWord.W4u16.Pack ext_eq 289ad18c38fa6633
+JWord.W4u16.Pack fillE e6ee73ed3a320a27
+JWord.W4u16.Pack get_out ecaa71cc7a6989a8
+JWord.W4u16.Pack initE 3699c9848192d107
+JWord.W4u16.Pack map2E 65342c4923873be2
+JWord.W4u16.Pack mapE 568003ef32156207
+JWord.W4u16.Pack of_listE 6d56757a060eb6cb
+JWord.W4u16.Pack setE 444d4375bb7b413e
+JWord.W4u16.Pack to_listE 16c4b1cfd4803ab7
+JWord.W4u32 bits32E 862260737a19c9ef
+JWord.W4u32 map2E e12999d598e1a08e
+JWord.W4u32 mapE 155c926e3f3f480a
+JWord.W4u32 pack4E 36a0624b453850d9
+JWord.W4u32 unpack32E 064926f5d7cf2bec
+JWord.W4u32.Pack ext_eq 289ad18c38fa6633
+JWord.W4u32.Pack fillE 728c54aaf3150a62
+JWord.W4u32.Pack get_out ecaa71cc7a6989a8
+JWord.W4u32.Pack initE cac5aeca1b86832c
+JWord.W4u32.Pack map2E f160287f965c90c2
+JWord.W4u32.Pack mapE d7a9f28a43dd8e4f
+JWord.W4u32.Pack of_listE f7ef573d430b0397
+JWord.W4u32.Pack setE 4a9ec32530329935
+JWord.W4u32.Pack to_listE 16c4b1cfd4803ab7
+JWord.W4u64 bits64E 109d45f8a45e92ef
+JWord.W4u64 map2E af0cb0dc97b7e721
+JWord.W4u64 mapE c2e98923d5bf52d7
+JWord.W4u64 pack4E 096827c8258f85a2
+JWord.W4u64 unpack64E 790728aef0afed2f
+JWord.W4u64.Pack ext_eq 289ad18c38fa6633
+JWord.W4u64.Pack fillE 4e6c7e31671f3484
+JWord.W4u64.Pack get_out ecaa71cc7a6989a8
+JWord.W4u64.Pack initE a91f7c4bd17ce15e
+JWord.W4u64.Pack map2E 734727899c3a0a24
+JWord.W4u64.Pack mapE a58930d526b5c1a0
+JWord.W4u64.Pack of_listE 457a0898f3f5fec4
+JWord.W4u64.Pack setE 2792e7b42fba0bda
+JWord.W4u64.Pack to_listE 16c4b1cfd4803ab7
+JWord.W4u8 bits8E 723e37f754d6ec91
+JWord.W4u8 map2E 101880fe1ee92cd7
+JWord.W4u8 mapE 1607d95548b81067
+JWord.W4u8 pack4E 63e2b38bf2a23330
+JWord.W4u8 unpack8E e846b35123397f07
+JWord.W4u8.Pack ext_eq 289ad18c38fa6633
+JWord.W4u8.Pack fillE d52b394730f0dc78
+JWord.W4u8.Pack get_out ecaa71cc7a6989a8
+JWord.W4u8.Pack initE 2cf1531fa252d98a
+JWord.W4u8.Pack map2E eef5cc7cbe28405d
+JWord.W4u8.Pack mapE 1c786b80abeb1ea8
+JWord.W4u8.Pack of_listE 739dc605d1153aa8
+JWord.W4u8.Pack setE 78379a30ae246211
+JWord.W4u8.Pack to_listE 16c4b1cfd4803ab7
+JWord.W64 addE bf51be6b168c9b61
+JWord.W64 addcE 75403e168ed1d75e
+JWord.W64 all_wordsE eeae388486d179cb
+JWord.W64 andE 9cad5dbfc6ba3087
+JWord.W64 bits2wE fdd5ea705971ba4e
+JWord.W64 ext_eq c23c293e348fc2f9
+JWord.W64 fillE 0a670cc4827c04cc
+JWord.W64 get_out 1406bda42f27d646
+JWord.W64 initE 1cbc4cd28c498004
+JWord.W64 invE 2be169562371f2c0
+JWord.W64 map2E b88fa9868c2b795a
+JWord.W64 mapE 4d8cb80cde5469e0
+JWord.W64 mulE 924420a2e3a8ddd5
+JWord.W64 muluE 2c32a607df70a051
+JWord.W64 of_intE fe299033953a360c
+JWord.W64 oneE 75ff81f1aea1985b
+JWord.W64 oppE f1498c0ea43ee566
+JWord.W64 orE 7d4d7e419002c78d
+JWord.W64 rolE bad4e7ce4e7b7b0d
+JWord.W64 rorE 6e2f6e23341e786a
+JWord.W64 sarE 2ca3b5184507072b
+JWord.W64 sdivE c17d068cd7589760
+JWord.W64 setE 77f8fb1d9ef00466
+JWord.W64 sleE 7437de1a156baa30
+JWord.W64 sltE a49479b1e95f5c2c
+JWord.W64 smodE cad42596ff78d557
+JWord.W64 subcE 7ff889f105c1aedc
+JWord.W64 to_sintE 6283ca02c4a67d22
+JWord.W64 to_uintE 12a4334ee2704690
+JWord.W64 udivE 5ff3e94eec08be50
+JWord.W64 uleE 2668645e4e99b448
+JWord.W64 ultE 4f4b240c1d6fbbb2
+JWord.W64 umodE 791b2f2c3124c693
+JWord.W64 w2bitsE 302fbc1e6e55ff11
+JWord.W64 wlslE 0d65762cc19435e5
+JWord.W64 wlsrE e13e91d5e1012af4
+JWord.W64 xorE 8776051358ebd8f5
+JWord.W64.Alphabet enum_spec 8a1fd988066cffac
+JWord.W64.SHIFT ROL_64_E 52c91b285b518dc1
+JWord.W64.SHIFT ROR_64_E bb50ea868e037db0
+JWord.W8 addE bf51be6b168c9b61
+JWord.W8 addcE 28e27afd10c541ae
+JWord.W8 all_wordsE eeae388486d179cb
+JWord.W8 andE 9cad5dbfc6ba3087
+JWord.W8 bits2wE fdd5ea705971ba4e
+JWord.W8 ext_eq df5f3a8ce969590f
+JWord.W8 fillE bf0be8f9c043e147
+JWord.W8 get_out bcd0b6eb549c752c
+JWord.W8 initE 330a96a458881fac
+JWord.W8 invE 2be169562371f2c0
+JWord.W8 map2E 1278a82c1f65a044
+JWord.W8 mapE abff1c094ce4aee5
+JWord.W8 mulE 924420a2e3a8ddd5
+JWord.W8 muluE 43aa9fdccafe457c
+JWord.W8 of_intE 8eb3a5c06033df59
+JWord.W8 oneE 75ff81f1aea1985b
+JWord.W8 oppE f1498c0ea43ee566
+JWord.W8 orE 7d4d7e419002c78d
+JWord.W8 rolE 287b794b9597740e
+JWord.W8 rorE 231e77e9005e7874
+JWord.W8 sarE 2c80a73f5c2246ce
+JWord.W8 sdivE c17d068cd7589760
+JWord.W8 setE ed906639b95a19a9
+JWord.W8 sleE 39d94390402ab02f
+JWord.W8 sltE 522387ee74c78c3c
+JWord.W8 smodE cad42596ff78d557
+JWord.W8 subcE e291f12adc5019ca
+JWord.W8 to_sintE 3dc13f79db2744d6
+JWord.W8 to_uintE a707b2c1bb702e91
+JWord.W8 udivE 5ff3e94eec08be50
+JWord.W8 uleE 835bc7e755a77d09
+JWord.W8 ultE 44b95ba72a768811
+JWord.W8 umodE 791b2f2c3124c693
+JWord.W8 w2bitsE e1e36369b0ed493a
+JWord.W8 wlslE 0ec689765d1a55e3
+JWord.W8 wlsrE 31b05e0d1770f30b
+JWord.W8 xorE 8776051358ebd8f5
+JWord.W8.Alphabet enum_spec 8a1fd988066cffac
+JWord.W8.SHIFT ROL_8_E f42f82c3a3bd74a7
+JWord.W8.SHIFT ROR_8_E ba6e5e8ee1c37d99
+JWord.W8u16 bits16E 9cef9e4b86f32002
+JWord.W8u16 map2E cb3a6aea9a09b066
+JWord.W8u16 mapE d0c122c5e5e217af
+JWord.W8u16 pack8E 9e8b6250e20d642e
+JWord.W8u16 unpack16E 97b717833e2cfb70
+JWord.W8u16.Pack ext_eq dafe4e2dcee1f663
+JWord.W8u16.Pack fillE e6ee73ed3a320a27
+JWord.W8u16.Pack get_out 900d777678784964
+JWord.W8u16.Pack initE ad6cd54112e3e315
+JWord.W8u16.Pack map2E 65342c4923873be2
+JWord.W8u16.Pack mapE 568003ef32156207
+JWord.W8u16.Pack of_listE 6d56757a060eb6cb
+JWord.W8u16.Pack setE 444d4375bb7b413e
+JWord.W8u16.Pack to_listE 8b7072bcc4d8b715
+JWord.W8u32 bits32E c20a7a50dd29ae85
+JWord.W8u32 map2E 08dc624a3dd226cf
+JWord.W8u32 mapE c363e7ec51fe08a0
+JWord.W8u32 pack8E b8972f0874a5ac95
+JWord.W8u32 unpack32E b4f29455ddc8d232
+JWord.W8u32.Pack ext_eq dafe4e2dcee1f663
+JWord.W8u32.Pack fillE 728c54aaf3150a62
+JWord.W8u32.Pack get_out 900d777678784964
+JWord.W8u32.Pack initE 1d1c8adfbb7929b6
+JWord.W8u32.Pack map2E f160287f965c90c2
+JWord.W8u32.Pack mapE d7a9f28a43dd8e4f
+JWord.W8u32.Pack of_listE f7ef573d430b0397
+JWord.W8u32.Pack setE 4a9ec32530329935
+JWord.W8u32.Pack to_listE 8b7072bcc4d8b715
+JWord.W8u8 bits8E 370d5fcc8abccc11
+JWord.W8u8 map2E 1d41898c9fe77642
+JWord.W8u8 mapE 7d0f4505f03d3659
+JWord.W8u8 pack8E d1be97513dac0827
+JWord.W8u8 unpack8E 81ecb3e75c776ff1
+JWord.W8u8.Pack ext_eq dafe4e2dcee1f663
+JWord.W8u8.Pack fillE d52b394730f0dc78
+JWord.W8u8.Pack get_out 900d777678784964
+JWord.W8u8.Pack initE 0dc1cb72cf2f5e00
+JWord.W8u8.Pack map2E eef5cc7cbe28405d
+JWord.W8u8.Pack mapE 1c786b80abeb1ea8
+JWord.W8u8.Pack of_listE 739dc605d1153aa8
+JWord.W8u8.Pack setE 78379a30ae246211
+JWord.W8u8.Pack to_listE 8b7072bcc4d8b715
+JWordList stores64E 78dab771daffcd3a
+JWordList stores8E 65c14aaeea1def0f
+List.Iota iota0 43153312493ee904
+List.Iota iotaS dbe3d80e4131cf76
+Logic choicebdP 7ada9f2aefda6e75
+Logic fun_ext 46d06636ffddb24c
+Number.RealField.Axioms addr_gt0 deeebf202bb7c025
+Number.RealField.Axioms ger_leVge e7600004a7df829d
+Number.RealField.Axioms ler_def c2aaae35b8dc3ff0
+Number.RealField.Axioms ler_norm_add 035640ed15c23418
+Number.RealField.Axioms ltr_def 2244cbfa91fec085
+Number.RealField.Axioms maxrE 55e794592462f56c
+Number.RealField.Axioms minrE 22ca27bc46cd780f
+Number.RealField.Axioms norm_eq0 d11cc5b7566aec2c
+Number.RealField.Axioms normrM 49eaf366f77a02bc
+Number.RealField.Axioms real_axiom 2830ee6fc3a1dc00
+Number.RealField.Field add0r 38539a1f00d45ec8
+Number.RealField.Field addNr cf0f71be30fe6aa5
+Number.RealField.Field addrA 1e70dde65a09cdfb
+Number.RealField.Field addrC 974e52a5a02db028
+Number.RealField.Field mul1r 903d1b6d11ff45ad
+Number.RealField.Field mulVr ff3ecfa8761e82d5
+Number.RealField.Field mulf_eq0 0d1015c733d3be4b
+Number.RealField.Field mulrA 5c5919ab253fa88a
+Number.RealField.Field mulrC 029cc1e7dd5154d8
+Number.RealField.Field mulrDl 866068e4a54c1f3e
+Number.RealField.Field oner_neq0 c571a08cb9a9f567
+Number.RealField.Field unitP eb1b0a55dd04bc3c
+Number.RealField.Field unitout 6db80110500eb971
+Real floor_bound 0a057e776890b859
+Real from_int_floor d8353ef64dd547ec
+Real gt_intp 7972455eb62715e5
+Real le_intp 46fd7b89345d559c
+Real lub_adherent 4b8fe80190cd91b0
+Real lub_upper_bound 1d2137932b9d3735
+RealExp convex_exp 8065d6e2dea94b22
+RealExp exp0 d75b2f3afebd4b77
+RealExp expD 1c382164f6420623
+RealExp expK 360acc3409b32e6a
+RealExp exp_gt0 7871aa654f4fe470
+RealExp exp_mono 15089451eba22483
+RealExp ge2_e f208e4fa51dec8c8
+RealExp le1Dx_exp 590778417b884a6d
+RealExp le_ln_dw 48da60742f9bd056
+RealExp le_ln_up f4c299574b774750
+RealExp lnK 0b38609e7d756878
+RealExp ln_le0 86ea2900412cf36e
+RealExp lt3_e 3f793f4f059c680b
+SmtMap offunE 09646d1496ed7455
+
+theorems
+
+(* Theorems.words256E *)
+lemma words256E: Theorems.words256 = State.h256.
+
+(* Theorems.words512E *)
+lemma words512E: Theorems.words512 = State.h512.
+
+(* Theorems.sha256_stateE *)
+lemma sha256_stateE:
+  forall (h0 : JWord.W32.t List.list) (m : Bytes.bytes) (h : BArray32.t)
+    (buf : BArray64.t) (total : JWord.W64.t),
+    Theorems.sha256_state h0 m h buf total <=>
+    SHA256_Stream.stream256 h0 m h buf total.
+
+(* Theorems.sha512_stateE *)
+lemma sha512_stateE:
+  forall (h0 : JWord.W64.t List.list) (m : Bytes.bytes) (h : BArray64.t)
+    (buf : BArray128.t) (total : JWord.W64.t),
+    Theorems.sha512_state h0 m h buf total <=>
+    SHA512_Stream.stream512 h0 m h buf total.
+
+(* Theorems.sha256_compress_total *)
+lemma sha256_compress_total:
+  forall (h0 : JWord.W32.t List.list) (blk : BArray64.t),
+    phoare[ NirapodSha2.M._sha256_compress :
+             Theorems.words256 h = h0 /\ block = blk ==>
+             Theorems.words256 res.`1 =
+             FIPS180_SHA2.SHA256.compress h0
+               (List.map FIPS180_SHA2.be32
+                  (BitEncoding.BitChunking.chunk 4 (BArray64.to_list blk)))] = (
+    Real.(%r) 1).
+
+(* Theorems.sha256_compress_blocks_total *)
+lemma sha256_compress_blocks_total:
+  forall (h0 : JWord.W32.t List.list) (p0 n0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha256_compress_blocks :
+             Theorems.words256 h = h0 /\
+             p = p0 /\
+             n = n0 /\
+             Int.(<)
+               (Int.(+) (JWord.W64.to_uint p0)
+                  (Int.( * ) 64 (JWord.W64.to_uint n0)))
+               JModel_armv8a.ptr_modulus ==>
+             Theorems.words256 res.`1 =
+             List.foldl FIPS180_SHA2.SHA256.compress h0
+               (FIPS180_SHA2.SHA256.parse
+                  (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                     (Int.( * ) 64 (JWord.W64.to_uint n0))))] = (Real.(%r) 1).
+
+(* Theorems.sha512_compress_total *)
+lemma sha512_compress_total:
+  forall (h0 : JWord.W64.t List.list) (blk : BArray128.t),
+    phoare[ NirapodSha2.M._sha512_compress :
+             Theorems.words512 h = h0 /\ block = blk ==>
+             Theorems.words512 res.`1 =
+             FIPS180_SHA2.SHA512.compress h0
+               (List.map FIPS180_SHA2.be64
+                  (BitEncoding.BitChunking.chunk 8 (BArray128.to_list blk)))] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_compress_blocks_total *)
+lemma sha512_compress_blocks_total:
+  forall (h0 : JWord.W64.t List.list) (p0 n0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha512_compress_blocks :
+             Theorems.words512 h = h0 /\
+             p = p0 /\
+             n = n0 /\
+             Int.(<)
+               (Int.(+) (JWord.W64.to_uint p0)
+                  (Int.( * ) 128 (JWord.W64.to_uint n0)))
+               JModel_armv8a.ptr_modulus ==>
+             Theorems.words512 res.`1 =
+             List.foldl FIPS180_SHA2.SHA512.compress h0
+               (FIPS180_SHA2.SHA512.parse
+                  (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                     (Int.( * ) 128 (JWord.W64.to_uint n0))))] = (Real.(%r) 1).
+
+(* Theorems.sha256_absorb_mem_total *)
+lemma sha256_absorb_mem_total:
+  forall (h0 : JWord.W32.t List.list) (m : Bytes.bytes) (p0
+    l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha256_absorb_mem :
+             Theorems.sha256_state h0 m h buf total /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (Int.(+) (List.size m) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             Theorems.sha256_state h0
+               (List.(++) m
+                  (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                     (JWord.W64.to_uint l0))) res.`1 res.`2 res.`3] = (
+    Real.(%r) 1).
+
+(* Theorems.sha256_init_total *)
+lemma sha256_init_total:
+  phoare[ NirapodSha2.M.__sha256_init :
+           true ==> Theorems.words256 res = FIPS180_SHA2.SHA256.H0_256] = (
+  Real.(%r) 1).
+
+(* Theorems.sha224_init_total *)
+lemma sha224_init_total:
+  phoare[ NirapodSha2.M.__sha224_init :
+           true ==> Theorems.words256 res = FIPS180_SHA2.SHA256.H0_224] = (
+  Real.(%r) 1).
+
+(* Theorems.sha512_init_total *)
+lemma sha512_init_total:
+  phoare[ NirapodSha2.M.__sha512_init :
+           true ==> Theorems.words512 res = FIPS180_SHA2.SHA512.H0_512] = (
+  Real.(%r) 1).
+
+(* Theorems.sha384_init_total *)
+lemma sha384_init_total:
+  phoare[ NirapodSha2.M.__sha384_init :
+           true ==> Theorems.words512 res = FIPS180_SHA2.SHA512.H0_384] = (
+  Real.(%r) 1).
+
+(* Theorems.sha512_224_init_total *)
+lemma sha512_224_init_total:
+  phoare[ NirapodSha2.M.__sha512_224_init :
+           true ==> Theorems.words512 res = FIPS180_SHA2.SHA512.H0_512_224] = (
+  Real.(%r) 1).
+
+(* Theorems.sha512_256_init_total *)
+lemma sha512_256_init_total:
+  phoare[ NirapodSha2.M.__sha512_256_init :
+           true ==> Theorems.words512 res = FIPS180_SHA2.SHA512.H0_512_256] = (
+  Real.(%r) 1).
+
+(* Theorems.sha256_finalize_total *)
+lemma sha256_finalize_total:
+  forall (h0 : JWord.W32.t List.list) (m : Bytes.bytes),
+    phoare[ NirapodSha2.M._sha256___sha256_finalize :
+             Theorems.sha256_state h0 m h buf total /\
+             Int.(<) (List.size m) (Ring.IntID.(^) 2 61) ==>
+             BArray32.to_list res.`1 =
+             List.take 32
+               (List.flatten
+                  (List.map FIPS180_SHA2.w32_be
+                     (FIPS180_SHA2.SHA256.hash h0 m)))] = (Real.(%r) 1).
+
+(* Theorems.sha224_finalize_total *)
+lemma sha224_finalize_total:
+  forall (h0 : JWord.W32.t List.list) (m : Bytes.bytes),
+    phoare[ NirapodSha2.M._sha224___sha256_finalize :
+             Theorems.sha256_state h0 m h buf total /\
+             Int.(<) (List.size m) (Ring.IntID.(^) 2 61) ==>
+             BArray28.to_list res.`1 =
+             List.take 28
+               (List.flatten
+                  (List.map FIPS180_SHA2.w32_be
+                     (FIPS180_SHA2.SHA256.hash h0 m)))] = (Real.(%r) 1).
+
+(* Theorems.sha512_absorb_mem_total *)
+lemma sha512_absorb_mem_total:
+  forall (h0 : JWord.W64.t List.list) (m : Bytes.bytes) (p0
+    l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha512_absorb_mem :
+             Theorems.sha512_state h0 m h buf total /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (Int.(+) (List.size m) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             Theorems.sha512_state h0
+               (List.(++) m
+                  (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                     (JWord.W64.to_uint l0))) res.`1 res.`2 res.`3] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_finalize_total *)
+lemma sha512_finalize_total:
+  forall (h0 : JWord.W64.t List.list) (m : Bytes.bytes),
+    phoare[ NirapodSha2.M._sha512___sha512_finalize :
+             Theorems.sha512_state h0 m h buf total /\
+             Int.(<) (List.size m) (Ring.IntID.(^) 2 61) ==>
+             BArray64.to_list res.`1 =
+             List.take 64
+               (List.flatten
+                  (List.map FIPS180_SHA2.w64_be
+                     (FIPS180_SHA2.SHA512.hash h0 m)))] = (Real.(%r) 1).
+
+(* Theorems.sha384_finalize_total *)
+lemma sha384_finalize_total:
+  forall (h0 : JWord.W64.t List.list) (m : Bytes.bytes),
+    phoare[ NirapodSha2.M._sha384___sha512_finalize :
+             Theorems.sha512_state h0 m h buf total /\
+             Int.(<) (List.size m) (Ring.IntID.(^) 2 61) ==>
+             BArray48.to_list res.`1 =
+             List.take 48
+               (List.flatten
+                  (List.map FIPS180_SHA2.w64_be
+                     (FIPS180_SHA2.SHA512.hash h0 m)))] = (Real.(%r) 1).
+
+(* Theorems.sha512_224_finalize_total *)
+lemma sha512_224_finalize_total:
+  forall (h0 : JWord.W64.t List.list) (m : Bytes.bytes),
+    phoare[ NirapodSha2.M._sha512_224___sha512_finalize :
+             Theorems.sha512_state h0 m h buf total /\
+             Int.(<) (List.size m) (Ring.IntID.(^) 2 61) ==>
+             BArray28.to_list res.`1 =
+             List.take 28
+               (List.flatten
+                  (List.map FIPS180_SHA2.w64_be
+                     (FIPS180_SHA2.SHA512.hash h0 m)))] = (Real.(%r) 1).
+
+(* Theorems.sha512_256_finalize_total *)
+lemma sha512_256_finalize_total:
+  forall (h0 : JWord.W64.t List.list) (m : Bytes.bytes),
+    phoare[ NirapodSha2.M._sha512_256___sha512_finalize :
+             Theorems.sha512_state h0 m h buf total /\
+             Int.(<) (List.size m) (Ring.IntID.(^) 2 61) ==>
+             BArray32.to_list res.`1 =
+             List.take 32
+               (List.flatten
+                  (List.map FIPS180_SHA2.w64_be
+                     (FIPS180_SHA2.SHA512.hash h0 m)))] = (Real.(%r) 1).
+
+(* Theorems.sha256_mem_from_total *)
+lemma sha256_mem_from_total:
+  forall (h0 : JWord.W32.t List.list) (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha256____sha256_mem_from :
+             Theorems.words256 h = h0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray32.to_list res.`1 =
+             List.take 32
+               (List.flatten
+                  (List.map FIPS180_SHA2.w32_be
+                     (FIPS180_SHA2.SHA256.hash h0
+                        (Theorems.memread JMemory.Glob.mem
+                           (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))))] = (
+    Real.(%r) 1).
+
+(* Theorems.sha224_mem_from_total *)
+lemma sha224_mem_from_total:
+  forall (h0 : JWord.W32.t List.list) (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha224____sha256_mem_from :
+             Theorems.words256 h = h0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray28.to_list res.`1 =
+             List.take 28
+               (List.flatten
+                  (List.map FIPS180_SHA2.w32_be
+                     (FIPS180_SHA2.SHA256.hash h0
+                        (Theorems.memread JMemory.Glob.mem
+                           (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))))] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_mem_from_total *)
+lemma sha512_mem_from_total:
+  forall (h0 : JWord.W64.t List.list) (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha512____sha512_mem_from :
+             Theorems.words512 h = h0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray64.to_list res.`1 =
+             List.take 64
+               (List.flatten
+                  (List.map FIPS180_SHA2.w64_be
+                     (FIPS180_SHA2.SHA512.hash h0
+                        (Theorems.memread JMemory.Glob.mem
+                           (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))))] = (
+    Real.(%r) 1).
+
+(* Theorems.sha384_mem_from_total *)
+lemma sha384_mem_from_total:
+  forall (h0 : JWord.W64.t List.list) (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha384____sha512_mem_from :
+             Theorems.words512 h = h0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray48.to_list res.`1 =
+             List.take 48
+               (List.flatten
+                  (List.map FIPS180_SHA2.w64_be
+                     (FIPS180_SHA2.SHA512.hash h0
+                        (Theorems.memread JMemory.Glob.mem
+                           (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))))] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_224_mem_from_total *)
+lemma sha512_224_mem_from_total:
+  forall (h0 : JWord.W64.t List.list) (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha512_224____sha512_mem_from :
+             Theorems.words512 h = h0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray28.to_list res.`1 =
+             List.take 28
+               (List.flatten
+                  (List.map FIPS180_SHA2.w64_be
+                     (FIPS180_SHA2.SHA512.hash h0
+                        (Theorems.memread JMemory.Glob.mem
+                           (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))))] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_256_mem_from_total *)
+lemma sha512_256_mem_from_total:
+  forall (h0 : JWord.W64.t List.list) (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha512_256____sha512_mem_from :
+             Theorems.words512 h = h0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray32.to_list res.`1 =
+             List.take 32
+               (List.flatten
+                  (List.map FIPS180_SHA2.w64_be
+                     (FIPS180_SHA2.SHA512.hash h0
+                        (Theorems.memread JMemory.Glob.mem
+                           (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))))] = (
+    Real.(%r) 1).
+
+(* Theorems.sha256_mem_total *)
+lemma sha256_mem_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha256_mem :
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray32.to_list res.`1 =
+             FIPS180_SHA2.SHA256.sha256
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha224_mem_total *)
+lemma sha224_mem_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha224_mem :
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray28.to_list res.`1 =
+             FIPS180_SHA2.SHA256.sha224
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha512_mem_total *)
+lemma sha512_mem_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha512_mem :
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray64.to_list res.`1 =
+             FIPS180_SHA2.SHA512.sha512
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha384_mem_total *)
+lemma sha384_mem_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha384_mem :
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray48.to_list res.`1 =
+             FIPS180_SHA2.SHA512.sha384
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha512_224_mem_total *)
+lemma sha512_224_mem_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha512_224_mem :
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray28.to_list res.`1 =
+             FIPS180_SHA2.SHA512.sha512_224
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha512_256_mem_total *)
+lemma sha512_256_mem_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha512_256_mem :
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray32.to_list res.`1 =
+             FIPS180_SHA2.SHA512.sha512_256
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.hmac_sha256_keyblock_total *)
+lemma hmac_sha256_keyblock_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._hmac_sha256_keyblock_mem :
+             key = p0 /\
+             keylen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray64.to_list res.`1 =
+             FIPS198_HMAC.hmac_key FIPS180_SHA2.SHA256.sha256 64
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.hmac_sha512_keyblock_total *)
+lemma hmac_sha512_keyblock_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._hmac_sha512_keyblock_mem :
+             key = p0 /\
+             keylen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray128.to_list res.`1 =
+             FIPS198_HMAC.hmac_key FIPS180_SHA2.SHA512.sha512 128
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.hmac_sha256_mem_total *)
+lemma hmac_sha256_mem_total:
+  forall (pk lk pm lm : JWord.W64.t),
+    phoare[ NirapodSha2.M._hmac_sha256_mem :
+             key = pk /\
+             keylen = lk /\
+             msg = pm /\
+             msglen = lm /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint pk) (JWord.W64.to_uint lk))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint lk) (Ring.IntID.(^) 2 61) /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint pm) (JWord.W64.to_uint lm))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (Int.(+) 64 (JWord.W64.to_uint lm))
+               (Ring.IntID.(^) 2 61) ==>
+             BArray32.to_list res.`1 =
+             FIPS198_HMAC.hmac_sha256
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint pk)
+                  (JWord.W64.to_uint lk))
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint pm)
+                  (JWord.W64.to_uint lm))] = (Real.(%r) 1).
+
+(* Theorems.hmac_sha512_mem_total *)
+lemma hmac_sha512_mem_total:
+  forall (pk lk pm lm : JWord.W64.t),
+    phoare[ NirapodSha2.M._hmac_sha512_mem :
+             key = pk /\
+             keylen = lk /\
+             msg = pm /\
+             msglen = lm /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint pk) (JWord.W64.to_uint lk))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint lk) (Ring.IntID.(^) 2 61) /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint pm) (JWord.W64.to_uint lm))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (Int.(+) 128 (JWord.W64.to_uint lm))
+               (Ring.IntID.(^) 2 61) ==>
+             BArray64.to_list res.`1 =
+             FIPS198_HMAC.hmac_sha512
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint pk)
+                  (JWord.W64.to_uint lk))
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint pm)
+                  (JWord.W64.to_uint lm))] = (Real.(%r) 1).
+
+(* Theorems.sha256_ctxE *)
+lemma sha256_ctxE:
+  forall (tag : JWord.W64.t) (h0 : JWord.W32.t List.list) (m : Bytes.bytes)
+    (c : BArray112.t),
+    Theorems.sha256_ctx tag h0 m c <=> Ctx256.ctx256 tag h0 m c.
+
+(* Theorems.sha512_ctxE *)
+lemma sha512_ctxE:
+  forall (tag : JWord.W64.t) (h0 : JWord.W64.t List.list) (m : Bytes.bytes)
+    (c : BArray208.t),
+    Theorems.sha512_ctx tag h0 m c <=> Ctx512.ctx512 tag h0 m c.
+
+(* Theorems.hmac256_ctxE *)
+lemma hmac256_ctxE:
+  forall (tag : JWord.W64.t) (k text : Bytes.bytes) (c : BArray144.t),
+    Theorems.hmac256_ctx tag k text c <=> CtxHmac256.hctx256 tag k text c.
+
+(* Theorems.hmac512_ctxE *)
+lemma hmac512_ctxE:
+  forall (tag : JWord.W64.t) (k text : Bytes.bytes) (c : BArray272.t),
+    Theorems.hmac512_ctx tag k text c <=> CtxHmac512.hctx512 tag k text c.
+
+(* Theorems.hmac256_tagE *)
+lemma hmac256_tagE: Theorems.hmac256_tag = CtxHmac256.tag256h.
+
+(* Theorems.hmac512_tagE *)
+lemma hmac512_tagE: Theorems.hmac512_tag = CtxHmac512.tag512h.
+
+(* Theorems.sha256_ctx_init_total *)
+lemma sha256_ctx_init_total:
+  forall (h1 : BArray32.t) (t : JWord.W64.t),
+    phoare[ NirapodSha2.M.__sha256_ctx_init :
+             h = h1 /\ tag = t /\ total = JWord.W64.zero ==>
+             Theorems.sha256_ctx t (Theorems.words256 h1) [] res] = (
+    Real.(%r) 1).
+
+(* Theorems.sha256_ctx_update_total *)
+lemma sha256_ctx_update_total:
+  forall (c0 : BArray112.t) (tag0 : JWord.W64.t) (h0 : JWord.W32.t List.list)
+    (m : Bytes.bytes) (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha256_ctx_update :
+             ctx = c0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             expect_0 = tag0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray112.get64d c0 0 <> tag0 => res.`2 = JWord.W64.one) /\
+             (Theorems.sha256_ctx tag0 h0 m c0 =>
+              if Int.(<) (Int.(+) (List.size m) (JWord.W64.to_uint l0))
+                   (Ring.IntID.(^) 2 61) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.sha256_ctx tag0 h0
+                  (List.(++) m
+                     (Theorems.memread JMemory.Glob.mem
+                        (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.sha224_ctx_final_total *)
+lemma sha224_ctx_final_total:
+  forall (c0 : BArray112.t) (tag0 : JWord.W64.t) (h0 : JWord.W32.t List.list)
+    (m : Bytes.bytes) (d0 : BArray28.t),
+    phoare[ NirapodSha2.M._sha224_ctx___sha2_ctx_final :
+             ctx = c0 /\ digest = d0 /\ expect_0 = tag0 ==>
+             (BArray112.get64d c0 0 <> tag0 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha256_ctx tag0 h0 m c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray28.to_list res.`2 =
+              List.take 28
+                (List.flatten
+                   (List.map FIPS180_SHA2.w32_be
+                      (FIPS180_SHA2.SHA256.hash h0 m))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 112 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha256_ctx_final_total *)
+lemma sha256_ctx_final_total:
+  forall (c0 : BArray112.t) (tag0 : JWord.W64.t) (h0 : JWord.W32.t List.list)
+    (m : Bytes.bytes) (d0 : BArray32.t),
+    phoare[ NirapodSha2.M._sha256_ctx___sha2_ctx_final :
+             ctx = c0 /\ digest = d0 /\ expect_0 = tag0 ==>
+             (BArray112.get64d c0 0 <> tag0 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha256_ctx tag0 h0 m c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray32.to_list res.`2 =
+              List.take 32
+                (List.flatten
+                   (List.map FIPS180_SHA2.w32_be
+                      (FIPS180_SHA2.SHA256.hash h0 m))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 112 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_ctx_init_total *)
+lemma sha512_ctx_init_total:
+  forall (h1 : BArray64.t) (t : JWord.W64.t),
+    phoare[ NirapodSha2.M.__sha512_ctx_init :
+             h = h1 /\ tag = t /\ total = JWord.W64.zero ==>
+             Theorems.sha512_ctx t (Theorems.words512 h1) [] res] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_ctx_update_total *)
+lemma sha512_ctx_update_total:
+  forall (c0 : BArray208.t) (tag0 : JWord.W64.t) (h0 : JWord.W64.t List.list)
+    (m : Bytes.bytes) (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha512_ctx_update :
+             ctx = c0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             expect_0 = tag0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray208.get64d c0 0 <> tag0 => res.`2 = JWord.W64.one) /\
+             (Theorems.sha512_ctx tag0 h0 m c0 =>
+              if Int.(<) (Int.(+) (List.size m) (JWord.W64.to_uint l0))
+                   (Ring.IntID.(^) 2 61) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.sha512_ctx tag0 h0
+                  (List.(++) m
+                     (Theorems.memread JMemory.Glob.mem
+                        (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.sha512_ctx_final_total *)
+lemma sha512_ctx_final_total:
+  forall (c0 : BArray208.t) (tag0 : JWord.W64.t) (h0 : JWord.W64.t List.list)
+    (m : Bytes.bytes) (d0 : BArray64.t),
+    phoare[ NirapodSha2.M._sha512_ctx___sha2_ctx_final :
+             ctx = c0 /\ digest = d0 /\ expect_0 = tag0 ==>
+             (BArray208.get64d c0 0 <> tag0 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha512_ctx tag0 h0 m c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray64.to_list res.`2 =
+              List.take 64
+                (List.flatten
+                   (List.map FIPS180_SHA2.w64_be
+                      (FIPS180_SHA2.SHA512.hash h0 m))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 208 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha384_ctx_final_total *)
+lemma sha384_ctx_final_total:
+  forall (c0 : BArray208.t) (tag0 : JWord.W64.t) (h0 : JWord.W64.t List.list)
+    (m : Bytes.bytes) (d0 : BArray48.t),
+    phoare[ NirapodSha2.M._sha384_ctx___sha2_ctx_final :
+             ctx = c0 /\ digest = d0 /\ expect_0 = tag0 ==>
+             (BArray208.get64d c0 0 <> tag0 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha512_ctx tag0 h0 m c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray48.to_list res.`2 =
+              List.take 48
+                (List.flatten
+                   (List.map FIPS180_SHA2.w64_be
+                      (FIPS180_SHA2.SHA512.hash h0 m))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 208 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_224_ctx_final_total *)
+lemma sha512_224_ctx_final_total:
+  forall (c0 : BArray208.t) (tag0 : JWord.W64.t) (h0 : JWord.W64.t List.list)
+    (m : Bytes.bytes) (d0 : BArray28.t),
+    phoare[ NirapodSha2.M._sha512_224_ctx___sha2_ctx_final :
+             ctx = c0 /\ digest = d0 /\ expect_0 = tag0 ==>
+             (BArray208.get64d c0 0 <> tag0 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha512_ctx tag0 h0 m c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray28.to_list res.`2 =
+              List.take 28
+                (List.flatten
+                   (List.map FIPS180_SHA2.w64_be
+                      (FIPS180_SHA2.SHA512.hash h0 m))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 208 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_256_ctx_final_total *)
+lemma sha512_256_ctx_final_total:
+  forall (c0 : BArray208.t) (tag0 : JWord.W64.t) (h0 : JWord.W64.t List.list)
+    (m : Bytes.bytes) (d0 : BArray32.t),
+    phoare[ NirapodSha2.M._sha512_256_ctx___sha2_ctx_final :
+             ctx = c0 /\ digest = d0 /\ expect_0 = tag0 ==>
+             (BArray208.get64d c0 0 <> tag0 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha512_ctx tag0 h0 m c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray32.to_list res.`2 =
+              List.take 32
+                (List.flatten
+                   (List.map FIPS180_SHA2.w64_be
+                      (FIPS180_SHA2.SHA512.hash h0 m))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 208 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.hmac_sha256_ctx_init_total *)
+lemma hmac_sha256_ctx_init_total:
+  forall (pk lk : JWord.W64.t),
+    phoare[ NirapodSha2.M.__hmac_sha256_ctx_init :
+             key = pk /\
+             keylen = lk /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint pk) (JWord.W64.to_uint lk))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint lk) (Ring.IntID.(^) 2 61) ==>
+             Theorems.hmac256_ctx Theorems.hmac256_tag
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint pk)
+                  (JWord.W64.to_uint lk)) [] res.`1] = (Real.(%r) 1).
+
+(* Theorems.hmac_sha256_ctx_final_total *)
+lemma hmac_sha256_ctx_final_total:
+  forall (c0 : BArray144.t) (o0 : BArray32.t) (k text : Bytes.bytes),
+    phoare[ NirapodSha2.M.__hmac_sha256_ctx_final :
+             ctx = c0 /\ out = o0 ==>
+             (BArray112.get64d (SBArray144_112.SBArray144_112.get_sub c0 0) 0 <>
+              Theorems.hmac256_tag =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = o0) /\
+             (Theorems.hmac256_ctx Theorems.hmac256_tag k text c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray32.to_list res.`2 = FIPS198_HMAC.hmac_sha256 k text /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 144 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.hmac_sha512_ctx_init_total *)
+lemma hmac_sha512_ctx_init_total:
+  forall (pk lk : JWord.W64.t),
+    phoare[ NirapodSha2.M.__hmac_sha512_ctx_init :
+             key = pk /\
+             keylen = lk /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint pk) (JWord.W64.to_uint lk))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint lk) (Ring.IntID.(^) 2 61) ==>
+             Theorems.hmac512_ctx Theorems.hmac512_tag
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint pk)
+                  (JWord.W64.to_uint lk)) [] res.`1] = (Real.(%r) 1).
+
+(* Theorems.hmac_sha512_ctx_final_total *)
+lemma hmac_sha512_ctx_final_total:
+  forall (c0 : BArray272.t) (o0 : BArray64.t) (k text : Bytes.bytes),
+    phoare[ NirapodSha2.M.__hmac_sha512_ctx_final :
+             ctx = c0 /\ out = o0 ==>
+             (BArray208.get64d (SBArray272_208.SBArray272_208.get_sub c0 0) 0 <>
+              Theorems.hmac512_tag =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = o0) /\
+             (Theorems.hmac512_ctx Theorems.hmac512_tag k text c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray64.to_list res.`2 = FIPS198_HMAC.hmac_sha512 k text /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 272 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.lane256E *)
+lemma lane256E:
+  forall (h : BArray256.t) (k : int), Theorems.lane256 h k = SHA256_X8.l8 h k.
+
+(* Theorems.lane512E *)
+lemma lane512E:
+  forall (h : BArray256.t) (k : int), Theorems.lane512 h k = SHA512_X4.l4 h k.
+
+(* Theorems.sha256_x8_stateE *)
+lemma sha256_x8_stateE:
+  forall (h0 : JWord.W32.t List.list) (ms : int -> Bytes.bytes)
+    (h : BArray256.t) (buf : BArray512.t) (total : JWord.W64.t),
+    Theorems.sha256_x8_state h0 ms h buf total <=>
+    SHA256_X8.stream8 h0 ms h buf total.
+
+(* Theorems.sha512_x4_stateE *)
+lemma sha512_x4_stateE:
+  forall (h0 : JWord.W64.t List.list) (ms : int -> Bytes.bytes)
+    (h : BArray256.t) (buf : BArray512.t) (total : JWord.W64.t),
+    Theorems.sha512_x4_state h0 ms h buf total <=>
+    SHA512_X4.stream4 h0 ms h buf total.
+
+(* Theorems.sha256_x8_ctxE *)
+lemma sha256_x8_ctxE:
+  forall (h0 : JWord.W32.t List.list) (ms : int -> Bytes.bytes)
+    (c : BArray784.t), Theorems.sha256_x8_ctx h0 ms c <=> CtxX8.ctx8 h0 ms c.
+
+(* Theorems.sha512_x4_ctxE *)
+lemma sha512_x4_ctxE:
+  forall (h0 : JWord.W64.t List.list) (ms : int -> Bytes.bytes)
+    (c : BArray784.t), Theorems.sha512_x4_ctx h0 ms c <=> CtxX4.ctx4 h0 ms c.
+
+(* Theorems.sha2_tagE *)
+lemma sha2_tagE:
+  forall (f : int),
+    Theorems.sha2_tag f =
+    JWord.W64.of_int (Int.(+) 1100357333870 (JUtils.(`<<`) f 32)).
+
+(* Theorems.tag2E *)
+lemma tag2E: Theorems.sha2_tag 2 = CtxX8.tag256.
+
+(* Theorems.tag9E *)
+lemma tag9E: Theorems.sha2_tag 9 = CtxX8.tagx8.
+
+(* Theorems.tag4E *)
+lemma tag4E: Theorems.sha2_tag 4 = CtxX4.tag512.
+
+(* Theorems.tag10E *)
+lemma tag10E: Theorems.sha2_tag 10 = CtxX4.tagx4.
+
+(* Theorems.sha256_x8_init_total *)
+lemma sha256_x8_init_total:
+  phoare[ NirapodSha2.M.__sha256_x8_init :
+           true ==>
+           forall (k : int),
+             0 Int.(<=) k Int.(<) 8 =>
+             Theorems.lane256 res k = FIPS180_SHA2.SHA256.H0_256] = (
+  Real.(%r) 1).
+
+(* Theorems.sha256_x8_from_total *)
+lemma sha256_x8_from_total:
+  forall (hs0 : BArray32.t) (bs0 : BArray64.t),
+    phoare[ NirapodSha2.M.__sha256_x8_from :
+             hs = hs0 /\ bs = bs0 ==>
+             (forall (k : int),
+                0 Int.(<=) k Int.(<) 8 =>
+                Theorems.lane256 res.`1 k = Theorems.words256 hs0) /\
+             forall (k : int),
+               0 Int.(<=) k Int.(<) 8 => SHA256_X8.sub8 res.`2 k = bs0] = (
+    Real.(%r) 1).
+
+(* Theorems.sha256_x8_absorb_total *)
+lemma sha256_x8_absorb_total:
+  forall (h0 : JWord.W32.t List.list) (ms0 : int -> Bytes.bytes)
+    (in0 : BArray64.t) (l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha256_x8_absorb_lanes :
+             Theorems.sha256_x8_state h0 ms0 h buf total /\
+             in_0 = in0 /\
+             inlen = l0 /\
+             (forall (q : int),
+                0 Int.(<=) q Int.(<) 8 =>
+                Int.(<)
+                  (Int.(+) (SHA256_X8.ptr in0 q) (JWord.W64.to_uint l0))
+                  JModel_armv8a.ptr_modulus) /\
+             Int.(<)
+               (Int.(+) (JWord.W64.to_uint total) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             Theorems.sha256_x8_state h0
+               (fun (k : int) =>
+                  List.(++) (ms0 k)
+                    (Theorems.memread JMemory.Glob.mem (SHA256_X8.ptr in0 k)
+                       (JWord.W64.to_uint l0))) res.`1 res.`2 res.`3] = (
+    Real.(%r) 1).
+
+(* Theorems.sha256_x8_finalize_total *)
+lemma sha256_x8_finalize_total:
+  forall (h0 : JWord.W32.t List.list) (ms0 : int -> Bytes.bytes),
+    phoare[ NirapodSha2.M._sha256_x8_finalize :
+             Theorems.sha256_x8_state h0 ms0 h buf total /\
+             Int.(<) (JWord.W64.to_uint total) (Ring.IntID.(^) 2 61) ==>
+             forall (k : int),
+               0 Int.(<=) k Int.(<) 8 =>
+               List.take 32
+                 (List.drop (Int.( * ) 32 k) (BArray256.to_list res.`1)) =
+               List.flatten
+                 (List.map FIPS180_SHA2.w32_be
+                    (FIPS180_SHA2.SHA256.hash h0 (ms0 k)))] = (Real.(%r) 1).
+
+(* Theorems.sha256_x8_lanes_total *)
+lemma sha256_x8_lanes_total:
+  forall (in0 : BArray64.t) (l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha256_x8_lanes :
+             in_0 = in0 /\
+             len = l0 /\
+             (forall (q : int),
+                0 Int.(<=) q Int.(<) 8 =>
+                Int.(<)
+                  (Int.(+) (SHA256_X8.ptr in0 q) (JWord.W64.to_uint l0))
+                  JModel_armv8a.ptr_modulus) /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             forall (k : int),
+               0 Int.(<=) k Int.(<) 8 =>
+               List.take 32
+                 (List.drop (Int.( * ) 32 k) (BArray256.to_list res.`1)) =
+               FIPS180_SHA2.SHA256.sha256
+                 (Theorems.memread JMemory.Glob.mem (SHA256_X8.ptr in0 k)
+                    (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha256_x8_ctx_init_total *)
+lemma sha256_x8_ctx_init_total:
+  phoare[ NirapodSha2.M.__sha256_x8_ctx_init :
+           true ==>
+           Theorems.sha256_x8_ctx FIPS180_SHA2.SHA256.H0_256
+             (fun (_ : int) => []) res] = (Real.(%r) 1).
+
+(* Theorems.sha256_x8_ctx_from_total *)
+lemma sha256_x8_ctx_from_total:
+  forall (c0 : BArray784.t) (s0 : BArray112.t) (h0 : JWord.W32.t List.list)
+    (m : Bytes.bytes),
+    phoare[ NirapodSha2.M._sha256_x8_ctx_from :
+             ctx = c0 /\ src = s0 ==>
+             (BArray112.get64d s0 0 <> Theorems.sha2_tag 2 =>
+              res.`2 = JWord.W64.one /\ res.`1 = c0) /\
+             (Theorems.sha256_ctx (Theorems.sha2_tag 2) h0 m s0 =>
+              res.`2 = JWord.W64.zero /\
+              Theorems.sha256_x8_ctx h0 (fun (_ : int) => m) res.`1)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha256_x8_ctx_update_total *)
+lemma sha256_x8_ctx_update_total:
+  forall (c0 : BArray784.t) (h0 : JWord.W32.t List.list)
+    (ms0 : int -> Bytes.bytes) (in0 : BArray64.t) (l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha256_x8_ctx_update :
+             ctx = c0 /\
+             in_0 = in0 /\
+             inlen = l0 /\
+             forall (q : int),
+               0 Int.(<=) q Int.(<) 8 =>
+               Int.(<) (Int.(+) (SHA256_X8.ptr in0 q) (JWord.W64.to_uint l0))
+                 JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray784.get64d c0 0 <> Theorems.sha2_tag 9 =>
+              res.`2 = JWord.W64.one) /\
+             (Theorems.sha256_x8_ctx h0 ms0 c0 =>
+              if Int.(<) (Int.(+) (List.size (ms0 0)) (JWord.W64.to_uint l0))
+                   (Ring.IntID.(^) 2 61) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.sha256_x8_ctx h0
+                  (fun (k : int) =>
+                     List.(++) (ms0 k)
+                       (Theorems.memread JMemory.Glob.mem
+                          (SHA256_X8.ptr in0 k) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.sha256_x8_ctx_final_total *)
+lemma sha256_x8_ctx_final_total:
+  forall (c0 : BArray784.t) (d0 : BArray256.t) (h0 : JWord.W32.t List.list)
+    (ms0 : int -> Bytes.bytes),
+    phoare[ NirapodSha2.M._sha256_x8_ctx_final :
+             ctx = c0 /\ out = d0 ==>
+             (BArray784.get64d c0 0 <> Theorems.sha2_tag 9 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha256_x8_ctx h0 ms0 c0 =>
+              res.`3 = JWord.W64.zero /\
+              (forall (k : int),
+                 0 Int.(<=) k Int.(<) 8 =>
+                 List.take 32
+                   (List.drop (Int.( * ) 32 k) (BArray256.to_list res.`2)) =
+                 List.flatten
+                   (List.map FIPS180_SHA2.w32_be
+                      (FIPS180_SHA2.SHA256.hash h0 (ms0 k)))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 784 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_x4_init_total *)
+lemma sha512_x4_init_total:
+  phoare[ NirapodSha2.M.__sha512_x4_init :
+           true ==>
+           forall (k : int),
+             0 Int.(<=) k Int.(<) 4 =>
+             Theorems.lane512 res k = FIPS180_SHA2.SHA512.H0_512] = (
+  Real.(%r) 1).
+
+(* Theorems.sha512_x4_from_total *)
+lemma sha512_x4_from_total:
+  forall (hs0 : BArray64.t) (bs0 : BArray128.t),
+    phoare[ NirapodSha2.M.__sha512_x4_from :
+             hs = hs0 /\ bs = bs0 ==>
+             (forall (k : int),
+                0 Int.(<=) k Int.(<) 4 =>
+                Theorems.lane512 res.`1 k = Theorems.words512 hs0) /\
+             forall (k : int),
+               0 Int.(<=) k Int.(<) 4 => SHA512_X4.sub4 res.`2 k = bs0] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_x4_absorb_total *)
+lemma sha512_x4_absorb_total:
+  forall (h0 : JWord.W64.t List.list) (ms0 : int -> Bytes.bytes)
+    (in0 : BArray32.t) (l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha512_x4_absorb_lanes :
+             Theorems.sha512_x4_state h0 ms0 h buf total /\
+             in_0 = in0 /\
+             inlen = l0 /\
+             (forall (q : int),
+                0 Int.(<=) q Int.(<) 4 =>
+                Int.(<)
+                  (Int.(+) (SHA512_X4.ptr in0 q) (JWord.W64.to_uint l0))
+                  JModel_armv8a.ptr_modulus) /\
+             Int.(<)
+               (Int.(+) (JWord.W64.to_uint total) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             Theorems.sha512_x4_state h0
+               (fun (k : int) =>
+                  List.(++) (ms0 k)
+                    (Theorems.memread JMemory.Glob.mem (SHA512_X4.ptr in0 k)
+                       (JWord.W64.to_uint l0))) res.`1 res.`2 res.`3] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_x4_finalize_total *)
+lemma sha512_x4_finalize_total:
+  forall (h0 : JWord.W64.t List.list) (ms0 : int -> Bytes.bytes),
+    phoare[ NirapodSha2.M._sha512_x4_finalize :
+             Theorems.sha512_x4_state h0 ms0 h buf total /\
+             Int.(<) (JWord.W64.to_uint total) (Ring.IntID.(^) 2 61) ==>
+             forall (k : int),
+               0 Int.(<=) k Int.(<) 4 =>
+               List.take 64
+                 (List.drop (Int.( * ) 64 k) (BArray256.to_list res.`1)) =
+               List.flatten
+                 (List.map FIPS180_SHA2.w64_be
+                    (FIPS180_SHA2.SHA512.hash h0 (ms0 k)))] = (Real.(%r) 1).
+
+(* Theorems.sha512_x4_lanes_total *)
+lemma sha512_x4_lanes_total:
+  forall (in0 : BArray32.t) (l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha512_x4_lanes :
+             in_0 = in0 /\
+             len = l0 /\
+             (forall (q : int),
+                0 Int.(<=) q Int.(<) 4 =>
+                Int.(<)
+                  (Int.(+) (SHA512_X4.ptr in0 q) (JWord.W64.to_uint l0))
+                  JModel_armv8a.ptr_modulus) /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             forall (k : int),
+               0 Int.(<=) k Int.(<) 4 =>
+               List.take 64
+                 (List.drop (Int.( * ) 64 k) (BArray256.to_list res.`1)) =
+               FIPS180_SHA2.SHA512.sha512
+                 (Theorems.memread JMemory.Glob.mem (SHA512_X4.ptr in0 k)
+                    (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha512_x4_ctx_init_total *)
+lemma sha512_x4_ctx_init_total:
+  phoare[ NirapodSha2.M.__sha512_x4_ctx_init :
+           true ==>
+           Theorems.sha512_x4_ctx FIPS180_SHA2.SHA512.H0_512
+             (fun (_ : int) => []) res] = (Real.(%r) 1).
+
+(* Theorems.sha512_x4_ctx_from_total *)
+lemma sha512_x4_ctx_from_total:
+  forall (c0 : BArray784.t) (s0 : BArray208.t) (h0 : JWord.W64.t List.list)
+    (m : Bytes.bytes),
+    phoare[ NirapodSha2.M._sha512_x4_ctx_from :
+             ctx = c0 /\ src = s0 ==>
+             (BArray208.get64d s0 0 <> Theorems.sha2_tag 4 =>
+              res.`2 = JWord.W64.one /\ res.`1 = c0) /\
+             (Theorems.sha512_ctx (Theorems.sha2_tag 4) h0 m s0 =>
+              res.`2 = JWord.W64.zero /\
+              Theorems.sha512_x4_ctx h0 (fun (_ : int) => m) res.`1)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_x4_ctx_update_total *)
+lemma sha512_x4_ctx_update_total:
+  forall (c0 : BArray784.t) (h0 : JWord.W64.t List.list)
+    (ms0 : int -> Bytes.bytes) (in0 : BArray32.t) (l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M._sha512_x4_ctx_update :
+             ctx = c0 /\
+             in_0 = in0 /\
+             inlen = l0 /\
+             forall (q : int),
+               0 Int.(<=) q Int.(<) 4 =>
+               Int.(<) (Int.(+) (SHA512_X4.ptr in0 q) (JWord.W64.to_uint l0))
+                 JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray784.get64d c0 0 <> Theorems.sha2_tag 10 =>
+              res.`2 = JWord.W64.one) /\
+             (Theorems.sha512_x4_ctx h0 ms0 c0 =>
+              if Int.(<) (Int.(+) (List.size (ms0 0)) (JWord.W64.to_uint l0))
+                   (Ring.IntID.(^) 2 61) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.sha512_x4_ctx h0
+                  (fun (k : int) =>
+                     List.(++) (ms0 k)
+                       (Theorems.memread JMemory.Glob.mem
+                          (SHA512_X4.ptr in0 k) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.sha512_x4_ctx_final_total *)
+lemma sha512_x4_ctx_final_total:
+  forall (c0 : BArray784.t) (d0 : BArray256.t) (h0 : JWord.W64.t List.list)
+    (ms0 : int -> Bytes.bytes),
+    phoare[ NirapodSha2.M._sha512_x4_ctx_final :
+             ctx = c0 /\ out = d0 ==>
+             (BArray784.get64d c0 0 <> Theorems.sha2_tag 10 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha512_x4_ctx h0 ms0 c0 =>
+              res.`3 = JWord.W64.zero /\
+              (forall (k : int),
+                 0 Int.(<=) k Int.(<) 4 =>
+                 List.take 64
+                   (List.drop (Int.( * ) 64 k) (BArray256.to_list res.`2)) =
+                 List.flatten
+                   (List.map FIPS180_SHA2.w64_be
+                      (FIPS180_SHA2.SHA512.hash h0 (ms0 k)))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 784 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha224_export_total *)
+lemma sha224_export_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha224 :
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray28.to_list res =
+             FIPS180_SHA2.SHA256.sha224
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha256_export_total *)
+lemma sha256_export_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha256 :
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray32.to_list res =
+             FIPS180_SHA2.SHA256.sha256
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha384_export_total *)
+lemma sha384_export_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha384 :
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray48.to_list res =
+             FIPS180_SHA2.SHA512.sha384
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha512_export_total *)
+lemma sha512_export_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha512 :
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray64.to_list res =
+             FIPS180_SHA2.SHA512.sha512
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha512_224_export_total *)
+lemma sha512_224_export_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha512_224 :
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray28.to_list res =
+             FIPS180_SHA2.SHA512.sha512_224
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha512_256_export_total *)
+lemma sha512_256_export_total:
+  forall (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha512_256 :
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             BArray32.to_list res =
+             FIPS180_SHA2.SHA512.sha512_256
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint p0)
+                  (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha224_init_export_total *)
+lemma sha224_init_export_total:
+  phoare[ NirapodSha2.M.sha224_init :
+           true ==>
+           Theorems.sha256_ctx (Theorems.sha2_tag 1)
+             FIPS180_SHA2.SHA256.H0_224 [] res] = (Real.(%r) 1).
+
+(* Theorems.sha224_update_export_total *)
+lemma sha224_update_export_total:
+  forall (c0 : BArray112.t) (h0 : JWord.W32.t List.list) (m : Bytes.bytes)
+    (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha224_update :
+             ctx = c0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray112.get64d c0 0 <> Theorems.sha2_tag 1 =>
+              res.`2 = JWord.W64.one) /\
+             (Theorems.sha256_ctx (Theorems.sha2_tag 1) h0 m c0 =>
+              if Int.(<) (Int.(+) (List.size m) (JWord.W64.to_uint l0))
+                   (Ring.IntID.(^) 2 61) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.sha256_ctx (Theorems.sha2_tag 1) h0
+                  (List.(++) m
+                     (Theorems.memread JMemory.Glob.mem
+                        (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.sha224_final_export_total *)
+lemma sha224_final_export_total:
+  forall (c0 : BArray112.t) (h0 : JWord.W32.t List.list) (m : Bytes.bytes)
+    (d0 : BArray28.t),
+    phoare[ NirapodSha2.M.sha224_final :
+             ctx = c0 /\ out = d0 ==>
+             (BArray112.get64d c0 0 <> Theorems.sha2_tag 1 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha256_ctx (Theorems.sha2_tag 1) h0 m c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray28.to_list res.`2 =
+              List.take 28
+                (List.flatten
+                   (List.map FIPS180_SHA2.w32_be
+                      (FIPS180_SHA2.SHA256.hash h0 m))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 112 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha256_init_export_total *)
+lemma sha256_init_export_total:
+  phoare[ NirapodSha2.M.sha256_init :
+           true ==>
+           Theorems.sha256_ctx (Theorems.sha2_tag 2)
+             FIPS180_SHA2.SHA256.H0_256 [] res] = (Real.(%r) 1).
+
+(* Theorems.sha256_update_export_total *)
+lemma sha256_update_export_total:
+  forall (c0 : BArray112.t) (h0 : JWord.W32.t List.list) (m : Bytes.bytes)
+    (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha256_update :
+             ctx = c0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray112.get64d c0 0 <> Theorems.sha2_tag 2 =>
+              res.`2 = JWord.W64.one) /\
+             (Theorems.sha256_ctx (Theorems.sha2_tag 2) h0 m c0 =>
+              if Int.(<) (Int.(+) (List.size m) (JWord.W64.to_uint l0))
+                   (Ring.IntID.(^) 2 61) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.sha256_ctx (Theorems.sha2_tag 2) h0
+                  (List.(++) m
+                     (Theorems.memread JMemory.Glob.mem
+                        (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.sha256_final_export_total *)
+lemma sha256_final_export_total:
+  forall (c0 : BArray112.t) (h0 : JWord.W32.t List.list) (m : Bytes.bytes)
+    (d0 : BArray32.t),
+    phoare[ NirapodSha2.M.sha256_final :
+             ctx = c0 /\ out = d0 ==>
+             (BArray112.get64d c0 0 <> Theorems.sha2_tag 2 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha256_ctx (Theorems.sha2_tag 2) h0 m c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray32.to_list res.`2 =
+              List.take 32
+                (List.flatten
+                   (List.map FIPS180_SHA2.w32_be
+                      (FIPS180_SHA2.SHA256.hash h0 m))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 112 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha384_init_export_total *)
+lemma sha384_init_export_total:
+  phoare[ NirapodSha2.M.sha384_init :
+           true ==>
+           Theorems.sha512_ctx (Theorems.sha2_tag 3)
+             FIPS180_SHA2.SHA512.H0_384 [] res] = (Real.(%r) 1).
+
+(* Theorems.sha384_update_export_total *)
+lemma sha384_update_export_total:
+  forall (c0 : BArray208.t) (h0 : JWord.W64.t List.list) (m : Bytes.bytes)
+    (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha384_update :
+             ctx = c0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray208.get64d c0 0 <> Theorems.sha2_tag 3 =>
+              res.`2 = JWord.W64.one) /\
+             (Theorems.sha512_ctx (Theorems.sha2_tag 3) h0 m c0 =>
+              if Int.(<) (Int.(+) (List.size m) (JWord.W64.to_uint l0))
+                   (Ring.IntID.(^) 2 61) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.sha512_ctx (Theorems.sha2_tag 3) h0
+                  (List.(++) m
+                     (Theorems.memread JMemory.Glob.mem
+                        (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.sha384_final_export_total *)
+lemma sha384_final_export_total:
+  forall (c0 : BArray208.t) (h0 : JWord.W64.t List.list) (m : Bytes.bytes)
+    (d0 : BArray48.t),
+    phoare[ NirapodSha2.M.sha384_final :
+             ctx = c0 /\ out = d0 ==>
+             (BArray208.get64d c0 0 <> Theorems.sha2_tag 3 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha512_ctx (Theorems.sha2_tag 3) h0 m c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray48.to_list res.`2 =
+              List.take 48
+                (List.flatten
+                   (List.map FIPS180_SHA2.w64_be
+                      (FIPS180_SHA2.SHA512.hash h0 m))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 208 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_init_export_total *)
+lemma sha512_init_export_total:
+  phoare[ NirapodSha2.M.sha512_init :
+           true ==>
+           Theorems.sha512_ctx (Theorems.sha2_tag 4)
+             FIPS180_SHA2.SHA512.H0_512 [] res] = (Real.(%r) 1).
+
+(* Theorems.sha512_update_export_total *)
+lemma sha512_update_export_total:
+  forall (c0 : BArray208.t) (h0 : JWord.W64.t List.list) (m : Bytes.bytes)
+    (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha512_update :
+             ctx = c0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray208.get64d c0 0 <> Theorems.sha2_tag 4 =>
+              res.`2 = JWord.W64.one) /\
+             (Theorems.sha512_ctx (Theorems.sha2_tag 4) h0 m c0 =>
+              if Int.(<) (Int.(+) (List.size m) (JWord.W64.to_uint l0))
+                   (Ring.IntID.(^) 2 61) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.sha512_ctx (Theorems.sha2_tag 4) h0
+                  (List.(++) m
+                     (Theorems.memread JMemory.Glob.mem
+                        (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.sha512_final_export_total *)
+lemma sha512_final_export_total:
+  forall (c0 : BArray208.t) (h0 : JWord.W64.t List.list) (m : Bytes.bytes)
+    (d0 : BArray64.t),
+    phoare[ NirapodSha2.M.sha512_final :
+             ctx = c0 /\ out = d0 ==>
+             (BArray208.get64d c0 0 <> Theorems.sha2_tag 4 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha512_ctx (Theorems.sha2_tag 4) h0 m c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray64.to_list res.`2 =
+              List.take 64
+                (List.flatten
+                   (List.map FIPS180_SHA2.w64_be
+                      (FIPS180_SHA2.SHA512.hash h0 m))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 208 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_224_init_export_total *)
+lemma sha512_224_init_export_total:
+  phoare[ NirapodSha2.M.sha512_224_init :
+           true ==>
+           Theorems.sha512_ctx (Theorems.sha2_tag 5)
+             FIPS180_SHA2.SHA512.H0_512_224 [] res] = (Real.(%r) 1).
+
+(* Theorems.sha512_224_update_export_total *)
+lemma sha512_224_update_export_total:
+  forall (c0 : BArray208.t) (h0 : JWord.W64.t List.list) (m : Bytes.bytes)
+    (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha512_224_update :
+             ctx = c0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray208.get64d c0 0 <> Theorems.sha2_tag 5 =>
+              res.`2 = JWord.W64.one) /\
+             (Theorems.sha512_ctx (Theorems.sha2_tag 5) h0 m c0 =>
+              if Int.(<) (Int.(+) (List.size m) (JWord.W64.to_uint l0))
+                   (Ring.IntID.(^) 2 61) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.sha512_ctx (Theorems.sha2_tag 5) h0
+                  (List.(++) m
+                     (Theorems.memread JMemory.Glob.mem
+                        (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.sha512_224_final_export_total *)
+lemma sha512_224_final_export_total:
+  forall (c0 : BArray208.t) (h0 : JWord.W64.t List.list) (m : Bytes.bytes)
+    (d0 : BArray28.t),
+    phoare[ NirapodSha2.M.sha512_224_final :
+             ctx = c0 /\ out = d0 ==>
+             (BArray208.get64d c0 0 <> Theorems.sha2_tag 5 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha512_ctx (Theorems.sha2_tag 5) h0 m c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray28.to_list res.`2 =
+              List.take 28
+                (List.flatten
+                   (List.map FIPS180_SHA2.w64_be
+                      (FIPS180_SHA2.SHA512.hash h0 m))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 208 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_256_init_export_total *)
+lemma sha512_256_init_export_total:
+  phoare[ NirapodSha2.M.sha512_256_init :
+           true ==>
+           Theorems.sha512_ctx (Theorems.sha2_tag 6)
+             FIPS180_SHA2.SHA512.H0_512_256 [] res] = (Real.(%r) 1).
+
+(* Theorems.sha512_256_update_export_total *)
+lemma sha512_256_update_export_total:
+  forall (c0 : BArray208.t) (h0 : JWord.W64.t List.list) (m : Bytes.bytes)
+    (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha512_256_update :
+             ctx = c0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray208.get64d c0 0 <> Theorems.sha2_tag 6 =>
+              res.`2 = JWord.W64.one) /\
+             (Theorems.sha512_ctx (Theorems.sha2_tag 6) h0 m c0 =>
+              if Int.(<) (Int.(+) (List.size m) (JWord.W64.to_uint l0))
+                   (Ring.IntID.(^) 2 61) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.sha512_ctx (Theorems.sha2_tag 6) h0
+                  (List.(++) m
+                     (Theorems.memread JMemory.Glob.mem
+                        (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.sha512_256_final_export_total *)
+lemma sha512_256_final_export_total:
+  forall (c0 : BArray208.t) (h0 : JWord.W64.t List.list) (m : Bytes.bytes)
+    (d0 : BArray32.t),
+    phoare[ NirapodSha2.M.sha512_256_final :
+             ctx = c0 /\ out = d0 ==>
+             (BArray208.get64d c0 0 <> Theorems.sha2_tag 6 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha512_ctx (Theorems.sha2_tag 6) h0 m c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray32.to_list res.`2 =
+              List.take 32
+                (List.flatten
+                   (List.map FIPS180_SHA2.w64_be
+                      (FIPS180_SHA2.SHA512.hash h0 m))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 208 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.hmac_sha256_export_total *)
+lemma hmac_sha256_export_total:
+  forall (pk lk pm lm : JWord.W64.t),
+    phoare[ NirapodSha2.M.hmac_sha256 :
+             key = pk /\
+             keylen = lk /\
+             msg = pm /\
+             msglen = lm /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint pk) (JWord.W64.to_uint lk))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint lk) (Ring.IntID.(^) 2 61) /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint pm) (JWord.W64.to_uint lm))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (Int.(+) 64 (JWord.W64.to_uint lm))
+               (Ring.IntID.(^) 2 61) ==>
+             BArray32.to_list res =
+             FIPS198_HMAC.hmac_sha256
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint pk)
+                  (JWord.W64.to_uint lk))
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint pm)
+                  (JWord.W64.to_uint lm))] = (Real.(%r) 1).
+
+(* Theorems.hmac_sha256_init_export_total *)
+lemma hmac_sha256_init_export_total:
+  forall (pk lk : JWord.W64.t),
+    phoare[ NirapodSha2.M.hmac_sha256_init :
+             key = pk /\
+             keylen = lk /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint pk) (JWord.W64.to_uint lk))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint lk) (Ring.IntID.(^) 2 61) ==>
+             Theorems.hmac256_ctx Theorems.hmac256_tag
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint pk)
+                  (JWord.W64.to_uint lk)) [] res] = (Real.(%r) 1).
+
+(* Theorems.hmac_sha256_update_export_total *)
+lemma hmac_sha256_update_export_total:
+  forall (c0 : BArray144.t) (k text : Bytes.bytes) (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.hmac_sha256_update :
+             ctx = c0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray112.get64d (SBArray144_112.SBArray144_112.get_sub c0 0) 0 <>
+              Theorems.hmac256_tag => res.`2 = JWord.W64.one) /\
+             (Theorems.hmac256_ctx Theorems.hmac256_tag k text c0 =>
+              if Int.(<) (Int.(+) (List.size text) (JWord.W64.to_uint l0))
+                   (Int.(-) (Ring.IntID.(^) 2 61) 64) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.hmac256_ctx Theorems.hmac256_tag k
+                  (List.(++) text
+                     (Theorems.memread JMemory.Glob.mem
+                        (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.hmac_sha256_final_export_total *)
+lemma hmac_sha256_final_export_total:
+  forall (c0 : BArray144.t) (o0 : BArray32.t) (k text : Bytes.bytes),
+    phoare[ NirapodSha2.M.hmac_sha256_final :
+             ctx = c0 /\ out = o0 ==>
+             (BArray112.get64d (SBArray144_112.SBArray144_112.get_sub c0 0) 0 <>
+              Theorems.hmac256_tag =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = o0) /\
+             (Theorems.hmac256_ctx Theorems.hmac256_tag k text c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray32.to_list res.`2 = FIPS198_HMAC.hmac_sha256 k text /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 144 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.hmac_sha512_export_total *)
+lemma hmac_sha512_export_total:
+  forall (pk lk pm lm : JWord.W64.t),
+    phoare[ NirapodSha2.M.hmac_sha512 :
+             key = pk /\
+             keylen = lk /\
+             msg = pm /\
+             msglen = lm /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint pk) (JWord.W64.to_uint lk))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint lk) (Ring.IntID.(^) 2 61) /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint pm) (JWord.W64.to_uint lm))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (Int.(+) 128 (JWord.W64.to_uint lm))
+               (Ring.IntID.(^) 2 61) ==>
+             BArray64.to_list res =
+             FIPS198_HMAC.hmac_sha512
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint pk)
+                  (JWord.W64.to_uint lk))
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint pm)
+                  (JWord.W64.to_uint lm))] = (Real.(%r) 1).
+
+(* Theorems.hmac_sha512_init_export_total *)
+lemma hmac_sha512_init_export_total:
+  forall (pk lk : JWord.W64.t),
+    phoare[ NirapodSha2.M.hmac_sha512_init :
+             key = pk /\
+             keylen = lk /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint pk) (JWord.W64.to_uint lk))
+               JModel_armv8a.ptr_modulus /\
+             Int.(<) (JWord.W64.to_uint lk) (Ring.IntID.(^) 2 61) ==>
+             Theorems.hmac512_ctx Theorems.hmac512_tag
+               (Theorems.memread JMemory.Glob.mem (JWord.W64.to_uint pk)
+                  (JWord.W64.to_uint lk)) [] res] = (Real.(%r) 1).
+
+(* Theorems.hmac_sha512_update_export_total *)
+lemma hmac_sha512_update_export_total:
+  forall (c0 : BArray272.t) (k text : Bytes.bytes) (p0 l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.hmac_sha512_update :
+             ctx = c0 /\
+             in_0 = p0 /\
+             inlen = l0 /\
+             Int.(<) (Int.(+) (JWord.W64.to_uint p0) (JWord.W64.to_uint l0))
+               JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray208.get64d (SBArray272_208.SBArray272_208.get_sub c0 0) 0 <>
+              Theorems.hmac512_tag => res.`2 = JWord.W64.one) /\
+             (Theorems.hmac512_ctx Theorems.hmac512_tag k text c0 =>
+              if Int.(<) (Int.(+) (List.size text) (JWord.W64.to_uint l0))
+                   (Int.(-) (Ring.IntID.(^) 2 61) 128) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.hmac512_ctx Theorems.hmac512_tag k
+                  (List.(++) text
+                     (Theorems.memread JMemory.Glob.mem
+                        (JWord.W64.to_uint p0) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.hmac_sha512_final_export_total *)
+lemma hmac_sha512_final_export_total:
+  forall (c0 : BArray272.t) (o0 : BArray64.t) (k text : Bytes.bytes),
+    phoare[ NirapodSha2.M.hmac_sha512_final :
+             ctx = c0 /\ out = o0 ==>
+             (BArray208.get64d (SBArray272_208.SBArray272_208.get_sub c0 0) 0 <>
+              Theorems.hmac512_tag =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = o0) /\
+             (Theorems.hmac512_ctx Theorems.hmac512_tag k text c0 =>
+              res.`3 = JWord.W64.zero /\
+              BArray64.to_list res.`2 = FIPS198_HMAC.hmac_sha512 k text /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 272 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha256_x8_export_total *)
+lemma sha256_x8_export_total:
+  forall (in0 : BArray64.t) (l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha256_x8 :
+             in_0 = in0 /\
+             len = l0 /\
+             (forall (q : int),
+                0 Int.(<=) q Int.(<) 8 =>
+                Int.(<)
+                  (Int.(+) (SHA256_X8.ptr in0 q) (JWord.W64.to_uint l0))
+                  JModel_armv8a.ptr_modulus) /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             forall (k : int),
+               0 Int.(<=) k Int.(<) 8 =>
+               List.take 32
+                 (List.drop (Int.( * ) 32 k) (BArray256.to_list res)) =
+               FIPS180_SHA2.SHA256.sha256
+                 (Theorems.memread JMemory.Glob.mem (SHA256_X8.ptr in0 k)
+                    (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha256_x8_init_export_total *)
+lemma sha256_x8_init_export_total:
+  phoare[ NirapodSha2.M.sha256_x8_init :
+           true ==>
+           Theorems.sha256_x8_ctx FIPS180_SHA2.SHA256.H0_256
+             (fun (_ : int) => []) res] = (Real.(%r) 1).
+
+(* Theorems.sha256_x8_init_from_export_total *)
+lemma sha256_x8_init_from_export_total:
+  forall (c0 : BArray784.t) (s0 : BArray112.t) (h0 : JWord.W32.t List.list)
+    (m : Bytes.bytes),
+    phoare[ NirapodSha2.M.sha256_x8_init_from :
+             ctx = c0 /\ src = s0 ==>
+             (BArray112.get64d s0 0 <> Theorems.sha2_tag 2 =>
+              res.`2 = JWord.W64.one /\ res.`1 = c0) /\
+             (Theorems.sha256_ctx (Theorems.sha2_tag 2) h0 m s0 =>
+              res.`2 = JWord.W64.zero /\
+              Theorems.sha256_x8_ctx h0 (fun (_ : int) => m) res.`1)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha256_x8_update_export_total *)
+lemma sha256_x8_update_export_total:
+  forall (c0 : BArray784.t) (h0 : JWord.W32.t List.list)
+    (ms0 : int -> Bytes.bytes) (in0 : BArray64.t) (l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha256_x8_update :
+             ctx = c0 /\
+             in_0 = in0 /\
+             inlen = l0 /\
+             forall (q : int),
+               0 Int.(<=) q Int.(<) 8 =>
+               Int.(<) (Int.(+) (SHA256_X8.ptr in0 q) (JWord.W64.to_uint l0))
+                 JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray784.get64d c0 0 <> Theorems.sha2_tag 9 =>
+              res.`2 = JWord.W64.one) /\
+             (Theorems.sha256_x8_ctx h0 ms0 c0 =>
+              if Int.(<) (Int.(+) (List.size (ms0 0)) (JWord.W64.to_uint l0))
+                   (Ring.IntID.(^) 2 61) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.sha256_x8_ctx h0
+                  (fun (k : int) =>
+                     List.(++) (ms0 k)
+                       (Theorems.memread JMemory.Glob.mem
+                          (SHA256_X8.ptr in0 k) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.sha256_x8_final_export_total *)
+lemma sha256_x8_final_export_total:
+  forall (c0 : BArray784.t) (d0 : BArray256.t) (h0 : JWord.W32.t List.list)
+    (ms0 : int -> Bytes.bytes),
+    phoare[ NirapodSha2.M.sha256_x8_final :
+             ctx = c0 /\ out = d0 ==>
+             (BArray784.get64d c0 0 <> Theorems.sha2_tag 9 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha256_x8_ctx h0 ms0 c0 =>
+              res.`3 = JWord.W64.zero /\
+              (forall (k : int),
+                 0 Int.(<=) k Int.(<) 8 =>
+                 List.take 32
+                   (List.drop (Int.( * ) 32 k) (BArray256.to_list res.`2)) =
+                 List.flatten
+                   (List.map FIPS180_SHA2.w32_be
+                      (FIPS180_SHA2.SHA256.hash h0 (ms0 k)))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 784 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_x4_export_total *)
+lemma sha512_x4_export_total:
+  forall (in0 : BArray32.t) (l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha512_x4 :
+             in_0 = in0 /\
+             len = l0 /\
+             (forall (q : int),
+                0 Int.(<=) q Int.(<) 4 =>
+                Int.(<)
+                  (Int.(+) (SHA512_X4.ptr in0 q) (JWord.W64.to_uint l0))
+                  JModel_armv8a.ptr_modulus) /\
+             Int.(<) (JWord.W64.to_uint l0) (Ring.IntID.(^) 2 61) ==>
+             forall (k : int),
+               0 Int.(<=) k Int.(<) 4 =>
+               List.take 64
+                 (List.drop (Int.( * ) 64 k) (BArray256.to_list res)) =
+               FIPS180_SHA2.SHA512.sha512
+                 (Theorems.memread JMemory.Glob.mem (SHA512_X4.ptr in0 k)
+                    (JWord.W64.to_uint l0))] = (Real.(%r) 1).
+
+(* Theorems.sha512_x4_init_export_total *)
+lemma sha512_x4_init_export_total:
+  phoare[ NirapodSha2.M.sha512_x4_init :
+           true ==>
+           Theorems.sha512_x4_ctx FIPS180_SHA2.SHA512.H0_512
+             (fun (_ : int) => []) res] = (Real.(%r) 1).
+
+(* Theorems.sha512_x4_init_from_export_total *)
+lemma sha512_x4_init_from_export_total:
+  forall (c0 : BArray784.t) (s0 : BArray208.t) (h0 : JWord.W64.t List.list)
+    (m : Bytes.bytes),
+    phoare[ NirapodSha2.M.sha512_x4_init_from :
+             ctx = c0 /\ src = s0 ==>
+             (BArray208.get64d s0 0 <> Theorems.sha2_tag 4 =>
+              res.`2 = JWord.W64.one /\ res.`1 = c0) /\
+             (Theorems.sha512_ctx (Theorems.sha2_tag 4) h0 m s0 =>
+              res.`2 = JWord.W64.zero /\
+              Theorems.sha512_x4_ctx h0 (fun (_ : int) => m) res.`1)] = (
+    Real.(%r) 1).
+
+(* Theorems.sha512_x4_update_export_total *)
+lemma sha512_x4_update_export_total:
+  forall (c0 : BArray784.t) (h0 : JWord.W64.t List.list)
+    (ms0 : int -> Bytes.bytes) (in0 : BArray32.t) (l0 : JWord.W64.t),
+    phoare[ NirapodSha2.M.sha512_x4_update :
+             ctx = c0 /\
+             in_0 = in0 /\
+             inlen = l0 /\
+             forall (q : int),
+               0 Int.(<=) q Int.(<) 4 =>
+               Int.(<) (Int.(+) (SHA512_X4.ptr in0 q) (JWord.W64.to_uint l0))
+                 JModel_armv8a.ptr_modulus ==>
+             (res.`2 <> JWord.W64.zero => res.`1 = c0) /\
+             (BArray784.get64d c0 0 <> Theorems.sha2_tag 10 =>
+              res.`2 = JWord.W64.one) /\
+             (Theorems.sha512_x4_ctx h0 ms0 c0 =>
+              if Int.(<) (Int.(+) (List.size (ms0 0)) (JWord.W64.to_uint l0))
+                   (Ring.IntID.(^) 2 61) then
+                res.`2 = JWord.W64.zero /\
+                Theorems.sha512_x4_ctx h0
+                  (fun (k : int) =>
+                     List.(++) (ms0 k)
+                       (Theorems.memread JMemory.Glob.mem
+                          (SHA512_X4.ptr in0 k) (JWord.W64.to_uint l0)))
+                  res.`1
+              else res.`2 = JWord.W64.of_int 2)] = (Real.(%r) 1).
+
+(* Theorems.sha512_x4_final_export_total *)
+lemma sha512_x4_final_export_total:
+  forall (c0 : BArray784.t) (d0 : BArray256.t) (h0 : JWord.W64.t List.list)
+    (ms0 : int -> Bytes.bytes),
+    phoare[ NirapodSha2.M.sha512_x4_final :
+             ctx = c0 /\ out = d0 ==>
+             (BArray784.get64d c0 0 <> Theorems.sha2_tag 10 =>
+              res.`3 = JWord.W64.one /\ res.`1 = c0 /\ res.`2 = d0) /\
+             (Theorems.sha512_x4_ctx h0 ms0 c0 =>
+              res.`3 = JWord.W64.zero /\
+              (forall (k : int),
+                 0 Int.(<=) k Int.(<) 4 =>
+                 List.take 64
+                   (List.drop (Int.( * ) 64 k) (BArray256.to_list res.`2)) =
+                 List.flatten
+                   (List.map FIPS180_SHA2.w64_be
+                      (FIPS180_SHA2.SHA512.hash h0 (ms0 k)))) /\
+              forall (i : int),
+                0 Int.(<=) i Int.(<) 784 => res.`1.[i] = JWord.W8.zero)] = (
+    Real.(%r) 1).
+
+definitions 369
+
+ArrayForms.ArrayForm.* nested c5e34dcae566b612 64
+ArrayForms.ArrayForm.F module ad3cc2fbe8fd960d
+ArrayForms.ArrayForm.abytes op db2d9b986568a7dc
+ArrayForms.ArrayForm.asize op 3a8f5f91f6ee1d6a
+ArrayForms.ArrayForm.fill128a op 0eee021e416e617c
+ArrayForms.ArrayForm.fill64a op 121eb8860588d5c3
+ArrayForms.ArrayForm.mx op 78d1c8284cd27828
+ArrayForms.ArrayForm.mxl op d5f18873d9ac51af
+Arrays.Words.* nested 7d3e6bc8c58930c9 64
+Bytes.be_bytes op f134b45ffab2fc5e
+Bytes.be_int op 2b3e99dd50a6bfc6
+Bytes.bounded_while op 4e4a3f9f5c7101e4
+Bytes.byte type 6060cfa16fab4244
+Bytes.bytes type 547c2957694d8585
+Bytes.cdiv op ee7b406c0ab517a9
+Bytes.slice op 854fe90ce0fe4882
+Bytes.trunc op dbfa66b2531e919e
+Bytes.zeros op 154c3ec3ff854145
+Ctx256.CF224.* nested a1e5fee68a771173 130
+Ctx256.CF224.C module 4dc7af48ff4fefaa
+Ctx256.CF224.dsize op 2b7ca625a6917047
+Ctx256.CF256.* nested bb78480abae0473d 130
+Ctx256.CF256.C module d232f013044489e6
+Ctx256.CF256.dsize op 6b3d878b3b693e8a
+Ctx256.CtxFinal256.* nested eae2115e29bfb708 130
+Ctx256.CtxFinal256.C module 9e74b315c6165659
+Ctx256.CtxFinal256.dsize op e70b35f75f356a46
+Ctx256.ctx256 op 560c29c38a22a7b7
+Ctx512.CFsha384.* nested d87f0d9c5b9c75ce 130
+Ctx512.CFsha384.C module 9f066434bd2a9365
+Ctx512.CFsha384.dsize op 8c437b8950faab2b
+Ctx512.CFsha512.* nested 096c395a7f016806 130
+Ctx512.CFsha512.C module 0a80a222bf849425
+Ctx512.CFsha512.dsize op 91a75b86253a918a
+Ctx512.CFsha512_224.* nested 66c75ad052048586 130
+Ctx512.CFsha512_224.C module 12a5bfbcd3c41c8e
+Ctx512.CFsha512_224.dsize op 2b7ca625a6917047
+Ctx512.CFsha512_256.* nested 71c1a3e2db1af031 130
+Ctx512.CFsha512_256.C module 2acaa7c2dc65c4d3
+Ctx512.CFsha512_256.dsize op 6b3d878b3b693e8a
+Ctx512.CtxFinal512.* nested c556d7119f56ae0f 130
+Ctx512.CtxFinal512.C module 5b919c9b1557ab6f
+Ctx512.CtxFinal512.dsize op e70b35f75f356a46
+Ctx512.ctx512 op 29a3ac8dbecdc79b
+CtxHmac256.hctx256 op f7394d40b2095b91
+CtxHmac256.outer144 op cf48ae2deaab886a
+CtxHmac256.tag256h op 3cd12241c4a22031
+CtxHmac512.hctx512 op 3af6b91088c753af
+CtxHmac512.outer272 op f7f5cd1296656c92
+CtxHmac512.tag512h op 5d55a713c014ce4a
+CtxX4.ctx4 op 8c62cf9423d50603
+CtxX4.tag512 op 238fc98422c8f1d2
+CtxX4.tagx4 op 66ab4e51a7bdef12
+CtxX8.ctx8 op 7d6a9ed42ddf5f3a
+CtxX8.tag256 op 7e42cfc4229809ef
+CtxX8.tagx8 op 58160886a02e85c6
+FIPS180_SHA2.SHA256.H0_224 op 4a02429f5afd8148
+FIPS180_SHA2.SHA256.H0_256 op 44d2f430d75990d0
+FIPS180_SHA2.SHA256.K256 op 88a0e1d727e03686
+FIPS180_SHA2.SHA256.bsig0 op 6e207c595d456609
+FIPS180_SHA2.SHA256.bsig1 op 216389906dcd7e59
+FIPS180_SHA2.SHA256.ch op 03270d1734f96868
+FIPS180_SHA2.SHA256.compress op 6d0c9b734bba951a
+FIPS180_SHA2.SHA256.hash op 10cdea9b5bbedaae
+FIPS180_SHA2.SHA256.maj op 1246afc7dd92128e
+FIPS180_SHA2.SHA256.of_state op ac347cbc333498db
+FIPS180_SHA2.SHA256.pad op c2aa237c285881cc
+FIPS180_SHA2.SHA256.parse op 8dfca571f520efff
+FIPS180_SHA2.SHA256.round op b92b7b662a391c1a
+FIPS180_SHA2.SHA256.schedule op 911ee94a5ad78ef7
+FIPS180_SHA2.SHA256.sha224 op cb61fe3d3863ebd6
+FIPS180_SHA2.SHA256.sha256 op 10efe6e02b9ffde9
+FIPS180_SHA2.SHA256.ssig0 op 2c62ffecb2d3e33c
+FIPS180_SHA2.SHA256.ssig1 op e1caaf55cf867da5
+FIPS180_SHA2.SHA256.state type 16bd249e668ac905
+FIPS180_SHA2.SHA256.to_state op c3c68aa238ff7f7e
+FIPS180_SHA2.SHA512.H0_384 op 1b9d5f8da05baf4b
+FIPS180_SHA2.SHA512.H0_512 op 8a5b8616bfe71bbd
+FIPS180_SHA2.SHA512.H0_512_224 op 29345d05f79dc782
+FIPS180_SHA2.SHA512.H0_512_256 op 8720cf13a3cf85ee
+FIPS180_SHA2.SHA512.K512 op 6d74f3dcab5f16b1
+FIPS180_SHA2.SHA512.bsig0 op 9e7e772cef039213
+FIPS180_SHA2.SHA512.bsig1 op 053118c3ef22c3c8
+FIPS180_SHA2.SHA512.ch op 93d3d4bc3a1f8c44
+FIPS180_SHA2.SHA512.compress op c88a0bc3e92d90d5
+FIPS180_SHA2.SHA512.digest op 4f6bdc7f6115b139
+FIPS180_SHA2.SHA512.hash op ba5451675c88db83
+FIPS180_SHA2.SHA512.maj op 274146f36ffc104d
+FIPS180_SHA2.SHA512.of_state op 1a1334cd9baee895
+FIPS180_SHA2.SHA512.pad op 758cbe6021c4d4f3
+FIPS180_SHA2.SHA512.parse op 75711418f8d0f99e
+FIPS180_SHA2.SHA512.round op 75c594e6b887dc02
+FIPS180_SHA2.SHA512.schedule op a4b64360390ee2ed
+FIPS180_SHA2.SHA512.sha384 op e03a4347a6d56364
+FIPS180_SHA2.SHA512.sha512 op a20dfecb8f5ea0b4
+FIPS180_SHA2.SHA512.sha512_224 op 374cd416440c273b
+FIPS180_SHA2.SHA512.sha512_256 op 88789339be5deb33
+FIPS180_SHA2.SHA512.ssig0 op 467e284a7eb9122b
+FIPS180_SHA2.SHA512.ssig1 op aa51abee5ad940ce
+FIPS180_SHA2.SHA512.state type b0aa87667e328d06
+FIPS180_SHA2.SHA512.to_state op 66fb32c46846f1b4
+FIPS180_SHA2.be32 op d9b9d78fddadec98
+FIPS180_SHA2.be64 op 62820a800fa8ff7a
+FIPS180_SHA2.w32_be op 1e4eec9f08ea227a
+FIPS180_SHA2.w64_be op 6a3454fde48dcb16
+FIPS180_SHA2_Blocks.tail_block256 op c574cdd858369556
+FIPS180_SHA2_Blocks.tail_block512 op 6e6e85af2b47d9ae
+FIPS180_SHA2_Blocks.words256 op 54e6116af85bac8f
+FIPS180_SHA2_Blocks.words512 op a28cb521da735a26
+FIPS198_HMAC.hmac op 185f1e977f7157b0
+FIPS198_HMAC.hmac_key op 1141612ba0b8f0da
+FIPS198_HMAC.hmac_sha256 op a62a7b9d1987e0cd
+FIPS198_HMAC.hmac_sha512 op 8a46da91ac6f588a
+FIPS198_HMAC.ipad op 646a6bd3e20a7b05
+FIPS198_HMAC.opad op 3285fb7940e8fcfc
+FIPS198_HMAC.xorb op 3d643f0821913ee4
+Fill.fill128v op fda0a9a3cba3deea
+Fill.fill64v op c8eaa3f322e3a142
+Fill.zero128v op b9a80aa63aa0ec6b
+Fill.zero64v op 32312994c3e390bd
+HMAC_SHA256.ib256 op dcbacb3c7f7ef842
+HMAC_SHA256.kpre256 op 40b99dec4e73c12e
+HMAC_SHA256.ob256 op 329dd26cf132dc21
+HMAC_SHA512.ib512 op 6063542732bff186
+HMAC_SHA512.kpre512 op ffe298f8ae153a36
+HMAC_SHA512.ob512 op db47448b105f744a
+JWordList.Bytes2Bits.bytes_from_bits op d5b45f307e213697
+JWordList.Bytes2Bits.bytes_to_bits op 87683e70af16e3a7
+JWordList.ListEmbedding.SSS type dfade82cad286dea
+JWordList.ListEmbedding.SSS_from_TTTs op 2aa975b898899e88
+JWordList.ListEmbedding.SSS_to_TTTs op 01b3f8d99a7be2f1
+JWordList.ListEmbedding.SSSs_from_TTTs op b183a346bc8ef3dc
+JWordList.ListEmbedding.SSSs_to_TTTs op 2b225203984e9648
+JWordList.ListEmbedding.TTT type 531d8b90a2b824dd
+JWordList.ListEmbedding.dSSS op f9baf1eb27899e92
+JWordList.ListEmbedding.dTTT op 99150ff82c538abb
+JWordList.ListEmbedding.n op 4cb49501698be610
+JWordList.W64s2Bits.w64L_from_bits op ed030d93ea771d9f
+JWordList.W64s2Bits.w64L_to_bits op cd4b8e9bfa855730
+JWordList.W64s2Bytes.w64L_from_bytes op 389d21d57bc5289a
+JWordList.W64s2Bytes.w64L_to_bytes op b96a2fe29da50fe5
+JWordList.bit type f5984d1c812a5e4f
+JWordList.bits type c4ca2184a12250a7
+JWordList.byte type 6060cfa16fab4244
+JWordList.bytes type 547c2957694d8585
+JWordList.chunkfill op 61fde11dd3766db4
+JWordList.chunkify op c3cfadacbebed05c
+JWordList.chunkpad op e3eafb0265b0014f
+JWordList.chunkremains op a7907fe2e05d9c47
+JWordList.memread op eaa2fd57d41436ce
+JWordList.memread64 op 6090ec01585e8214
+JWordList.stores64 op d145fe12e59d2f14
+JWordList.stores8 op 400562684f5bbe75
+Lanes.lane op 7f541ec38303a95a
+Lanes.lane4 abbrev 513e4616e713cd10
+Lanes.lane8 abbrev 7ac489d91731a885
+Lanes.lane_block op f5b0c1dd362098d0
+Rounds256.T1 op c8a93b7ef6954705
+Rounds256.T2 op 2e300f28e74dd266
+Rounds256.blockwords op 409ced4ce50a3491
+Rounds256.ffwd op fb3abd871c9057ce
+Rounds256.rounds op fd7a1bb88773e4ea
+Rounds256.sched op c00e14f492ff86f0
+Rounds256.sched_step op 8b57d6f5d89592ad
+Rounds256.vars op 429ef2aad2a81f06
+Rounds256.window_ok op f3f215186b98f40e
+Rounds512.T1 op ca8cfb47b6ea418c
+Rounds512.T2 op 39f58e239ae6778b
+Rounds512.blockwords op ea90deacc9dcab74
+Rounds512.ffwd op eaea1893a4d0d9b5
+Rounds512.rounds op c0f17c589091e1ca
+Rounds512.sched op eac02bd61f41bb2c
+Rounds512.sched_step op 417102b9edf7798a
+Rounds512.vars op 0b6f17627866a3ef
+Rounds512.window_ok op 3a980c3da7c0ecb4
+SHA256_A64Sha2.Arr256.* nested 19216db1e8ecf215 64
+SHA256_A64Sha2.Arr32.* nested e98383b7d0ab469b 64
+SHA256_A64Sha2.Arr64.* nested 92ee285f2a0197d4 64
+SHA256_A64Sha2.hwords op 0d998c6c2e92aa3d
+SHA256_A64Sha2.st4a abbrev d62c878cef7feb7a
+SHA256_A64Sha2.st4e abbrev ad1d93f31d46353d
+SHA256_A64Sha2Safety.a64h256_I256 abbrev 70ef965bf077c819
+SHA256_A64Sha2Safety.a64h256_I32 abbrev 5f41a09ec383bf34
+SHA256_A64Sha2Safety.a64h256_I64 abbrev 36455ccc44670430
+SHA256_Stream.Fin224.* nested 971d228d0b086ac1 64
+SHA256_Stream.Fin224.F module b24485ff2b4180d1
+SHA256_Stream.Fin224.dsize op 2b7ca625a6917047
+SHA256_Stream.Fin256.* nested 46de1854c5e345e4 64
+SHA256_Stream.Fin256.F module 4554fce342002457
+SHA256_Stream.Fin256.dsize op 6b3d878b3b693e8a
+SHA256_Stream.Final256.* nested 73f9f7f87905da14 64
+SHA256_Stream.Final256.F module 4433e6e7a744fc53
+SHA256_Stream.Final256.dsize op e70b35f75f356a46
+SHA256_Stream.ab256 op 3a1659c35b2f2d93
+SHA256_Stream.memread abbrev 7d0a69f789134c7f
+SHA256_Stream.nf256 op 9ba0c0e60b5245e4
+SHA256_Stream.pending op 1889ec27f6ebc373
+SHA256_Stream.stream256 op 5ffc27e3e8eeca88
+SHA256_X8.abx op 1da00d1414f3eee7
+SHA256_X8.l8 abbrev 8e353cbe271752b3
+SHA256_X8.lanes8 op 4245621aa89f4368
+SHA256_X8.m1x op 4d6d14b018c31f40
+SHA256_X8.nfx op 65de05f84c9b11b3
+SHA256_X8.ptr abbrev ecd03ae8e60d091d
+SHA256_X8.stream8 op 26dd4c2bc5522a28
+SHA256_X8.sub8 abbrev 1955c510ab553ccf
+SHA256_X8_A64Sha2.Arr128.* nested c1fdb6c6009a0c92 64
+SHA256_X8_A64Sha2.Arr512.* nested ae91d69ff59953e6 64
+SHA256_X8_A64Sha2.R op e2a7f76758c6d25e
+SHA256_X8_A64Sha2.Sx op f0ba53f117cdd5d0
+SHA256_X8_A64Sha2.Wx op 2977283cf38a6ada
+SHA256_X8_A64Sha2.bwk op a05ba8964f98da82
+SHA256_X8_A64Sha2.hfin op e3f62cc3d5efc7a0
+SHA256_X8_A64Sha2.hq op 687a6eebe5843cde
+SHA256_X8_A64Sha2.q4 op f524a4b2baa9eb5c
+SHA256_X8_A64Sha2.rinv op d5db634fa2a96c2f
+SHA256_X8_A64Sha2.tq op 2ac415501a183ea4
+SHA256_X8_A64Sha2Block.frame op 82930276df18e422
+SHA256_X8_A64Sha2Block.kq abbrev 50d37056951d2832
+SHA256_X8_A64Sha2Block.lane_fin op 7788b896434631a6
+SHA256_X8_A64Sha2Block.lane_st op 18650e2729d285e9
+SHA256_X8_A64Sha2Block.lane_win op bf282391ff88209b
+SHA256_X8_A64Sha2Block.rs op 4ab593b016a327cd
+SHA256_X8_A64Sha2Block.wg op 71a0dac45f7e102d
+SHA256_X8_A64Sha2Lanes.Fo op 67207e4c23aff906
+SHA256_X8_A64Sha2Lanes.RL op a25749a60a8aa7b9
+SHA256_X8_A64Sha2Lanes.SL op 55006e17d421f1f6
+SHA256_X8_A64Sha2Lanes.WL op 622693987a8a0aba
+SHA256_X8_A64Sha2Lanes.addr op ea50beb3405ef294
+SHA256_X8_A64Sha2Lanes.bnd op 1f9eca0a785be5f4
+SHA256_X8_A64Sha2Lanes.others op 26e961575c3c8a22
+SHA256_X8_A64Sha2Lanes.pairat op 98cb5f5d3ea7bb57
+SHA256_X8_A64Sha2Safety.a64x8_I128 abbrev 3663135bb2f20cdc
+SHA256_X8_A64Sha2Safety.a64x8_I256 abbrev cdca84ea903d5e1d
+SHA256_X8_A64Sha2Safety.a64x8_I512 abbrev 20c77d0836561784
+SHA256_X8_A64Sha2Safety.a64x8_I64 abbrev ea261289edb45192
+SHA256_X8_A64Sha2Safety.a64x8_ONE abbrev 3ccfb719ac5d796e
+SHA256_X8_A64Sha2Safety.a64x8_half op a526d74bd0f6dcd9
+SHA256_X8_A64Sha2Safety.a64x8_lv op e68a71ce07108de3
+SHA256_X8_A64Sha2Safety.a64x8_win op 07097fb8ba8eaa7b
+SHA512_A64Sha2.Arr128.* nested c1fdb6c6009a0c92 64
+SHA512_A64Sha2.Arr64.* nested 92ee285f2a0197d4 64
+SHA512_A64Sha2.Arr640.* nested a19101d001884782 64
+SHA512_A64Sha2.Arr80.* nested fefd9e922ad18555 64
+SHA512_A64Sha2.hwords op f42e99d9e19878f8
+SHA512_A64Sha2.pi0 op 2ba69aff7ebcdcf0
+SHA512_A64Sha2.pi1 op 14bcc52897ec8835
+SHA512_A64Sha2.pi2 op bfcd3fb978f4c990
+SHA512_A64Sha2.pi3 op 66166f9e148820ee
+SHA512_A64Sha2.pi4 op 137b42313b46c905
+SHA512_A64Sha2.spair op ead8411d819d7d6c
+SHA512_A64Sha2Safety.a64h512_I128 abbrev 5a88d7c126af8361
+SHA512_A64Sha2Safety.a64h512_I64 abbrev 64d531be3e9f6c77
+SHA512_A64Sha2Safety.a64h512_I640 abbrev 08b8f2d5731684f7
+SHA512_A64Sha2Safety.a64h512_ONE abbrev 4a6e15ccca48fe7d
+SHA512_A64Sha2Safety.a64h512_perm op e29bef19d9c00d2c
+SHA512_A64Sha2Safety.a64h512_slots op 4294be8582b39db7
+SHA512_Stream.Final512.* nested 73f9f7f87905da14 64
+SHA512_Stream.Final512.F module 330d37a6af70f7cf
+SHA512_Stream.Final512.dsize op e70b35f75f356a46
+SHA512_Stream.Finsha384.* nested e671d2917d467f45 64
+SHA512_Stream.Finsha384.F module 0d2b89389ecc8589
+SHA512_Stream.Finsha384.dsize op 8c437b8950faab2b
+SHA512_Stream.Finsha512.* nested 5a6eb4633681bc6f 64
+SHA512_Stream.Finsha512.F module 762abd338126449b
+SHA512_Stream.Finsha512.dsize op 91a75b86253a918a
+SHA512_Stream.Finsha512_224.* nested 971d228d0b086ac1 64
+SHA512_Stream.Finsha512_224.F module ac5eb4899dbabebf
+SHA512_Stream.Finsha512_224.dsize op 2b7ca625a6917047
+SHA512_Stream.Finsha512_256.* nested 46de1854c5e345e4 64
+SHA512_Stream.Finsha512_256.F module c6ae51640d7367bb
+SHA512_Stream.Finsha512_256.dsize op 6b3d878b3b693e8a
+SHA512_Stream.ab512 op c86a92cd99bb7586
+SHA512_Stream.nf512 op 6dd6c9b9f718922b
+SHA512_Stream.pend512 op a417d274b9c816fd
+SHA512_Stream.stream512 op 8f51846ec0ad73e0
+SHA512_X4.abx4 op 07948066019684ec
+SHA512_X4.l4 abbrev 44402e7287f3b07d
+SHA512_X4.lanes4 op 6bad894caeef1194
+SHA512_X4.m1x4 op 5b53c69442c2ac54
+SHA512_X4.memread abbrev bcc40463e627bd0d
+SHA512_X4.nfx4 op 31920897db77591a
+SHA512_X4.ptr abbrev 21b227bca2d2d551
+SHA512_X4.stream4 op 193a1012f86b9add
+SHA512_X4.sub4 abbrev e5eb826910542c96
+SHA512_X4_A64Sha2.Arr256.* nested 19216db1e8ecf215 64
+SHA512_X4_A64Sha2.Arr512.* nested ae91d69ff59953e6 64
+SHA512_X4_A64Sha2.R4 op 72c8c91344eaa2f2
+SHA512_X4_A64Sha2.S4 op 2e115fba7c7b18a1
+SHA512_X4_A64Sha2.W4 op 07428341a1922906
+SHA512_X4_A64Sha2.bw4 op 8cf47fcdd80f7e5f
+SHA512_X4_A64Sha2.hfin4 op 950bbbcc499cb4df
+SHA512_X4_A64Sha2Block.lst op b58fdae08f979d18
+SHA512_X4_A64Sha2Block.lwin op 5e0ab9d79c46e75d
+SHA512_X4_A64Sha2Block.saved op 54e88e86bd6fc52b
+SHA512_X4_A64Sha2Block.wg8 op b3e942a69f3cd1b8
+SHA512_X4_A64Sha2Lanes.Fo4 op 26b6b315f63dd173
+SHA512_X4_A64Sha2Lanes.RL4 op 3b29e6a62ac1d5e9
+SHA512_X4_A64Sha2Lanes.SL4 op fd024dd42f7be7d3
+SHA512_X4_A64Sha2Lanes.WL4 op 2e9267771ed5c4ba
+SHA512_X4_A64Sha2Lanes.addr4 op dd8e95205e882c38
+SHA512_X4_A64Sha2Lanes.bnd4 op 6ac9b0aa5a898c54
+SHA512_X4_A64Sha2Lanes.pairat4 op dee6fc1a9f25b7b8
+SHA512_X4_A64Sha2Safety.a64x4_I128 abbrev af943f4e94bd6d17
+SHA512_X4_A64Sha2Safety.a64x4_I160 abbrev 6d90e0791151b6d5
+SHA512_X4_A64Sha2Safety.a64x4_I256 abbrev 91b668360438df7f
+SHA512_X4_A64Sha2Safety.a64x4_I32 abbrev dab42dccd74b3b83
+SHA512_X4_A64Sha2Safety.a64x4_I512 abbrev db5c59ea014e752b
+SHA512_X4_A64Sha2Safety.a64x4_I640 abbrev d57eccfc60ed6b2b
+SHA512_X4_A64Sha2Safety.a64x4_ONE abbrev 4fb1cdd6110a03f3
+SHA512_X4_A64Sha2Safety.a64x4_ls op d212f4865b9aacc1
+SHA512_X4_A64Sha2Safety.a64x4_lv op 8d9a0c4b323f70af
+SHA512_X4_A64Sha2Safety.a64x4_perm op 6226db6e616f7d22
+SHA512_X4_A64Sha2Safety.a64x4_win op 3987d1635ba2f6e4
+SafetyLib.lanes_valid op f5b2ba1645993303
+SafetyMask.full112 abbrev 3213460579875c4c
+SafetyMask.full128 abbrev 391c0e0bae1cbdee
+SafetyMask.full144 abbrev 478dbb065be33cbb
+SafetyMask.full16 abbrev cdd40504bd9a34e0
+SafetyMask.full208 abbrev 65e85ec638199730
+SafetyMask.full256 abbrev 68f5b1c2f9f9a5d0
+SafetyMask.full272 abbrev e059c71f5ebf983b
+SafetyMask.full28 abbrev d72b2b6899325456
+SafetyMask.full32 abbrev 88ff51b4c8906afa
+SafetyMask.full48 abbrev cb6b9c9860d158f9
+SafetyMask.full512 abbrev a36dd20b22d95218
+SafetyMask.full64 abbrev 0f71bcf0fe1899ac
+SafetyMask.full640 abbrev ac8a6ff29ca5b188
+SafetyMask.full784 abbrev d847f2a7a0a3d0c1
+SafetyMulti.lanes op 0a2738000bc4767a
+Sha2Insn.A256.srec op 4f82c05053f2902a
+Sha2Insn.A256.wk4 op 9722427eb529d375
+Sha2Insn.A256.wv op a295de45072f1d6c
+Sha2Insn.A512.h512 op 1627381ab67932fb
+Sha2Insn.A512.kw2 op b4e2d0ba6326bd5f
+Sha2Insn.A512.srec op c9ddd4ff434ca5bd
+Sha2Insn.A512.wv2 op 168c18daad7a9016
+State.h256 op c9dd56ca1dd8ba24
+State.h512 op 9374468efbdfcbb5
+StreamSpec.mfin op 04664483fdf3b92a
+StreamSpec.nfill op 4255da977203bd06
+StreamSpec.padb op ae9b20ec9a3069ee
+StreamSpec.tail op 67cf67295c6e1679
+Theorems.ArrayTheorems.* nested 6525e5030aeea894 135
+Theorems.ArrayTheorems.asize op 3a8f5f91f6ee1d6a
+Theorems.hmac256_ctx op 7f4f9f5ea7576577
+Theorems.hmac256_tag op d2916046e569eb57
+Theorems.hmac512_ctx op a98a34477d722d89
+Theorems.hmac512_tag op b43a7d1277c26412
+Theorems.lane256 op 50094fdcedfd2b61
+Theorems.lane512 op 630f6e3714b19b42
+Theorems.memread abbrev ddffbced6bd2dc2b
+Theorems.sha256_ctx op 7972640dcf8c9312
+Theorems.sha256_state op 8d8837811142c404
+Theorems.sha256_x8_ctx op 40c0b137deb52a62
+Theorems.sha256_x8_state op 482a99aec01bbbac
+Theorems.sha2_tag op ac07abf31652e91b
+Theorems.sha512_ctx op 0587ffd21b457775
+Theorems.sha512_state op 4473d19c6e632acf
+Theorems.sha512_x4_ctx op 981d08916fa1f9cf
+Theorems.sha512_x4_state op 93d8ec962165dcc7
+Theorems.words256 op 2e59c96755a25344
+Theorems.words512 op 25491b3cc32dd240
+Vec.N256.rotv op 612366c71d13d5c5
+Vec.p2 op b40da6662772aab6
+Vec.p4 op 50f5de3184bdd736
+Vec.tr4 op 01491ba872a298c3
+WordSpec.bswap32 op 250d66808a0b74c4
+WordSpec.bswap64 op 3686b083d6e68651
