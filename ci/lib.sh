@@ -85,6 +85,10 @@ ci_unit_roots() {
 
 # Run a command under a wall-clock limit, killing the whole process group
 # on expiry. Exit status is the command's, or 124 when the limit expired.
+# The command runs in a process group of its own, so a signal sent to an
+# enclosing group (an outer ci_cap expiring) would not reach it; the
+# wrapper therefore passes TERM, INT and HUP on to the command's group
+# before it exits, and a nested run never outlives the job that started it.
 # Perl is present on macOS and Linux; the shell has no portable timeout.
 ci_cap() {
   local limit=$1
@@ -100,6 +104,14 @@ ci_cap() {
       exit 127;
     }
     my $timed_out = 0;
+    for my $sig ("TERM", "INT", "HUP") {
+      $SIG{$sig} = sub {
+        kill $sig, -$pid;
+        sleep 2;
+        kill "KILL", -$pid;
+        exit 128 + ($sig eq "TERM" ? 15 : $sig eq "INT" ? 2 : 1);
+      };
+    }
     local $SIG{ALRM} = sub {
       $timed_out = 1;
       kill "TERM", -$pid;
