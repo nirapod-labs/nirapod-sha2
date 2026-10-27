@@ -499,20 +499,41 @@ extraction-control: extract
 #                       and results of this processor, with the negative
 #                       controls (tests/insn/README.md)
 #
-# The table lists the x86-64 SHA-NI instructions, so the check runs on an
-# x86-64 processor with SHA-NI. It needs JASMINC, JASMIN2EC and EASYCRYPT
-# of the pinned toolchain. INSN_SEED and INSN_RANDOM choose the random
-# vectors.
+#     make insn-check-recorded
+#                       the same for each recorded run tests/insn/<arch>/
+#                       (the Armv8-A instructions, run on an AArch64
+#                       processor): the recorded program must be what
+#                       JASMINC compiles now, and EasyCrypt must prove the
+#                       recorded vectors; on any host
+#     make insn-vectors the recorded run of the host's architecture,
+#                       repeated on this processor: the vectors must be the
+#                       recorded ones; no Jasmin tool needed
+#
+# The x86-64 table lists the SHA-NI instructions, so insn-check runs on an
+# x86-64 processor with SHA-NI. insn-check and insn-check-recorded need
+# JASMINC, JASMIN2EC and EASYCRYPT of the pinned toolchain. INSN_SEED and
+# INSN_RANDOM choose the random vectors of insn-check.
 EASYCRYPT   ?= easycrypt
 INSN_SEED   ?= 1
 INSN_RANDOM ?= 256
 
-.PHONY: insn-check
+.PHONY: insn-check insn-check-recorded insn-vectors
+INSN_RECORDED_ARCHS := $(patsubst $(TESTS)/insn/%/vectors.txt,%,$(wildcard $(TESTS)/insn/*/vectors.txt))
 
 insn-check:
 	JASMINC='$(JASMINC)' JASMIN2EC='$(JASMIN2EC)' EASYCRYPT='$(EASYCRYPT)' \
 	  CC='$(CC)' PYTHON='$(PYTHON)' INSN_SEED='$(INSN_SEED)' INSN_RANDOM='$(INSN_RANDOM)' \
 	  $(TESTS)/insn/check.sh $(HOST_ARCH) $(BUILD)/insn/$(HOST_ARCH)
+
+insn-check-recorded:
+	@[ -n '$(INSN_RECORDED_ARCHS)' ] || { echo 'FAIL: insn: no recorded run under $(TESTS)/insn' >&2; exit 1; }
+	set -e; for a in $(INSN_RECORDED_ARCHS); do \
+	  JASMINC='$(JASMINC)' JASMIN2EC='$(JASMIN2EC)' EASYCRYPT='$(EASYCRYPT)' PYTHON='$(PYTHON)' \
+	    INSN_RECORDED=$(TESTS)/insn/$$a $(TESTS)/insn/check.sh $$a $(BUILD)/insn/recorded-$$a; \
+	done
+
+insn-vectors:
+	CC='$(CC)' PYTHON='$(PYTHON)' $(TESTS)/insn/vectors.sh $(HOST_ARCH) $(BUILD)/insn-vectors/$(HOST_ARCH)
 
 clean:
 	rm -rf $(BUILD)

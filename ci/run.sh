@@ -14,7 +14,8 @@
 #
 # Default jobs: toolchain build tests exports ct extraction on a host with
 # the pinned Jasmin (the analysis host), and insn there when tests/insn has
-# an instruction table for the host's architecture.
+# an instruction table for the host's architecture; insn-vectors when
+# tests/insn has a recorded run for the host's architecture.
 # Opt-in jobs: safety (long, Linux only) and proofs (long, Linux only).
 #
 # A job passes only when it exits zero and its log holds a line that
@@ -33,8 +34,9 @@ cd "$ROOT" || exit 1
 
 ALL_JOBS="toolchain build tests exports ct extraction"
 INSN_JOBS="insn"
+VECTORS_JOBS="insn-vectors"
 OPT_JOBS="safety proofs"
-ORDER="toolchain build tests exports ct extraction insn safety proofs"
+ORDER="toolchain build tests exports ct extraction insn insn-vectors safety proofs"
 
 usage() {
   cat <<'EOF'
@@ -76,6 +78,7 @@ while [ $# -gt 0 ]; do
       printf 'default: %s\n' "$ALL_JOBS"
       printf 'default without Jasmin: %s\n' "$NATIVE_JOBS"
       printf 'default with Jasmin and an instruction table for the host: %s\n' "$INSN_JOBS"
+      printf 'default with a recorded instruction run for the host: %s\n' "$VECTORS_JOBS"
       printf 'opt-in:  %s\n' "$OPT_JOBS"
       exit 0
       ;;
@@ -92,12 +95,15 @@ else
   if [ -f "tests/insn/$(ci_host_arch).insn" ]; then
     selection="$selection $INSN_JOBS"
   fi
+  if [ -f "tests/insn/$(ci_host_arch)/vectors.txt" ]; then
+    selection="$selection $VECTORS_JOBS"
+  fi
   [ "$safety" = 1 ] && selection="$selection safety"
   [ "$proofs" = 1 ] && selection="$selection proofs"
 fi
 
 for job in $selection; do
-  case " $ALL_JOBS $INSN_JOBS $OPT_JOBS " in
+  case " $ALL_JOBS $INSN_JOBS $VECTORS_JOBS $OPT_JOBS " in
     *" $job "*) ;;
     *) echo "ci/run.sh: unknown job: $job" >&2; exit 2 ;;
   esac
@@ -167,7 +173,8 @@ ci_timeout() {
     exports) printf '300\n' ;;
     ct) printf '3600\n' ;;
     extraction) printf '900\n' ;;
-    insn) printf '1800\n' ;;
+    insn) printf '3600\n' ;;
+    insn-vectors) printf '300\n' ;;
     safety) printf '43200\n' ;;
     proofs) printf '28800\n' ;;
     *) printf '900\n' ;;
@@ -220,7 +227,7 @@ for job in $JOBS; do
 done
 
 printf '\nsummary\n'
-printf '%-11s %-13s %8s  %s\n' job status seconds log
+printf '%-13s %-13s %8s  %s\n' job status seconds log
 for job in $ORDER; do
   if want "$job"; then
     read -r status secs < "$RUNDIR/status.$job"
@@ -230,7 +237,7 @@ for job in $ORDER; do
     secs="-"
     log="-"
   fi
-  printf '%-11s %-13s %8s  %s\n' "$job" "$status" "$secs" "$log"
+  printf '%-13s %-13s %8s  %s\n' "$job" "$status" "$secs" "$log"
 done
 
 if [ "$overall" -eq 0 ]; then

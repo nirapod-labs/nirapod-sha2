@@ -21,8 +21,14 @@
 #      tests/insn/<host arch>.mutants.
 #
 # The architecture is the host's, since the instructions must execute;
-# a host without a table for its architecture fails. The PASS: line is
-# the one tests/insn/check.sh prints.
+# a host without a table for its architecture fails.
+#
+# It then runs make insn-check-recorded: the same four steps for each run
+# recorded on another processor under tests/insn/<arch>/ (the Armv8-A
+# instructions), with step 1 requiring the recorded program to be what the
+# pinned jasminc compiles now and step 2 taking the recorded vectors. The
+# job insn-vectors repeats step 2 on such a processor. Each check prints
+# its own PASS: line.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -38,3 +44,4 @@ ci_need easycrypt
 ci_need python3
 
 make insn-check PYTHON=python3
+make insn-check-recorded PYTHON=python3

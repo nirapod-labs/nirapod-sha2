@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# tests/insn/aarch64.symmetric
+# ============================
+#
+# Operand pairs whose exchange cannot change the result, so the "operands
+# exchanged" control of tests/insn/check.sh would be accepted by any
+# correct model; the check skips them and prints the reason.
+#
+#     ENTRY  PAIR  reason
+
+sha512su1  ac  the first and third operands enter the result only through their sum
+add_4u32   ab  addition is commutative
+add_2u64   ab  addition is commutative

@@ -348,6 +348,10 @@ def read_mutants(path):
             if k not in m:
                 die("%s:%d: mutant %s has no %s" % (path, m["line"], m["name"], k))
         m["entries"] = m["entries"].split()
+        # \n in from and to stands for a newline, so that a change can be
+        # anchored on text that is unique only across two lines.
+        for k in ("from", "to"):
+            m[k] = m[k].replace("\\n", "\n")
     if len(set(m["name"] for m in muts)) != len(muts):
         die("%s: duplicate mutant names" % path)
     return muts

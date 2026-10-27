@@ -24,6 +24,19 @@
 #      mutated copy of the EasyCrypt library. Before the mutants, every
 #      entry's cases must check against an unchanged copy.
 #
+# With INSN_RECORDED=DIR (tests/insn/aarch64), the processor is the one
+# DIR/host.txt names and the run of step 2 is the one recorded there: step
+# 1 compiles the program for each system DIR has an assembly file for and
+# requires it to equal that file byte for byte, step 2 takes DIR/vectors.txt
+# instead of running anything, and steps 3 and 4 are unchanged. Such a run
+# needs no ARCH processor; tests/insn/vectors.sh repeats step 2 on one and
+# requires the same vectors.
+#
+# An entry that is symmetric in two operands gives the same result when
+# they are exchanged, so that control cannot be rejected; ARCH.symmetric
+# lists such pairs, one per line ("ENTRY XY reason"), and they are skipped
+# with a printed reason.
+#
 # Tools come from the environment: JASMINC, JASMIN2EC, EASYCRYPT, CC and
 # PYTHON (default: the names on PATH). INSN_SEED and INSN_RANDOM are the
 # arguments of run.c (default 1 and 256). The last line is a PASS: line
@@ -42,6 +55,7 @@ CC=${CC:-cc}
 PYTHON=${PYTHON:-python3}
 SEED=${INSN_SEED:-1}
 RANDOM_VECTORS=${INSN_RANDOM:-256}
+RECORDED=${INSN_RECORDED:-}
 
 fail() { printf 'FAIL: insn: %s\n' "$*"; exit 1; }
 
@@ -55,14 +69,23 @@ case $(uname -m) in
   arm64|aarch64) host=aarch64 ;;
   *) host=unknown ;;
 esac
-[ "$host" = "$ARCH" ] || fail "the models of $ARCH need an $ARCH processor, this is $(uname -m)"
+if [ -n "$RECORDED" ]; then
+  RECORDED=$(cd "$RECORDED" && pwd) || fail "no recorded run in $INSN_RECORDED"
+  [ -f "$RECORDED/vectors.txt" ] && [ -f "$RECORDED/host.txt" ] \
+    || fail "$RECORDED has no vectors.txt and host.txt"
+else
+  [ "$host" = "$ARCH" ] || fail "the models of $ARCH need an $ARCH processor, this is $(uname -m)"
+fi
+SYMMETRIC=$HERE/$ARCH.symmetric
 case $ARCH in
   x86_64) jarch=x86-64 ;;
   aarch64) jarch=armv8a ;;
   *) fail "unknown architecture $ARCH" ;;
 esac
 
-for t in "$JASMINC" "$JASMIN2EC" "$EASYCRYPT" "$CC" "$PYTHON"; do
+tools=("$JASMINC" "$JASMIN2EC" "$EASYCRYPT" "$PYTHON")
+[ -n "$RECORDED" ] || tools+=("$CC")
+for t in "${tools[@]}"; do
   command -v "$t" >/dev/null 2>&1 || fail "required tool not found: $t"
 done
 
@@ -98,17 +121,37 @@ rejected() {
 
 # 1. Test program.
 INSN jazz "$TABLE" > "$OUT/insn.jazz"
-"$JASMINC" -arch "$jarch" -o "$OUT/insn.s" "$OUT/insn.jazz" \
-  || fail "$JASMINC could not compile the test program"
-INSN asm "$TABLE" "$OUT/insn.s" | tee "$OUT/asm.txt" \
-  || fail "an export does not contain its instruction"
+if [ -n "$RECORDED" ]; then
+  systems=0
+  for asm in "$RECORDED"/insn-*.s; do
+    [ -f "$asm" ] || continue
+    sys=${asm##*/insn-}; sys=${sys%.s}
+    "$JASMINC" -arch "$jarch" -system "$sys" -o "$OUT/insn-$sys.s" "$OUT/insn.jazz" \
+      || fail "$JASMINC could not compile the test program for $sys"
+    cmp -s "$OUT/insn-$sys.s" "$asm" \
+      || fail "the recorded $asm is not what $JASMINC compiles now"
+    INSN asm "$TABLE" "$asm" | tee "$OUT/asm-$sys.txt" \
+      || fail "an export of $asm does not contain its instruction"
+    systems=$((systems + 1))
+  done
+  [ "$systems" -gt 0 ] || fail "$RECORDED has no assembly file"
+else
+  "$JASMINC" -arch "$jarch" -o "$OUT/insn.s" "$OUT/insn.jazz" \
+    || fail "$JASMINC could not compile the test program"
+  INSN asm "$TABLE" "$OUT/insn.s" | tee "$OUT/asm.txt" \
+    || fail "an export does not contain its instruction"
+fi
 
-# 2. Native run.
-INSN header "$TABLE" > "$OUT/insns.h"
-"$CC" -O1 -std=c99 -Wall -Wextra -Werror -I "$OUT" -o "$OUT/run" "$HERE/run.c" "$OUT/insn.s" \
-  || fail "cannot build the test driver"
-"$OUT/run" "$SEED" "$RANDOM_VECTORS" > "$OUT/vectors.txt" \
-  || fail "the test driver failed"
+# 2. Native run, or the recorded one.
+if [ -n "$RECORDED" ]; then
+  cp "$RECORDED/vectors.txt" "$OUT/vectors.txt"
+else
+  INSN header "$TABLE" > "$OUT/insns.h"
+  "$CC" -O1 -std=c99 -Wall -Wextra -Werror -I "$OUT" -o "$OUT/run" "$HERE/run.c" "$OUT/insn.s" \
+    || fail "cannot build the test driver"
+  "$OUT/run" "$SEED" "$RANDOM_VECTORS" > "$OUT/vectors.txt" \
+    || fail "the test driver failed"
+fi
 
 # 3. Cases.
 "$JASMIN2EC" --arch="$jarch" -o "$OUT/Insn.ec" "$OUT/insn.jazz" \
@@ -148,6 +191,10 @@ for n in $names; do
   for x in $ops; do
     for y in $ops; do
       [[ "$x" < "$y" ]] || continue
+      if [ -f "$SYMMETRIC" ] && why=$(awk -v n="$n" -v p="$x$y" '$1 == n && $2 == p {$1 = $2 = ""; sub(/^ +/, ""); print; f = 1} END {exit !f}' "$SYMMETRIC"); then
+        printf 'control: %s, operands %s and %s: not run, %s\n' "$n" "$x" "$y" "$why"
+        continue
+      fi
       INSN lemmas "$TABLE" "$OUT/Insn.ec" "$OUT/vectors.txt" "$n" "--swap=$x,$y" > "$OUT/swap_${n}_$x$y.ec"
       check_rejected "$n, operands $x and $y exchanged" "$OUT/controls/swap_${n}_$x$y.log" "swap_${n}_$x$y.ec"
     done
@@ -177,5 +224,10 @@ done < "$OUT/mutants.txt"
 [ "$mutants" -gt 0 ] || fail "no wrong models in $MUTANTS"
 
 entries=$(printf '%s\n' $names | wc -l | tr -d ' ')
-printf 'PASS: insn: %s: %s instructions, %s cases checked against this processor; %s controls rejected (%s wrong models)\n' \
-  "$ARCH" "$entries" "$total" "$controls" "$mutants"
+if [ -n "$RECORDED" ]; then
+  where="the run recorded in ${RECORDED#"$(cd "$HERE/../.." && pwd)/"} ($(sed -n 1p "$RECORDED/host.txt"))"
+else
+  where="this processor"
+fi
+printf 'PASS: insn: %s: %s instructions, %s cases checked against %s; %s controls rejected (%s wrong models)\n' \
+  "$ARCH" "$entries" "$total" "$where" "$controls" "$mutants"

@@ -1,0 +1,249 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# tests/insn/aarch64.mutants
+# ==========================
+#
+# Wrong models of the Armv8-A instructions, in the format of
+# tests/insn/x86_64.mutants. In from and to, \n stands for a newline, so a
+# change can be anchored on text that is unique only across two lines.
+
+mutant sha256-Sigma0-rotation
+  entries  sha256h
+  file     SHA.ec
+  from     (a `|>>>|` 13)
+  to       (a `|>>>|` 12)
+
+mutant sha256-Sigma1-rotation
+  entries  sha256h sha256h2
+  file     SHA.ec
+  from     (e `|>>>|` 25)
+  to       (e `|>>>|` 24)
+
+mutant sha256-sigma0-rotation
+  entries  sha256su0
+  file     SHA.ec
+  from     (w `|>>>|` 18)
+  to       (w `|>>>|` 17)
+
+mutant sha256-sigma0-shift
+  entries  sha256su0
+  file     SHA.ec
+  from     (w `>>>` 3)
+  to       (w `>>>` 4)
+
+mutant sha256-sigma1-rotation
+  entries  sha256su1
+  file     SHA.ec
+  from     (w `|>>>|` 19)
+  to       (w `|>>>|` 18)
+
+mutant sha256-Ch-operand
+  entries  sha256h sha256h2
+  file     SHA.ec
+  from     (invw e `&` g)
+  to       (invw f `&` g)
+
+mutant sha256-Maj-term
+  entries  sha256h
+  file     SHA.ec
+  from     a `&` b +^ a `&` c +^ b `&` c.
+  to       a `&` b +^ a `&` c +^ b `|` c.
+
+mutant sha256hash-result-order
+  entries  sha256h sha256h2
+  file     JModel_armv8a.ec
+  from     let (r0, r1, r2, r3) = r in
+  to       let (r1, r0, r2, r3) = r in
+
+mutant sha256su0-result-order
+  entries  sha256su0
+  file     JModel_armv8a.ec
+  from     (iota_ 0 4)).
+  to       [1; 0; 2; 3]).
+
+mutant sha256su1-result-order
+  entries  sha256su1
+  file     JModel_armv8a.ec
+  from     nth W32.zero t0 3 in\n  W4u32.pack4 [r0; r1; r2; r3].
+  to       nth W32.zero t0 3 in\n  W4u32.pack4 [r1; r0; r2; r3].
+
+mutant sha256h-operand-order
+  entries  sha256h
+  file     JModel_armv8a.ec
+  from     = sha256hash d n m true.
+  to       = sha256hash n d m true.
+
+mutant sha256h2-operand-order
+  entries  sha256h2
+  file     JModel_armv8a.ec
+  from     = sha256hash n d m false.
+  to       = sha256hash d n m false.
+
+mutant sha256su0-operand-order
+  entries  sha256su0
+  file     JModel_armv8a.ec
+  from     op SHA256SU0 (d n: W128.t)
+  to       op SHA256SU0 (n d: W128.t)
+
+mutant sha256su1-operand-order
+  entries  sha256su1
+  file     JModel_armv8a.ec
+  from     op SHA256SU1 (d n m: W128.t)
+  to       op SHA256SU1 (n d m: W128.t)
+
+mutant sha512-Sigma1-rotation
+  entries  sha512h
+  file     JModel_armv8a.ec
+  from     (x `|>>>|` 41)
+  to       (x `|>>>|` 40)
+
+mutant sha512-Sigma0-rotation
+  entries  sha512h2
+  file     JModel_armv8a.ec
+  from     (x `|>>>|` 39)
+  to       (x `|>>>|` 38)
+
+mutant sha512-sigma0-rotation
+  entries  sha512su0
+  file     JModel_armv8a.ec
+  from     (x `|>>>|` 8)
+  to       (x `|>>>|` 9)
+
+mutant sha512-sigma0-shift
+  entries  sha512su0
+  file     JModel_armv8a.ec
+  from     (x `>>>` 7)
+  to       (x `>>>` 8)
+
+mutant sha512-sigma1-rotation
+  entries  sha512su1
+  file     JModel_armv8a.ec
+  from     (x `|>>>|` 61)
+  to       (x `|>>>|` 60)
+
+mutant sha512-Ch-operand
+  entries  sha512h
+  file     JModel_armv8a.ec
+  from     (invw y1 `&` x1)
+  to       (invw y1 `&` x0)
+
+mutant sha512-Maj-term
+  entries  sha512h2
+  file     JModel_armv8a.ec
+  from     ((x `|` y) `&` z)
+  to       ((x `&` y) `&` z)
+
+mutant sha512h-result-order
+  entries  sha512h
+  file     JModel_armv8a.ec
+  from     SHA512Sigma1 tmp + w0 in\n  W2u64.pack2 [v0; v1].
+  to       SHA512Sigma1 tmp + w0 in\n  W2u64.pack2 [v1; v0].
+
+mutant sha512h2-result-order
+  entries  sha512h2
+  file     JModel_armv8a.ec
+  from     SHA512Sigma0 v1 + w0 in\n  W2u64.pack2 [v0; v1].
+  to       SHA512Sigma0 v1 + w0 in\n  W2u64.pack2 [v1; v0].
+
+mutant sha512su0-result-order
+  entries  sha512su0
+  file     JModel_armv8a.ec
+  from     W2u64.pack2 [(d \bits64 0) + sha512sigma0 (d \bits64 1); (d \bits64 1) + sha512sigma0 (n \bits64 0)].
+  to       W2u64.pack2 [(d \bits64 1) + sha512sigma0 (n \bits64 0); (d \bits64 0) + sha512sigma0 (d \bits64 1)].
+
+mutant sha512su1-lane
+  entries  sha512su1
+  file     JModel_armv8a.ec
+  from     (d \bits64 0) + sha512sigma1 (n \bits64 0) + (m \bits64 0);
+  to       (d \bits64 1) + sha512sigma1 (n \bits64 1) + (m \bits64 1);
+
+mutant sha512su1-sigma-operand
+  entries  sha512su1
+  file     JModel_armv8a.ec
+  from     (d \bits64 0) + sha512sigma1 (n \bits64 0) + (m \bits64 0);
+  to       (d \bits64 0) + sha512sigma1 (m \bits64 0) + (n \bits64 0);
+
+mutant sha512h-operand-order
+  entries  sha512h
+  file     JModel_armv8a.ec
+  from     op SHA512H (d n m: W128.t)
+  to       op SHA512H (n d m: W128.t)
+
+mutant sha512h2-operand-order
+  entries  sha512h2
+  file     JModel_armv8a.ec
+  from     op SHA512H2 (d n m: W128.t)
+  to       op SHA512H2 (n d m: W128.t)
+
+mutant sha512su0-operand-order
+  entries  sha512su0
+  file     JModel_armv8a.ec
+  from     op SHA512SU0 (d n: W128.t)
+  to       op SHA512SU0 (n d: W128.t)
+
+mutant sha512su1-operand-order
+  entries  sha512su1
+  file     JModel_armv8a.ec
+  from     op SHA512SU1 (d n m: W128.t)
+  to       op SHA512SU1 (n d m: W128.t)
+
+mutant ext-offset
+  entries  ext8 ext8_same
+  file     JModel_armv8a.ec
+  from     let j = k + to_uint imm in
+  to       let j = k + to_uint imm + 1 in
+
+mutant ext-operand-order
+  entries  ext8
+  file     JModel_armv8a.ec
+  from     op VEXT (n m: W128.t)
+  to       op VEXT (m n: W128.t)
+
+mutant rev32-order
+  entries  rev32_16u8
+  file     JModel_armv8a.ec
+  from     x \bits8 (k %/ 4 * 4 + (4 - 1 - k %% 4))
+  to       x \bits8 (k %/ 4 * 4 + (k %% 4))
+
+mutant rev64-order
+  entries  rev64_16u8
+  file     JModel_armv8a.ec
+  from     x \bits8 (k %/ 8 * 8 + (8 - 1 - k %% 8))
+  to       x \bits8 (k %/ 8 * 8 + (4 - 1 - k %% 4))
+
+mutant add_4u32-lanes
+  entries  add_4u32
+  file     JModel_armv8a.ec
+  from     = VPADD_4u32 x y.
+  to       = VPADD_2u64 x y.
+
+mutant add_2u64-lanes
+  entries  add_2u64
+  file     JModel_armv8a.ec
+  from     = VPADD_2u64 x y.
+  to       = VPADD_4u32 x y.
+
+mutant trn1_4u32-operand-order
+  entries  trn1_4u32
+  file     JModel_armv8a.ec
+  from     op VTRN1_4u32 (n m: W128.t)
+  to       op VTRN1_4u32 (m n: W128.t)
+
+mutant trn2_4u32-operand-order
+  entries  trn2_4u32
+  file     JModel_armv8a.ec
+  from     op VTRN2_4u32 (n m: W128.t)
+  to       op VTRN2_4u32 (m n: W128.t)
+
+mutant trn1_2u64-operand-order
+  entries  trn1_2u64
+  file     JModel_armv8a.ec
+  from     op VTRN1_2u64 (n m: W128.t)
+  to       op VTRN1_2u64 (m n: W128.t)
+
+mutant trn2_2u64-operand-order
+  entries  trn2_2u64
+  file     JModel_armv8a.ec
+  from     op VTRN2_2u64 (n m: W128.t)
+  to       op VTRN2_2u64 (m n: W128.t)

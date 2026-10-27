@@ -1,0 +1,39 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# tests/insn/aarch64.insn
+# =======================
+#
+# The Armv8-A instructions whose EasyCrypt models the proofs of the
+# aarch64-sha2 kernels (src/aarch64/sha2) rest on, in the form
+# tests/insn/insn.py reads. Operands appear in the order of the Jasmin
+# intrinsic, which is the order the kernels pass them and the order of the
+# arguments of the EasyCrypt operator (JModel_armv8a.ec).
+#
+#   sha256_compress:  abcd = SHA256H(abcd, efgh, wk); efgh = SHA256H2(efgh, prev, wk)
+#                     m = SHA256SU0(m0, m1); m = SHA256SU1(m, m2, m3)
+#   sha512_compress:  SHA512H(s3, x, y); SHA512H2(s3, s1, s0)
+#                     SHA512SU0(m0, m1); SHA512SU1(m, m7, z)
+#                     VEXT(lo, hi, 8) and VEXT(wk, wk, 8)
+#   all:              VREV32_16u8 / VREV64_16u8 after the block load,
+#                     VADD_4u32 / VADD_2u64 (W + K, feed-forward),
+#                     VTRN1/VTRN2 .4s and .2d (multi-way state transposes)
+
+sha256h     r = #SHA256H(a, b, c);     sha256h
+sha256h2    r = #SHA256H2(a, b, c);    sha256h2
+sha256su0   r = #SHA256SU0(a, b);      sha256su0
+sha256su1   r = #SHA256SU1(a, b, c);   sha256su1
+sha512h     r = #SHA512H(a, b, c);     sha512h
+sha512h2    r = #SHA512H2(a, b, c);    sha512h2
+sha512su0   r = #SHA512SU0(a, b);      sha512su0
+sha512su1   r = #SHA512SU1(a, b, c);   sha512su1
+ext8        r = #VEXT(a, b, 8);        ext
+ext8_same   r = #VEXT(a, a, 8);        ext
+rev32_16u8  r = #VREV32_16u8(a);       rev32
+rev64_16u8  r = #VREV64_16u8(a);       rev64
+add_4u32    r = #VADD_4u32(a, b);      add
+add_2u64    r = #VADD_2u64(a, b);      add
+trn1_4u32   r = #VTRN1_4u32(a, b);     trn1
+trn2_4u32   r = #VTRN2_4u32(a, b);     trn2
+trn1_2u64   r = #VTRN1_2u64(a, b);     trn1
+trn2_2u64   r = #VTRN2_2u64(a, b);     trn2

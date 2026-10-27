@@ -37,9 +37,9 @@ path = ["proofs/extracted/**"]
 SPDX-FileCopyrightText = "nirapod-sha2 contributors"
 SPDX-License-Identifier = "Apache-2.0"
 
-# The digest manifest tests/xarch writes, which cannot carry a comment of
-# its own.
+# The digest manifest tests/xarch writes and the recorded Armv8-A
+# instruction run of tests/insn/aarch64; none carries a comment of its own.
 [[annotations]]
-path = "tests/vectors/xarch/manifest.txt"
+path = ["tests/vectors/xarch/manifest.txt", "tests/insn/aarch64/*.s", "tests/insn/aarch64/*.txt"]
 SPDX-FileCopyrightText = "nirapod-sha2 contributors"
 SPDX-License-Identifier = "Apache-2.0"
