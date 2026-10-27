@@ -164,6 +164,9 @@ def header(fname, what, sources):
              "SpecEval.ec, without SMT. The generator explains the selection of "
              "vectors." % (what, ", ".join(sources)))
     lines = textwrap.wrap(intro, 72)
+    # The header below is written into each generated file; it is not this
+    # file's licence, so REUSE skips it.
+    # REUSE-IgnoreStart
     return ("(*\n"
             " * SPDX-FileCopyrightText: nirapod-sha2 contributors\n"
             " * SPDX-License-Identifier: Apache-2.0\n"
@@ -176,6 +179,7 @@ def header(fname, what, sources):
             " * Generator: proofs/tools/spec_vectors.py\n"
             " * Regenerate: make -C proofs spec-vectors   (check: make -C proofs check-spec-exec)\n"
             " *)\n\n")
+    # REUSE-IgnoreEnd
 
 
 def hash_lemmas(vectors, table, fname, what, op, prefix, rsp, block):
