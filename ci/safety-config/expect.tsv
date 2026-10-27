@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# ci/safety-config/expect.tsv
+# ===========================
+#
+# Known outcomes of jasmin-checksafety, read by ci/jobs/safety.sh. The
+# checker is the second safety check; every export's #[safety] contract is
+# proved in EasyCrypt (proofs/safety/SafetyExports.ec, <export>_proof, and
+# the lemmas it uses). A row says that the checker raises an alarm the
+# proof refutes (FAIL), or gives no verdict within its limit (TIMEOUT), for
+# that export of the units the pattern matches. One row per entry, four
+# tab-separated fields:
+#
+#   unit      a shell pattern over the unit names
+#   export    an export of src/nirapod_sha2.jinc
+#   outcome   FAIL or TIMEOUT
+#   reason    what the checker reports or why it doesn't finish, and the
+#             proved lemma that settles the contract

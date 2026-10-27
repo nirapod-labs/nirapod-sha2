@@ -22,9 +22,19 @@
 #
 # Each export ends PASS, FAIL or TIMEOUT. A TIMEOUT is never a pass, an
 # export without a result is a FAIL, and the summary names every export
-# of every unit with its status, time and reason. Exit status: 0 when
-# every export passed, 124 when none failed but at least one timed out,
-# 1 otherwise.
+# of every unit with its status, time and reason.
+#
+# The checker is the second safety check; the first is the EasyCrypt
+# proof of every #[safety] contract (proofs/safety/). Where the checker
+# is known to raise an alarm that the proof refutes, or to give no
+# verdict within its limit, ci/safety-config/expect.tsv lists the unit,
+# the export, the outcome and the proved lemma. Such a run is reported as
+# KNOWN-FAIL or KNOWN-TIMEOUT and doesn't fail the job; any other FAIL or
+# TIMEOUT does, and so does a listed FAIL that no longer happens, so the
+# list stays exact (a listed TIMEOUT that finishes is only reported, as
+# the time a run takes depends on the machine). Exit status: 0 when every
+# export passed or ended as listed, 124 when none failed but at least one
+# timed out unexpectedly, 1 otherwise.
 #
 # Before the exports, the controls of tests/safety/controls.jazz run on
 # both architectures and must end as that file says: an exact range
@@ -65,6 +75,7 @@ SRC=src/nirapod_sha2.jinc
 RANGES=tests/safety/ranges.py
 CONTROLS=tests/safety/controls.jazz
 TABLE=ci/safety-config/table.tsv
+EXPECT=ci/safety-config/expect.tsv
 
 cap=${CI_SAFETY_TIMEOUT:-3600}
 case $cap in ''|*[!0-9]*|0) ci_fail "CI_SAFETY_TIMEOUT must be a positive number of seconds" ;; esac
@@ -277,31 +288,73 @@ while read -r unit export; do
 done < "$tasks"
 wait
 
+# The known outcomes: unit pattern, export, FAIL or TIMEOUT, reason (which
+# must name the proved lemma). Every row must be well formed and match a
+# unit and an export.
+expect_rows() {
+  [ -f "$EXPECT" ] || return 0
+  grep -v '^[[:space:]]*\(#\|$\)' "$EXPECT" || true
+}
+expect_rows | while IFS=$'\t' read -r pat exp st why; do
+  [ -n "$why" ] || ci_fail "$EXPECT: a row without a reason: $pat $exp"
+  grep -qx "$exp" "$out/exports" || ci_fail "$EXPECT: no export $exp"
+  case $st in FAIL|TIMEOUT) ;; *) ci_fail "$EXPECT: bad outcome $st" ;; esac
+  case $why in *_proof*) ;; *) ci_fail "$EXPECT: $pat $exp: the reason names no proved lemma" ;; esac
+  hit=0
+  for u in $all_units; do
+    # shellcheck disable=SC2254
+    case $u in $pat) hit=1 ;; esac
+  done
+  [ "$hit" = 1 ] || ci_fail "$EXPECT: pattern $pat matches no unit"
+done
+
+# expect_for UNIT EXPORT: the listed outcome of the first matching row, or -.
+expect_for() {
+  local pat exp st why
+  while IFS=$'\t' read -r pat exp st why; do
+    [ "$exp" = "$2" ] || continue
+    # shellcheck disable=SC2254
+    case $1 in $pat) echo "$st"; return ;; esac
+  done < <(expect_rows)
+  echo -
+}
+
 # --- Summary ----------------------------------------------------------
 
 summary=$out/summary.tsv
 printf 'unit\texport\tstatus\tseconds\tconfig\treason\n' > "$summary"
-pass=0 fail=0 tout=0
+pass=0 fail=0 tout=0 known=0
 while read -r unit export; do
   base=$out/runs/$unit.$export
   read -r cfg _ < <(config_for "$unit" "$export")
+  want=$(expect_for "$unit" "$export")
   if [ -f "$base.result" ]; then
     read -r status secs why < "$base.result"
   else
     status=FAIL secs=- why="no result"
   fi
-  case $status in
-    PASS) pass=$((pass + 1)) ;;
-    TIMEOUT) tout=$((tout + 1)) ;;
-    *) status=FAIL; fail=$((fail + 1)) ;;
-  esac
+  case $status in PASS|TIMEOUT) ;; *) status=FAIL ;; esac
+  if [ "$want" != - ] && [ "$status" = "$want" ]; then
+    status=KNOWN-$status; known=$((known + 1))
+  elif [ "$want" = FAIL ] && [ "$status" = PASS ]; then
+    status=FAIL; fail=$((fail + 1))
+    why="listed as FAIL in $EXPECT but passed; update the list. $why"
+  else
+    case $status in
+      PASS) pass=$((pass + 1)) ;;
+      TIMEOUT) tout=$((tout + 1)) ;;
+      *) fail=$((fail + 1)) ;;
+    esac
+    [ "$want" = TIMEOUT ] && [ "$status" = PASS ] \
+      && why="listed as TIMEOUT in $EXPECT, finished here. $why"
+  fi
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$unit" "$export" "$status" "$secs" "$cfg" "$why" >> "$summary"
 done < "$tasks"
 
 echo "safety: per export (also in $summary)"
 column -t -s "$(printf '\t')" "$summary" 2>/dev/null | sed 's/^/  /' \
   || sed 's/^/  /' "$summary"
-echo "safety: $pass PASS, $fail FAIL, $tout TIMEOUT of $total runs"
+echo "safety: $pass PASS, $known known (listed in $EXPECT), $fail FAIL, $tout TIMEOUT of $total runs"
 
 [ "$fail" -eq 0 ] || ci_fail "safety: $fail of $total runs failed"
 if [ "$tout" -ne 0 ]; then
@@ -314,4 +367,4 @@ if [ "$partial" -eq 1 ]; then
 fi
 nu=$(printf '%s\n' $units | wc -l | tr -d ' ')
 ne=$(printf '%s\n' $exports | wc -l | tr -d ' ')
-echo "PASS: safety: all $total runs ($nu units, $ne exports) within their contracts"
+echo "PASS: safety: $pass of $total runs ($nu units, $ne exports) within their contracts, $known ended as listed in $EXPECT"
