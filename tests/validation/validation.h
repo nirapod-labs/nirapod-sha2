@@ -6,7 +6,7 @@
  * ============
  *
  * Shared declarations of the validation suite. The suite runs the public
- * functions of nirapod_sha2.h and every kernel of this build through
+ * functions of nirapod/sha2.h and every kernel of this build through
  * nirapod_sha2_testing.h, and reports PASS, FAIL and SKIP per suite and
  * per kernel.
  *
@@ -22,7 +22,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "nirapod_sha2.h"
+#include "nirapod/sha2.h"
 #include "nirapod_sha2_testing.h"
 
 #define VALIDATION_KERNELS NIRAPOD_SHA2_TESTING_KERNELS

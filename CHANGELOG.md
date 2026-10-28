@@ -13,7 +13,7 @@ Nothing has been released. What exists today:
 
 - SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224 and SHA-512/256, one-shot
   and incremental, and HMAC-SHA-256 and HMAC-SHA-512 with keys of any
-  length, through the C API in `include/nirapod_sha2.h`.
+  length, through the C API in `include/nirapod/sha2.h`.
 - 8-way SHA-256 and 4-way SHA-512 over messages of equal length.
 - Kernels: portable on both architectures; scalar and SHA-2 instructions
   on AArch64; SHA-NI and AVX2 on x86-64. The C layer picks one by CPU

@@ -19,7 +19,7 @@
  *
  *     libnirapod_sha2.a links these objects and every unit of the host
  *     architecture into one object in which only the functions of
- *     nirapod_sha2.h stay global (Makefile, "Libraries"); the functions
+ *     nirapod/sha2.h stay global (Makefile, "Libraries"); the functions
  *     declared here and the Jasmin exports become local symbols.
  *     libnirapod_sha2_testing.a holds the same objects with their symbols
  *     as compiled, plus capi/testing/testing.c, the per-kernel entry points
@@ -34,7 +34,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "nirapod_sha2.h"
+#include "nirapod/sha2.h"
 #include "jasmin.h"
 
 /*
@@ -172,7 +172,7 @@ void nirapod_sha2_clear_registers(unsigned used_features);
 
 /*
  * The operations of api.c on an explicit unit and family. They check the
- * arguments as nirapod_sha2.h says, in its order, then run the export
+ * arguments as nirapod/sha2.h says, in its order, then run the export
  * with the timing mode set (except run_init, which reads no secret) and
  * clear the registers after it. The public functions pass
  * nirapod_sha2_select(f); capi/testing passes the unit it was asked for.

@@ -7,7 +7,7 @@
 # ==========================
 #
 # The global symbols of the application library are exactly the functions
-# that include/nirapod_sha2.h declares.
+# that include/nirapod/sha2.h declares.
 #
 #     check-exports.sh list <header> [prefix]
 #         Print the function names the header declares, one per line, each

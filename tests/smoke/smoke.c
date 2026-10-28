@@ -7,7 +7,7 @@
  *
  * Smoke tests of the C API: a small set of checks that every function
  * computes its published known answers and that misuse fails as
- * nirapod_sha2.h says. The full validation (CAVP, Wycheproof, differential
+ * nirapod/sha2.h says. The full validation (CAVP, Wycheproof, differential
  * tests, every split offset) is a separate suite.
  *
  * Built twice (Makefile, "Checks"):
@@ -19,7 +19,7 @@
  *                   kernel the CPU cannot run is reported as skipped. The
  *                   dispatch rule is checked for feature sets the host
  *                   does not have.
- *     smoke-public  only nirapod_sha2.h, linked with libnirapod_sha2.a:
+ *     smoke-public  only nirapod/sha2.h, linked with libnirapod_sha2.a:
  *                   the same checks through the public functions alone.
  *
  * What runs on every kernel:
@@ -53,7 +53,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "nirapod_sha2.h"
+#include "nirapod/sha2.h"
 #include "vectors.h"
 #ifdef SMOKE_TESTING
 #include "nirapod_sha2_testing.h"
@@ -569,7 +569,7 @@ static void test_multiway(int k, const char *kn)
     }
 }
 
-/* Misuse through the public functions (nirapod_sha2.h, "Results"). */
+/* Misuse through the public functions (nirapod/sha2.h, "Results"). */
 static void test_misuse(void)
 {
     const char *kn = "public";

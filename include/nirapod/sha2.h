@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: nirapod-sha2 contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * nirapod_sha2.h
+ * nirapod/sha2.h
  * ==============
  *
  * SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224 and SHA-512/256 (FIPS

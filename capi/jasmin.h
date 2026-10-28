@@ -36,7 +36,7 @@
  *
  *     status: 0 success, 1 context state, 2 length (src/context.jinc,
  *     SHA2_STATUS_*). D and C are the digest and context sizes of
- *     nirapod_sha2.h.
+ *     nirapod/sha2.h.
  */
 
 #ifndef NIRAPOD_SHA2_JASMIN_H

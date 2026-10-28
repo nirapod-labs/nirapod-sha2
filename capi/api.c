@@ -5,7 +5,7 @@
  * api.c
  * =====
  *
- * The public functions of nirapod_sha2.h and the checks they make. Their
+ * The public functions of nirapod/sha2.h and the checks they make. Their
  * contracts are in that header; this file is the boundary between them
  * and the Jasmin exports (jasmin.h).
  *
@@ -53,7 +53,7 @@ static int overlaps(const void *a, size_t a_len, const void *b, size_t b_len)
     return pa < pb + b_len && pb < pa + a_len;
 }
 
-/* The export's status (jasmin.h) as an error code of nirapod_sha2.h. */
+/* The export's status (jasmin.h) as an error code of nirapod/sha2.h. */
 static int status_code(uint64_t status)
 {
     switch (status) {
@@ -316,7 +316,7 @@ int nirapod_sha2_run_lanes_update(const nirapod_sha2_unit *u, nirapod_sha2_famil
  *
  * Each one asks dispatch.c for the unit of its family and hands the
  * operation to the runner of its shape above. The macros only spell out
- * that pairing; the contracts are in nirapod_sha2.h.
+ * that pairing; the contracts are in nirapod/sha2.h.
  */
 
 #define FAMILY_sha224     NIRAPOD_SHA2_FAMILY_SHA256
@@ -369,7 +369,7 @@ PUBLIC_HASH(sha512)
 PUBLIC_HASH(sha512_224)
 PUBLIC_HASH(sha512_256)
 
-/* B + msg_len < 2^61 for the HMAC message (nirapod_sha2.h, "Lengths"). */
+/* B + msg_len < 2^61 for the HMAC message (nirapod/sha2.h, "Lengths"). */
 #define HMAC_SHA256_MSG_LIMIT (NIRAPOD_SHA2_MAX_BYTES - 64)
 #define HMAC_SHA512_MSG_LIMIT (NIRAPOD_SHA2_MAX_BYTES - 128)
 
