@@ -201,8 +201,9 @@ fn _sha256_compress(
 
 /*
  * One block from caller memory at p, as _sha256_compress_blocks with
- * n = 1. Every SHA-256 kernel provides it (src/README.md, "Files and
- * kernel variants"); this one's _sha256_compress_blocks does not call it.
+ * n = 1, provided as the portable and AVX2 kernels provide it
+ * (docs/ARCHITECTURE.md, "Kernels"); this one's _sha256_compress_blocks
+ * does not call it.
  */
 #[sct = "{ ptr: public, val: secret } × public × msf → { ptr: public, val: secret } × msf"]
 #[safety =

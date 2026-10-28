@@ -117,9 +117,9 @@
  *
  *     Before returning, each call clears the stack its Jasmin code used
  *     and the caller-saved registers. The stack each call needs is
- *     documented per kernel with the library's sources ("Stack use" in
- *     its README). Contexts hold secret state between calls; final
- *     zeroes them, and a caller that abandons a context should clear it.
+ *     documented per kernel in docs/API.md ("Stack use"). Contexts hold
+ *     secret state between calls; final zeroes them, and a caller that
+ *     abandons a context should clear it.
  *
  * Kernels
  *

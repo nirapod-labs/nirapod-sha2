@@ -10,7 +10,7 @@
 # Checks the EasyCrypt models of the instructions in tests/insn/ARCH.insn
 # against this processor, which must be an ARCH processor, and runs the
 # negative controls. Work and logs go to OUT. The steps, as
-# tests/insn/README.md explains them:
+# docs/VALIDATION.md explains them:
 #
 #   1. generate the Jasmin test program, compile it with JASMINC and check
 #      that each export contains its instruction;

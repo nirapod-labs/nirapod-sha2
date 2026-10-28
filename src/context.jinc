@@ -572,8 +572,8 @@ namespace _sha512_256_ctx {
  *           keylen = 0
  *
  * key must not overlap ctx. K0, the padded key blocks and, for a long
- * key, H(K) stay in this function's frame (README.md, "Residue") until
- * the export's stack clearing removes them.
+ * key, H(K) stay in this function's frame (docs/API.md, "Residue")
+ * until the export's stack clearing removes them.
  */
 #[safety =
    { requires = is_mem_init((64u) key, (64u) keylen)

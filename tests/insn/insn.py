@@ -5,7 +5,7 @@
 # tests/insn/insn.py
 # ==================
 #
-# The generators of the instruction-model test (tests/insn/README.md).
+# The generators of the instruction-model test (docs/VALIDATION.md).
 #
 #     insn.py jazz     TABLE            the Jasmin test program
 #     insn.py header   TABLE            the C table of its exports

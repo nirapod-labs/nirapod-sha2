@@ -23,11 +23,11 @@
  *
  * Rounds (_sha512_x4_block): rounds 0 to 15 are unrolled, rounds 16 to 79
  * are a loop of four passes over 16 unrolled rounds, a third of the code of
- * a full unroll, which made one-block calls slower (src/README.md, "Kernel
- * notes"); after 16 rounds the state rotation and the window are back in
- * place. AVX2 has no 64-bit rotate, so ROTR by r is a right shift, a left
- * shift by 64 - r and an XOR, except ROTR 8 in sigma0, which is a byte
- * shuffle. Further savings per round:
+ * a full unroll, which made one-block calls slower (docs/KERNELS.md); after
+ * 16 rounds the state rotation and the window are back in place. AVX2 has no
+ * 64-bit rotate, so ROTR by r is a right shift, a left shift by 64 - r and
+ * an XOR, except ROTR 8 in sigma0, which is a byte shuffle. Further savings
+ * per round:
  *
  *     K_t is read from a table holding it four times, as the memory
  *     operand of the addition, instead of being broadcast
