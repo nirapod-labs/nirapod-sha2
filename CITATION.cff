@@ -12,8 +12,7 @@ abstract: >-
   x86-64, with a C API and EasyCrypt proofs of functional correctness.
 type: software
 authors:
-  - given-names: "H. M."
-    family-names: "Yousuf"
+  - given-names: "H. M. Yousuf"
     alias: "hm-yousuf"
     email: "hmyousuf@nirapod.org"
   - given-names: "Rifat"
