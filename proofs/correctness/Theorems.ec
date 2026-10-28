@@ -62,7 +62,7 @@
  *     The portable units need no CPU feature.
  *
  * The statements are about the Jasmin procedures; the C wrapper is
- * outside them. proofs/README.md records the trusted base.
+ * outside them. docs/SECURITY-MODEL.md lists the trusted base.
  *)
 
 require import AllCore List IntDiv.
