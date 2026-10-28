@@ -76,8 +76,7 @@ while [ $# -gt 0 ]; do
     --no-clean) clean=0 ;;
     --list)
       printf 'default: %s\n' "$ALL_JOBS"
-      printf 'default without Jasmin: %s\n' "$NATIVE_JOBS"
-      printf 'default with Jasmin and an instruction table for the host: %s\n' "$INSN_JOBS"
+      printf 'default with an instruction table for the host: %s\n' "$INSN_JOBS"
       printf 'default with a recorded instruction run for the host: %s\n' "$VECTORS_JOBS"
       printf 'opt-in:  %s\n' "$OPT_JOBS"
       exit 0
