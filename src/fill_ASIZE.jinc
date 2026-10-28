@@ -10,7 +10,7 @@
  * same three steps (single bytes up to the next 8-byte position of the
  * buffer, u64 words, the remaining bytes). Instance file, included inside
  * a namespace that sets param int _ASIZE, the array size; the other
- * *_ASIZE.jinc files require it themselves (README.md, "Array instances").
+ * *_ASIZE.jinc files require it themselves (docs/API.md, "Array forms").
  *
  * Security: the array's bytes are secret; dst, off and n are public and
  * are the only values that decide a branch, a bound or an index.

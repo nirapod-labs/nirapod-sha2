@@ -27,7 +27,7 @@
  * Lengths and pointers are public.
  *
  * Residue: the local K0, the padded key blocks, the states and the inner
- * digest remain in this function's frame and its callees' (README.md,
+ * digest remain in this function's frame and its callees' (docs/API.md,
  * "Residue"). The exports that run this code clear their stack before
  * returning.
  */

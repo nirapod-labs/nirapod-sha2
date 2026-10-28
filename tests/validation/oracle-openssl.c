@@ -12,7 +12,7 @@
  * AWS-LC and BoringSSL have no EVP_sha512_224 or EVP_sha512_256, so their
  * programs do not implement SHA-512/224 and SHA-512/256. The three
  * libraries descend from one code base; this backend is one oracle
- * family, not three independent ones (README.md, "Oracles").
+ * family, not three independent ones (docs/VALIDATION.md, "Oracles").
  */
 
 #include <limits.h>

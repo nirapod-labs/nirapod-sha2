@@ -96,7 +96,7 @@ OUT  := $(BUILD)/$(HOST_ARCH)-$(HOST_SYSTEM)
 # src/nirapod_sha2.jinc in the namespace nirapod_sha2_jz_<arch>_<variant>,
 # so every unit has the full set of exports under its own names
 # (capi/jasmin.h). A unit's kernels are chosen by its include roots
-# (src/README.md):
+# (docs/ARCHITECTURE.md):
 #
 #     unit               Sha256Kernel        Sha512Kernel        Sha256KernelX, Sha512KernelX
 #     aarch64-portable   src                 src                 src
@@ -161,7 +161,7 @@ print-roots-%:
 # clear with 256-bit stores, since the frames of their multi-way exports
 # and of the AVX2 single-way kernels (W + K on the stack) are 1.5 KiB or
 # more and a 64-bit store loop over them is a large share of a short call
-# (src/README.md, "Kernel notes").
+# (docs/KERNELS.md).
 ZERO_shani := u256
 ZERO_avx2  := u256
 unit_flags = -arch $(call unit_jarch,$(1)) -system $(2) \
@@ -383,8 +383,8 @@ $(BUILD)/ct/%.ok: $(BUILD)/units/%.jazz $(JASMIN_DEPS) $(TESTS)/ct/exports.sh
 ct: $(addprefix $(BUILD)/ct/,$(addsuffix .ok,$(CT_UNITS) $(addprefix array-,$(CT_ARCHES))))
 	@echo "ct: jasmin-ct and jasmin-ct --sct ($(CT_FLAGS)) PASS on $(words $(CT_UNITS)) units ($(CT_UNITS)) and the array unit of $(CT_ARCHES)"
 
-# The array instance files (src/*_ASIZE.jinc, src/README.md "Array
-# instances"). Their test unit, tests/array/array.jazz, instantiates every
+# The array instance files (src/*_ASIZE.jinc, docs/API.md, "Array
+# forms"). Their test unit, tests/array/array.jazz, instantiates every
 # one at several array sizes behind test exports. It is compiled with the
 # portable kernels (build/array/<arch>-<system>.s), typed by jasmin-ct and --sct with the units (make ct), and
 # linked only into the array test, never into a library.
@@ -497,7 +497,7 @@ extraction-control: extract
 #     make insn-check   the EasyCrypt models of the instructions listed in
 #                       tests/insn/<host arch>.insn, evaluated on inputs
 #                       and results of this processor, with the negative
-#                       controls (tests/insn/README.md)
+#                       controls (docs/VALIDATION.md)
 #
 #     make insn-check-recorded
 #                       the same for each recorded run tests/insn/<arch>/

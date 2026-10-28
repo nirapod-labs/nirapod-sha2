@@ -1,7 +1,7 @@
 version = 1
 
 # Files imported unchanged from formosa-crypto/crypto-specs at
-# fb050598ed356c5c6604d92a1e198b2dd4543777; see README.md here.
+# fb050598ed356c5c6604d92a1e198b2dd4543777.
 [[annotations]]
 path = ["LICENSE", "common/**"]
 precedence = "closest"
