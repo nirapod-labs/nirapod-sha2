@@ -214,7 +214,7 @@ $(OUT)/obj/%.o: $(ASM_ROOT)/asm/$(HOST_SYSTEM)/%.s
 #
 #     libnirapod_sha2.a          the C objects and the host's units, linked
 #                                into one relocatable object in which only
-#                                the functions of include/nirapod_sha2.h
+#                                the functions of include/nirapod/sha2.h
 #                                stay global; every other symbol, Jasmin
 #                                exports included, is made local (ld -r
 #                                with an exported-symbols list on Mach-O;
@@ -230,7 +230,7 @@ CWARN  := -std=c99 -Wall -Wextra -Wpedantic -Wshadow -Wmissing-prototypes \
 CPPFLAGS += -I$(INCLUDE) -I$(CAPI) -I$(CAPI)/testing
 
 CAPI_FILES := api clear dispatch timing units
-CAPI_DEPS  := $(wildcard $(CAPI)/*.h) $(INCLUDE)/nirapod_sha2.h
+CAPI_DEPS  := $(wildcard $(CAPI)/*.h) $(INCLUDE)/nirapod/sha2.h
 COBJ       := $(addprefix $(OUT)/obj/c/,$(addsuffix .o,$(CAPI_FILES)))
 TOBJ       := $(OUT)/obj/c/testing.o
 
@@ -249,7 +249,7 @@ EXPORTS     := $(OUT)/lib/exports.txt
 SYM_PREFIX  := $(if $(filter macho,$(FORMAT)),_,)
 CHECK_EXPORTS := sh $(TESTS)/abi/check-exports.sh
 
-$(EXPORTS): $(INCLUDE)/nirapod_sha2.h $(TESTS)/abi/check-exports.sh
+$(EXPORTS): $(INCLUDE)/nirapod/sha2.h $(TESTS)/abi/check-exports.sh
 	@mkdir -p $(@D)
 	$(CHECK_EXPORTS) list $< $(SYM_PREFIX) > $@
 
@@ -315,8 +315,8 @@ $(DIT_TEST): $(TESTS)/timing/dit.c $(TESTING_LIB)
 	$(CC) $(CPPFLAGS) $(CWARN) $(CFLAGS) -o $@ $(TESTS)/timing/dit.c $(TESTING_LIB)
 
 check: $(LIB) $(EXPORTS_CONTROL) $(SMOKE) $(SMOKE_PUBLIC) $(DIT_TEST) asm-policy
-	$(CHECK_EXPORTS) check $(INCLUDE)/nirapod_sha2.h $(LIB) $(SYM_PREFIX)
-	@if $(CHECK_EXPORTS) check $(INCLUDE)/nirapod_sha2.h $(EXPORTS_CONTROL) $(SYM_PREFIX) \
+	$(CHECK_EXPORTS) check $(INCLUDE)/nirapod/sha2.h $(LIB) $(SYM_PREFIX)
+	@if $(CHECK_EXPORTS) check $(INCLUDE)/nirapod/sha2.h $(EXPORTS_CONTROL) $(SYM_PREFIX) \
 	    > $(OUT)/lib/exports-control.log 2>&1; then \
 	  echo "check-exports negative control: the extra global symbol was not detected" >&2; exit 1; \
 	else echo "check-exports negative control: rejected, as required"; fi

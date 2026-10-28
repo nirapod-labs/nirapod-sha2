@@ -5,7 +5,7 @@
  * negative.c
  * ==========
  *
- * Negative and misuse tests of the C API, against nirapod_sha2.h,
+ * Negative and misuse tests of the C API, against nirapod/sha2.h,
  * "Results", "Lengths" and "Contexts": NULL pointers, every overlapping
  * placement of an output and an input, a context and an input, update and
  * final after final, contexts of another function, uninitialised
@@ -14,7 +14,7 @@
  *
  * A forged context starts with the valid tag of its function, copied from
  * a context init made, and holds random bytes after it: the case
- * nirapod_sha2.h leaves as a wrong digest, never a write outside the
+ * nirapod/sha2.h leaves as a wrong digest, never a write outside the
  * context or the output. Each one is placed between guard bytes and run
  * through update and final; the guards must survive, every result must be
  * one of the documented codes, a failed call must leave the context as it
@@ -1014,7 +1014,7 @@ static void forged_controls(validation_suite *s)
 }
 
 /*
- * A context of one function used with every other function. nirapod_sha2.h
+ * A context of one function used with every other function. nirapod/sha2.h
  * says this fails with ESTATE and changes nothing; after all the failures
  * the original context must still finish normally.
  */

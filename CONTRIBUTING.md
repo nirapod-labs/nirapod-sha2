@@ -1,7 +1,7 @@
 # Contributing
 
 Bug reports, review comments and patches are welcome. Nothing has been
-released yet, so the interface in `include/nirapod_sha2.h` may still
+released yet, so the interface in `include/nirapod/sha2.h` may still
 change.
 
 ## Before you start

@@ -60,7 +60,7 @@ SUITES     ?=
 SRCS := util.c json.c oracle.c cavp.c wycheproof.c bounds.c splits.c cross.c \
         negative.c multiway.c diff.c xarch.c long.c fuzz.c main.c
 OBJS := $(addprefix $(OBJDIR)/,$(SRCS:.c=.o))
-DEPS := $(wildcard $(HERE)/*.h) $(ROOT)/include/nirapod_sha2.h \
+DEPS := $(wildcard $(HERE)/*.h) $(ROOT)/include/nirapod/sha2.h \
         $(ROOT)/capi/testing/nirapod_sha2_testing.h
 
 CWARN := -std=c99 -Wall -Wextra -Wpedantic -Wshadow -Wmissing-prototypes \

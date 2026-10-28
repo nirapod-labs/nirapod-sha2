@@ -22,7 +22,7 @@
 #include <stdint.h>
 
 #include "bench.h"
-#include "nirapod_sha2.h"
+#include "nirapod/sha2.h"
 #include "nirapod_sha2_testing.h"
 
 #ifndef BENCH_VERSION

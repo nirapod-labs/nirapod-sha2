@@ -6,7 +6,7 @@
 # ===================
 #
 # The production library exports exactly the functions of
-# include/nirapod_sha2.h, and the check rejects a library that exports one
+# include/nirapod/sha2.h, and the check rejects a library that exports one
 # more. The second half is the negative control: the same object with one
 # extra global function must fail the check.
 
@@ -31,9 +31,9 @@ case $CI_HOST_SYSTEM in
   *) ci_fail "unsupported system: $CI_HOST_SYSTEM" ;;
 esac
 
-sh "$check" check include/nirapod_sha2.h "$lib" "$prefix"
+sh "$check" check include/nirapod/sha2.h "$lib" "$prefix"
 
-if sh "$check" check include/nirapod_sha2.h "$control" "$prefix" \
+if sh "$check" check include/nirapod/sha2.h "$control" "$prefix" \
     > "$CI_RUN_DIR/exports-control.log" 2>&1; then
   ci_fail "the negative control passed: an extra global symbol was not detected"
 fi

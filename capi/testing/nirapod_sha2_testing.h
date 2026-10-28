@@ -5,7 +5,7 @@
  * nirapod_sha2_testing.h
  * ======================
  *
- * The testing interface: every function of nirapod_sha2.h run on a kernel
+ * The testing interface: every function of nirapod/sha2.h run on a kernel
  * the caller names, instead of the one the library would choose. It is
  * declared only in this header, which is not installed, and defined only
  * in libnirapod_sha2_testing.a; libnirapod_sha2.a has none of it. It
@@ -26,7 +26,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "nirapod_sha2.h"
+#include "nirapod/sha2.h"
 
 #ifdef __cplusplus
 extern "C" {

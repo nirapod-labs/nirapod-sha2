@@ -14,7 +14,7 @@
  * what the call did, and a caller that already had DIT set costs no write.
  * The test covers both starting states, clear and set. It runs on
  * AArch64; on x86-64 the mode is DOITM, which user code cannot write, and
- * the test reports NOT APPLICABLE (nirapod_sha2.h, "Security").
+ * the test reports NOT APPLICABLE (nirapod/sha2.h, "Security").
  */
 
 #include <stdio.h>

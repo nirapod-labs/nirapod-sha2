@@ -5,7 +5,7 @@
  * tests/residue/residue.c
  * =======================
  *
- * What a call leaves behind on the stack and in registers. nirapod_sha2.h
+ * What a call leaves behind on the stack and in registers. nirapod/sha2.h
  * says every export clears the stack it used before it returns and that
  * the C layer clears the registers a Jasmin call may leave holding
  * secret-derived values (capi/clear.c). This program checks both on the
@@ -75,7 +75,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "nirapod_sha2.h"
+#include "nirapod/sha2.h"
 #include "nirapod_sha2_testing.h"
 
 #define RESIDUE_AREA 32768

@@ -124,7 +124,7 @@ static void splits_hash(validation_suite *s, const hash_alg *a, int kernel, uint
         }
     }
 
-    /* Copying a context forks the hash (nirapod_sha2.h, "Contexts"). The
+    /* Copying a context forks the hash (nirapod/sha2.h, "Contexts"). The
      * random loop above left the one-shot digest of another message in
      * one, so compute it again. */
     {

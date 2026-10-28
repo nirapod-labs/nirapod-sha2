@@ -50,7 +50,7 @@
  * tag 0, so update or final after final fails the same way, as does a
  * context of another function. An uninitialised context passes only if
  * its first eight bytes happen to equal the tag, which the API leaves to
- * the caller (nirapod_sha2.h).
+ * the caller (nirapod/sha2.h).
  *
  * Length limit
  *

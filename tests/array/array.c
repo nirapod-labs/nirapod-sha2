@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "nirapod_sha2.h"
+#include "nirapod/sha2.h"
 
 typedef void (*array_fn)(uint8_t *out, const uint8_t *a, uint64_t off, uint64_t len);
 typedef void (*lanes_fn)(uint8_t *out, const uint8_t *a, uint64_t off, uint64_t stride,
