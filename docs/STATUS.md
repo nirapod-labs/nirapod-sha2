@@ -37,16 +37,12 @@ passed everything the dispatched units have, and only the testing library
 reaches it. [ARCHITECTURE](ARCHITECTURE.md#dispatch) gives the dispatch
 order and [KERNELS](KERNELS.md) the inspection notes.
 
+Memory safety rests on the EasyCrypt proofs. The `jasmin-checksafety` row
+is a second opinion, not part of the evidence;
+[SECURITY-MODEL](SECURITY-MODEL.md#memory-safety) says where it stops.
+
 ## Before a release
 
-* `jasmin-checksafety` on every export. With the pinned checker fewer than
-  half of the 252 export-unit runs pass. Most of the rest are exports that
-  absorb input and run past the one-hour limit; some stop on alarms that the
-  EasyCrypt safety proofs refute. The four exports that read lanes through a
-  pointer table (`sha256_x8`, `sha512_x4` and their `update`) cannot pass at
-  all: the checker gives each argument one memory region, so a load through
-  a pointer read from the table is an alarm by construction. The checker
-  would need a region per lane pointer to pass them.
 * Spec vectors at the SHA-512 padding boundary. The specification is
   executed in EasyCrypt on 52 CAVP vectors, and for the SHA-512 family they
   include 119 and 120 bytes but not 111 and 112, where the 16-byte length

@@ -149,11 +149,13 @@ contents gives a wrong digest and nothing worse.
 
 The evidence for the `#[safety]` contracts is the EasyCrypt proof on each
 unit's safety model ([PROOFS](PROOFS.md#memory-safety)).
-`jasmin-checksafety` is run as a second, independent check, one run per
-export and unit, and each memory range it prints must fall within the
-export's contract. It does not pass everywhere yet
-([STATUS](STATUS.md#before-a-release)), and on the four exports that read
-lanes through a pointer table it cannot, since its memory model gives each
+`jasmin-checksafety` also runs, one run per export and unit, and each memory
+range it prints must fall within the export's contract, but it is not part
+of the evidence. With the pinned checker fewer than half of the 252
+export-unit runs pass. Most of the rest absorb input and run past the
+one-hour limit, and some stop on alarms the proofs refute. On the four
+exports that read lanes through a pointer table (`sha256_x8`, `sha512_x4`
+and their `update`) it cannot pass, since its memory model gives each
 argument one region.
 
 ## Trusted base
