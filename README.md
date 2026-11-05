@@ -12,13 +12,13 @@ EasyCrypt, and checked constant-time and speculative constant-time with the
 Jasmin type systems.
 
 What is proved, and under which assumptions, is in
-[docs/PROOFS.md](docs/PROOFS.md). What is done and what is still missing is in
-[docs/STATUS.md](docs/STATUS.md).
+[proofs](docs/PROOFS.md). What is done and what is still missing is in
+[status](docs/STATUS.md).
 
 ## Building
 
 The pinned toolchain and its patch series are described in
-[docs/TOOLCHAIN.md](docs/TOOLCHAIN.md).
+[toolchain](docs/TOOLCHAIN.md).
 
 If you just want to build and test the library, here is a TL;DR:
 
