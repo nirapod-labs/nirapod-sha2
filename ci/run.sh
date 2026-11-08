@@ -50,7 +50,8 @@ usage: ci/run.sh [options]
   -h, --help      show this text
 
 Environment:
-  CI_TIMEOUT_<JOB>   wall-clock limit per job in seconds
+  CI_TIMEOUT_<JOB>   wall-clock limit per job in seconds (JOB upper case,
+                     - as _: CI_TIMEOUT_INSN_VECTORS)
   CI_PROOF_JOBS      proof files checked at a time (default: cores, max 8)
   SHA2_TOOLCHAIN_WORK      toolchain work directory to verify
   SHA2_TOOLCHAIN_PROVENANCE  provenance file to verify
@@ -153,7 +154,7 @@ JOBS=${JOBS# }
 
 ci_timeout() {
   local name=$1 var default
-  var=CI_TIMEOUT_$(printf '%s' "$name" | tr '[:lower:]' '[:upper:]')
+  var=CI_TIMEOUT_$(printf '%s' "$name" | tr '[:lower:]-' '[:upper:]_')
   eval "default=\${$var:-}"
   if [ -n "$default" ]; then
     printf '%s\n' "$default"
