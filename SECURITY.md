@@ -2,9 +2,11 @@
 
 ## Status
 
-nirapod-sha2 is under development and has not been released. No version is
-supported for production use, and none should be relied on yet. Reports are
-welcome all the same, and they are handled as described below.
+0.1.0 is the first release. Fixes go into the latest release only, and
+before 1.0 a minor release may change the interface. The library has had no
+external audit. What is proved and what is only tested is set out in
+[docs/PROOFS.md](docs/PROOFS.md) and [docs/STATUS.md](docs/STATUS.md).
+Reports are handled as described below.
 
 ## Scope
 

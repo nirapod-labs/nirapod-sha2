@@ -42,7 +42,7 @@ usage() {
   cat <<'EOF'
 usage: ci/run.sh [options]
 
-  --all           select every job, including proofs
+  --all           the default jobs plus proofs (same as --proofs)
   --proofs        add the proof job (long; Linux only)
   --only JOBS     run exactly these jobs, comma separated
   --no-clean      keep the build directory

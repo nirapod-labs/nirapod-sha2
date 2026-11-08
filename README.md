@@ -7,9 +7,11 @@
 ## About
 
 nirapod-sha2 implements SHA-2 and HMAC for x86-64 and AArch64 in Jasmin, with
-a small C API. Its exported procedures are proved correct and memory safe in
-EasyCrypt, and checked constant-time and speculative constant-time with the
-Jasmin type systems.
+a small C API. Its Jasmin exports are proved correct against FIPS 180-4
+and FIPS 198-1, and memory safe, in EasyCrypt, and checked constant-time
+and speculative constant-time with the Jasmin type systems. The C layer
+around them (argument checks, kernel choice, DIT, register clearing) is
+tested, not proved.
 
 What is proved, and under which assumptions, is in
 [proofs](docs/PROOFS.md). What is done and what is still missing is in

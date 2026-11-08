@@ -16,9 +16,10 @@ First release.
   instructions on AArch64; SHA-NI and AVX2 on x86-64. The C layer picks one
   from the CPU features.
 * EasyCrypt proofs of total correctness against FIPS 180-4 and FIPS 198-1
-  and of the memory-safety contracts, for all 42 exports of all six units;
-  constant time and speculative constant time verified with the Jasmin type
-  systems. Scope and assumptions are in [docs/PROOFS.md](docs/PROOFS.md)
-  and [docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md).
+  and of the memory-safety contracts, for each of the 42 exports, on each
+  of the six units; constant time and speculative constant time verified
+  with the Jasmin type systems. Scope and assumptions are in [docs/PROOFS.md](docs/PROOFS.md)
+  and [docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md). The C layer is
+  tested, not proved.
 * Built with toolchain 2026.11.1 of
   [nirapod-labs/toolchain](https://github.com/nirapod-labs/toolchain).
