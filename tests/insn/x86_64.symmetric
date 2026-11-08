@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# tests/insn/x86_64.symmetric
+# ===========================
+#
+# Operand pairs whose exchange cannot change the result, in the format of
+# tests/insn/aarch64.symmetric; the check skips their "operands
+# exchanged" control and prints the reason.
+#
+#     ENTRY  PAIR  reason
+
+vpadd_4u32  ab  lane addition is commutative
+add_8u32    ab  lane addition is commutative
+add_4u64    ab  lane addition is commutative
+xor_256     ab  exclusive or is commutative
+and_256     ab  and is commutative

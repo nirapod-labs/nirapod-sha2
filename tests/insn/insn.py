@@ -19,18 +19,31 @@
 #                                       a copy of ECLIB with one of them
 #                                       (NAME -: an unchanged copy)
 #
-# A table has one entry per line: a name, one Jasmin statement and the
-# mnemonic the statement must compile to.
+# A table has one entry per line: a name, optional word types, one Jasmin
+# statement and the mnemonic the statement must compile to.
 #
 #     sha256msg1  r = #SHA256MSG1(a, b);  sha256msg1
+#     vinserti128  u256 b:u128  r = #VINSERTI128(a, b, 1);  vinserti128
 #
-# In the statement, a to h are the operands: 128-bit words that the test
-# program loads from the input buffer, a at byte 0, b at byte 16 and so
-# on. r, s, t and u are the results, 128-bit words that it stores to the
-# output buffer, r at byte 0, s at byte 16 and so on. The statement may
-# also read the input buffer itself, through `src` (a load instruction
-# under test reads [:u32 src + 4], say), and may be several statements
-# separated by `;`. Each entry becomes one export,
+# In the statement, a to h are the operands, words that the test program
+# loads from the input buffer, and r, s, t and u are the results, words
+# that it stores to the output buffer. Each variable is a 128-bit word
+# unless the entry gives its type: `uN` alone sets the type of every
+# variable of the entry, `x:uN` that of x alone, for N one of 32, 64, 128
+# and 256. The results of one entry share one type.
+#
+# The buffers are divided into slots, one per variable, all of the same
+# size: SLOT bytes, the widest type in the table but at least 16. Operand
+# a is at byte 0 of the input, b at byte SLOT and so on; result r is at
+# byte 0 of the output, s at byte SLOT and so on. A variable narrower than
+# a slot occupies the start of it. A table of 128-bit words alone has
+# 16-byte slots, the layout of the recorded run in tests/insn/aarch64.
+#
+# The statement may also read the input buffer itself, through `src` (an
+# instruction with only a memory form reads [:u128 src + 0], say); a slot
+# read that way gets the edge patterns of run.c as an operand slot does.
+# It may be several statements separated by `;`. Each entry becomes one
+# export,
 #
 #     export fn insn_<name>(reg u64 out src)
 #
@@ -57,7 +70,9 @@ import sys
 
 OPERANDS = "abcdefgh"
 RESULTS = "rstu"
-SLOT = 16
+TYPES = (32, 64, 128, 256)
+TYPE = re.compile(r"(?:([a-hr-u]):)?u(\d+)")
+MEM = re.compile(r"\[:u(\d+) src \+ (\d+)\]")
 
 
 def die(msg):
@@ -75,9 +90,24 @@ def read_table(path):
                 continue
             parts = line.split()
             if len(parts) < 3:
-                die("%s:%d: expected NAME STATEMENT MNEMONIC" % (path, n))
+                die("%s:%d: expected NAME [TYPES] STATEMENT MNEMONIC" % (path, n))
             name, mnemonic = parts[0], parts[-1]
+            # The type annotations come between the name and the
+            # statement, which starts with a variable or `_`, never with
+            # a token of the form uN or x:uN.
+            default, given, k = 128, {}, 1
+            while k < len(parts) - 1 and TYPE.fullmatch(parts[k]):
+                var, bits = TYPE.fullmatch(parts[k]).groups()
+                if int(bits) not in TYPES:
+                    die("%s:%d: unsupported type u%s" % (path, n, bits))
+                if var:
+                    given[var] = int(bits)
+                else:
+                    default = int(bits)
+                k += 1
             stmt = line[len(name):].strip()
+            for t in parts[1:k]:
+                stmt = stmt[len(t):].strip()
             stmt = stmt[: len(stmt) - len(mnemonic)].strip()
             if not re.fullmatch(r"[a-z][a-z0-9_]*", name):
                 die("%s:%d: bad name %r" % (path, n, name))
@@ -93,12 +123,28 @@ def read_table(path):
                 die("%s:%d: unknown variables %s" % (path, n, " ".join(sorted(other))))
             if not res:
                 die("%s:%d: the statement writes no result" % (path, n))
+            if set(given) - letters:
+                die("%s:%d: type for a variable the statement does not use" % (path, n))
             if any(e["name"] == name for e in entries):
                 die("%s:%d: duplicate name %s" % (path, n, name))
+            types = dict((c, given.get(c, default)) for c in ops + res)
+            if len(set(types[c] for c in res)) != 1:
+                die("%s:%d: the results must share one type" % (path, n))
+            mem = [(int(b), int(o)) for b, o in MEM.findall(stmt)]
             entries.append(dict(name=name, stmt=stmt, mnemonic=mnemonic,
-                                ops=ops, res=res, line=n))
+                                ops=ops, res=res, types=types, mem=mem, line=n))
     if not entries:
         die("%s: no entries" % path)
+    slot = max([16] + [t // 8 for e in entries for t in e["types"].values()])
+    for e in entries:
+        e["slot"] = slot
+        # The slots the statement reads through src, for the patterns.
+        e["memslots"] = []
+        for bits, off in e["mem"]:
+            if off % slot or off // slot >= len(OPERANDS) or bits // 8 > slot:
+                die("%s:%d: [:u%d src + %d] is not the start of a slot"
+                    % (path, e["line"], bits, off))
+            e["memslots"].append(off // slot)
     return entries
 
 
@@ -118,17 +164,21 @@ def cmd_jazz(table):
     out = ["/* Generated by tests/insn/insn.py jazz %s; do not edit. */"
            % os.path.basename(table)]
     for e in entries:
-        regs = e["ops"] + [r for r in e["res"] if r not in e["ops"]]
+        slot, ty = e["slot"], e["types"]
+        regs = e["ops"] + e["res"]
         out.append("")
         out.append("export fn insn_%s(reg u64 out src)" % e["name"])
         out.append("{")
-        out.append("  reg u128 %s;" % " ".join(regs))
+        for t in TYPES:
+            vs = [c for c in regs if ty[c] == t]
+            if vs:
+                out.append("  reg u%d %s;" % (t, " ".join(vs)))
         for c in e["ops"]:
-            out.append("  %s = [:u128 src + %d];" % (c, SLOT * OPERANDS.index(c)))
+            out.append("  %s = [:u%d src + %d];" % (c, ty[c], slot * OPERANDS.index(c)))
         for s in re.findall(r"[^;]+;", e["stmt"]):
             out.append("  %s" % s.strip())
         for c in e["res"]:
-            out.append("  [:u128 out + %d] = %s;" % (SLOT * RESULTS.index(c), c))
+            out.append("  [:u%d out + %d] = %s;" % (ty[c], slot * RESULTS.index(c), c))
         out.append("}")
     print("\n".join(out))
 
@@ -136,15 +186,17 @@ def cmd_jazz(table):
 def cmd_header(table):
     entries = read_table(table)
     out = ["/* Generated by tests/insn/insn.py header %s; do not edit. */"
-           % os.path.basename(table), ""]
+           % os.path.basename(table), "", "#define SLOT %d" % entries[0]["slot"], ""]
     for e in entries:
         out.append("void insn_%s(uint8_t *out, const uint8_t *src);" % e["name"])
     out.append("")
     out.append("static const struct insn insns[] = {")
     for e in entries:
-        mask = sum(1 << OPERANDS.index(c) for c in e["ops"])
-        out.append('  { "%s", insn_%s, 0x%02x, %d },'
-                   % (e["name"], e["name"], mask, len(e["res"])))
+        slots = set(OPERANDS.index(c) for c in e["ops"]) | set(e["memslots"])
+        mask = sum(1 << i for i in slots)
+        out.append('  { "%s", insn_%s, 0x%02x, %d, %d },'
+                   % (e["name"], e["name"], mask, len(e["res"]),
+                      e["types"][e["res"][0]] // 8))
     out.append("};")
     print("\n".join(out))
 
@@ -181,12 +233,14 @@ def cmd_asm(table, asm):
 # WordEval.ec
 # --------------------------------------------------------------------
 
-SIZES = [8, 16, 32, 64, 128]
+SIZES = [8, 16, 32, 64, 128, 256]
 PACKS = [  # theory, lane bits, word bits, lanes
     ("W4u8", 8, 32, 4), ("W2u16", 16, 32, 2),
     ("W8u8", 8, 64, 8), ("W4u16", 16, 64, 4), ("W2u32", 32, 64, 2),
     ("W16u8", 8, 128, 16), ("W8u16", 16, 128, 8), ("W4u32", 32, 128, 4),
     ("W2u64", 64, 128, 2),
+    ("W32u8", 8, 256, 32), ("W16u16", 16, 256, 16), ("W8u32", 32, 256, 8),
+    ("W4u64", 64, 256, 4), ("W2u128", 128, 256, 2),
 ]
 
 
@@ -289,6 +343,7 @@ def subst(e, inp):
 
 def cmd_lemmas(table, model, vectors, name, control=None):
     e = entry(read_table(table), name)
+    SLOT = e["slot"]
     header, stmts = proc_body(model, name)
     imp = re.search(r"^from Jasmin require import (\S+)\.$", header, re.M)
     if not imp:
@@ -304,12 +359,18 @@ def cmd_lemmas(table, model, vectors, name, control=None):
             die("%s has no operands %s and %s" % (name, x, y))
         swap = (SLOT * OPERANDS.index(x), SLOT * OPERANDS.index(y))
     if flip or swap:
-        # The controls use one case, the first in which the operand slots
-        # all differ from each other, so that exchanging two operands
-        # changes the input.
+        # The controls use one case, the first in which the operands all
+        # differ from each other, so that exchanging two operand slots
+        # changes the input. Two operands of different widths differ when
+        # their common prefix does.
         def distinct(inp):
-            slots = [inp[SLOT * OPERANDS.index(c):][:SLOT] for c in e["ops"]]
-            return len(set(slots)) == len(slots)
+            for i, x in enumerate(e["ops"]):
+                for y in e["ops"][i + 1:]:
+                    w = min(e["types"][x], e["types"][y]) // 8
+                    ox, oy = SLOT * OPERANDS.index(x), SLOT * OPERANDS.index(y)
+                    if inp[ox:ox + w] == inp[oy:oy + w]:
+                        return False
+            return True
         vs = [v for v in vs if distinct(v[1])][:1]
         if not vs:
             die("%s: no vector with distinct operands for the controls" % name)

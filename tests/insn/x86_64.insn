@@ -4,16 +4,94 @@
 # tests/insn/x86_64.insn
 # ======================
 #
-# The x86-64 instructions whose EasyCrypt models the proofs of the SHA-NI
-# kernel (src/x86_64/shani) rest on, in the form tests/insn/insn.py reads:
-# a name, one Jasmin statement over the operands a to h and the results
-# r to u, and the mnemonic it must compile to. Operands appear in the
-# order of the Jasmin intrinsic, which is the order of the arguments of
-# the EasyCrypt operator (JModel_x86.ec).
+# The x86-64 instructions whose EasyCrypt models the proofs of the x86-64
+# kernels rest on, in the form tests/insn/insn.py reads: a name, optional
+# word types, one Jasmin statement over the operands a to h and the
+# results r to u, and the mnemonic it must compile to. Operands appear in
+# the order of the Jasmin intrinsic, which is the order of the arguments
+# of the EasyCrypt operator (JModel_x86.ec, and JWord.ec for the vector
+# operators and the BMI instructions).
 #
-# SHA256RNDS2 takes its third operand in XMM0; the register allocator
-# places c there.
+# Every intrinsic and vector operator of src/x86_64 has an entry, with
+# each immediate the kernels pass. Entries ending in _more try other
+# immediates as well: the lane-select and zeroing bits of VPERM2I128,
+# byte offsets of VPALIGNR up to and past one lane, and shift and rotate
+# counts at the ends of their range, 32 and 64 included, where a vector
+# shift clears every lane.
 
+# SHA-NI (src/x86_64/shani). SHA256RNDS2 takes its third operand in XMM0;
+# the register allocator places c there.
 sha256rnds2  r = #SHA256RNDS2(a, b, c);  sha256rnds2
 sha256msg1   r = #SHA256MSG1(a, b);      sha256msg1
 sha256msg2   r = #SHA256MSG2(a, b);      sha256msg2
+
+# 128-bit vector instructions of the SHA-NI kernels: the byte swap after
+# the block load, W + K, the ABEF/CDGH state layout and its inverse, the
+# eight-way state transposes, and the message words of VMOV_64.
+vpshufb_128        r = #VPSHUFB_128(a, b);  vpshufb
+vpshufd_128        r = #VPSHUFD_128(a, 0x0e); s = #VPSHUFD_128(a, 0x1b); t = #VPSHUFD_128(a, 0xb1); u = #VPSHUFD_128(a, 0x88);  vpshufd
+vpshufd_128_dd     r = #VPSHUFD_128(a, 0xdd);  vpshufd
+vpshufd_128_more   r = #VPSHUFD_128(a, 0x00); s = #VPSHUFD_128(a, 0xe4); t = #VPSHUFD_128(a, 0x39);  vpshufd
+vpadd_4u32         r = #VPADD_4u32(a, b);  vpaddd
+vpunpckl_2u64      r = #VPUNPCKL_2u64(a, b);  vpunpcklqdq
+vpunpckh_2u64      r = #VPUNPCKH_2u64(a, b);  vpunpckhqdq
+vpunpckl_4u32      r = #VPUNPCKL_4u32(a, b);  vpunpckldq
+vpunpckh_4u32      r = #VPUNPCKH_4u32(a, b);  vpunpckhdq
+vpblend_8u16       r = #VPBLEND_8u16(a, b, 0x0f); s = #VPBLEND_8u16(a, b, 0xf0);  vpblendw
+vpblend_8u16_more  r = #VPBLEND_8u16(a, b, 0x00); s = #VPBLEND_8u16(a, b, 0xff); t = #VPBLEND_8u16(a, b, 0x5a);  vpblendw
+vpalignr_128       r = #VPALIGNR_128(a, b, 4); s = #VPALIGNR_128(a, b, 8);  vpalignr
+vpalignr_128_more  r = #VPALIGNR_128(a, b, 0); s = #VPALIGNR_128(a, b, 15); t = #VPALIGNR_128(a, b, 16); u = #VPALIGNR_128(a, b, 31);  vpalignr
+vmov_64            a:u64  r = #VMOV_64(a);  vmovq
+
+# 256-bit AVX2 instructions (src/x86_64/avx2).
+vpshufb_256        u256  r = #VPSHUFB_256(a, b);  vpshufb
+vpbroadcast_2u128  u256  r = #VPBROADCAST_2u128([:u128 src + 0]);  vbroadcasti128
+vinserti128        u256 b:u128  r = #VINSERTI128(a, b, 1);  vinserti128
+vinserti128_more   u256 b:u128  r = #VINSERTI128(a, b, 0);  vinserti128
+vperm2i128         u256  r = #VPERM2I128(a, b, 0x20); s = #VPERM2I128(a, b, 0x31);  vperm2i128
+vperm2i128_more    u256  r = #VPERM2I128(a, b, 0x02); s = #VPERM2I128(a, b, 0x13); t = #VPERM2I128(a, b, 0x18); u = #VPERM2I128(a, b, 0x83);  vperm2i128
+vpalignr_256       u256  r = #VPALIGNR_256(a, b, 4); s = #VPALIGNR_256(a, b, 8);  vpalignr
+vpalignr_256_more  u256  r = #VPALIGNR_256(a, b, 0); s = #VPALIGNR_256(a, b, 13); t = #VPALIGNR_256(a, b, 16); u = #VPALIGNR_256(a, b, 31);  vpalignr
+vpshufd_256        u256  r = #VPSHUFD_256(a, 0x50); s = #VPSHUFD_256(a, 0xfa);  vpshufd
+vpshufd_256_more   u256  r = #VPSHUFD_256(a, 0x1b); s = #VPSHUFD_256(a, 0xe4);  vpshufd
+vpunpckl_4u64      u256  r = #VPUNPCKL_4u64(a, b);  vpunpcklqdq
+vpunpckh_4u64      u256  r = #VPUNPCKH_4u64(a, b);  vpunpckhqdq
+vpunpckl_8u32      u256  r = #VPUNPCKL_8u32(a, b);  vpunpckldq
+vpunpckh_8u32      u256  r = #VPUNPCKH_8u32(a, b);  vpunpckhdq
+add_8u32           u256  r = a +8u32 b;  vpaddd
+add_4u64           u256  r = a +4u64 b;  vpaddq
+xor_256            u256  r = a ^ b;  vpxor
+and_256            u256  r = a & b;  vpand
+
+# Lane shifts by an immediate, four counts per entry: every count the
+# kernels use, then the ends of the range.
+shr_8u32_1         u256  r = a >>8u32 2; s = a >>8u32 3; t = a >>8u32 6; u = a >>8u32 7;  vpsrld
+shr_8u32_2         u256  r = a >>8u32 10; s = a >>8u32 11; t = a >>8u32 13; u = a >>8u32 17;  vpsrld
+shr_8u32_3         u256  r = a >>8u32 18; s = a >>8u32 19; t = a >>8u32 22; u = a >>8u32 25;  vpsrld
+shr_8u32_more      u256  r = a >>8u32 0; s = a >>8u32 1; t = a >>8u32 31; u = a >>8u32 32;  vpsrld
+shl_8u32_1         u256  r = a <<8u32 7; s = a <<8u32 10; t = a <<8u32 11; u = a <<8u32 13;  vpslld
+shl_8u32_2         u256  r = a <<8u32 14; s = a <<8u32 15; t = a <<8u32 19; u = a <<8u32 21;  vpslld
+shl_8u32_3         u256  r = a <<8u32 25; s = a <<8u32 26; t = a <<8u32 30;  vpslld
+shl_8u32_more      u256  r = a <<8u32 0; s = a <<8u32 1; t = a <<8u32 31; u = a <<8u32 32;  vpslld
+shr_4u64_1         u256  r = a >>4u64 1; s = a >>4u64 2; t = a >>4u64 6; u = a >>4u64 7;  vpsrlq
+shr_4u64_2         u256  r = a >>4u64 14; s = a >>4u64 17; t = a >>4u64 18; u = a >>4u64 19;  vpsrlq
+shr_4u64_3         u256  r = a >>4u64 28; s = a >>4u64 34; t = a >>4u64 39; u = a >>4u64 41;  vpsrlq
+shr_4u64_4         u256  r = a >>4u64 42; s = a >>4u64 61;  vpsrlq
+shr_4u64_more      u256  r = a >>4u64 0; s = a >>4u64 32; t = a >>4u64 63; u = a >>4u64 64;  vpsrlq
+shl_4u64_1         u256  r = a <<4u64 3; s = a <<4u64 7; t = a <<4u64 23; u = a <<4u64 25;  vpsllq
+shl_4u64_2         u256  r = a <<4u64 30; s = a <<4u64 36; t = a <<4u64 42; u = a <<4u64 45;  vpsllq
+shl_4u64_3         u256  r = a <<4u64 46; s = a <<4u64 50; t = a <<4u64 56; u = a <<4u64 63;  vpsllq
+shl_4u64_more      u256  r = a <<4u64 0; s = a <<4u64 1; t = a <<4u64 32; u = a <<4u64 64;  vpsllq
+
+# Scalar BMI1, BMI2 and byte swaps of the AVX2 SHA-256 and SHA-512
+# kernels (rounds) and of src/x86_64/word.jinc (big-endian loads).
+andn_32            u32  _, _, _, _, _, r = #ANDN_32(a, b);  andnl
+andn_64            u64  _, _, _, _, _, r = #ANDN_64(a, b);  andnq
+rorx_32_1          u32  r = #RORX_32(a, 2); s = #RORX_32(a, 6); t = #RORX_32(a, 11); u = #RORX_32(a, 13);  rorx
+rorx_32_2          u32  r = #RORX_32(a, 22); s = #RORX_32(a, 25);  rorx
+rorx_32_more       u32  r = #RORX_32(a, 0); s = #RORX_32(a, 1); t = #RORX_32(a, 31);  rorx
+rorx_64_1          u64  r = #RORX_64(a, 14); s = #RORX_64(a, 18); t = #RORX_64(a, 28); u = #RORX_64(a, 34);  rorx
+rorx_64_2          u64  r = #RORX_64(a, 39); s = #RORX_64(a, 41);  rorx
+rorx_64_more       u64  r = #RORX_64(a, 0); s = #RORX_64(a, 1); t = #RORX_64(a, 63);  rorx
+bswap_32           u32  r = #BSWAP_32(a);  bswapl
+bswap_64           u64  r = #BSWAP_64(a);  bswapq

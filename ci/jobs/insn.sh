@@ -5,8 +5,8 @@
 # ci/jobs/insn.sh
 # ===============
 #
-# The proofs about the SHA-NI kernel rest on EasyCrypt models of the
-# instructions it uses, and nothing proves those models right: they are
+# The proofs about the SHA-NI and AVX2 kernels rest on EasyCrypt models of
+# the instructions they use, and nothing proves those models right: they are
 # checked against the processor instead. This job runs make insn-check,
 # which, for the instructions of tests/insn/<host arch>.insn:
 #
@@ -25,10 +25,10 @@
 #
 # It then runs make insn-check-recorded: the same four steps for each run
 # recorded on another processor under tests/insn/<arch>/ (the Armv8-A
-# instructions), with step 1 requiring the recorded program to be what the
-# pinned jasminc compiles now and step 2 taking the recorded vectors. The
-# job insn-vectors repeats step 2 on such a processor. Each check prints
-# its own PASS: line.
+# instructions on an Apple M4, the x86-64 ones on an AMD Ryzen 7 7700X),
+# with step 1 requiring the recorded program to be what the pinned jasminc
+# compiles now and step 2 taking the recorded vectors. The job insn-vectors
+# repeats step 2 on such a processor. Each check prints its own PASS: line.
 
 set -euo pipefail
 # shellcheck disable=SC1091

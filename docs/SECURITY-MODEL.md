@@ -165,9 +165,8 @@ argument one region.
 | --- | --- | --- |
 | EasyCrypt, Z3, CVC5, Alt-Ergo | every proof | nothing; pinned past the r2026.09 soundness fixes |
 | `jasmin2ec`, including the safety model's printing | the link from the source to every model | extraction identity ([PROOFS](PROOFS.md#extraction-identity)); the instruction-model test, for the instructions it covers |
-| SHA-NI models | the SHA-NI kernel | 888 vectors run natively, 18 controls rejected |
 | Armv8-A SHA-2 and Advanced SIMD models | the AArch64 vector kernels | 18 instructions on 5,292 vectors recorded on an Apple M4, 86 controls rejected |
-| AVX2, BMI1, BMI2 models | the AVX2 kernels | nothing here |
+| SHA-NI, SSE/AVX, AVX2, BMI1, BMI2 models | the SHA-NI and AVX2 kernels | 62 entries on 17,732 vectors recorded on an AMD Ryzen 7 7700X, 164 controls rejected |
 | `BSWAP` and `REV` models | byte order everywhere | proved to reverse bytes (`ArchWord.ec`); emission trusted |
 | `JWordList` axioms | reading bytes of memory | listed in each unit's inventory |
 | Jasmin front end, assembly printers, `jasmin-ct`, `jasmin-checksafety`, `-stack-zero` | compilation outside the proved passes, the leakage results, stack clearing | tests; the compiler theorem covers the passes in between ([TOOLCHAIN](TOOLCHAIN.md#the-compiler-proof)) |

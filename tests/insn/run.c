@@ -10,10 +10,11 @@
  * Runs every export of the instruction test program (tests/insn/insn.py
  * jazz) on this processor and prints one line per call:
  *
- *     <name> <index> <input, 128 bytes> <output, 16 bytes per result>
+ *     <name> <index> <input, 8 slots> <output, one slot per result>
  *
- * in hexadecimal, byte 0 first. The inputs of each export are, for its
- * operand slots (16 bytes each, a to h):
+ * in hexadecimal, byte 0 first. A slot is SLOT bytes, which the generated
+ * header sets (16 for a table of 128-bit words, 32 if it has a 256-bit
+ * one). The inputs of each export are, for its operand slots (a to h):
  *
  *   1. every slot set to the same edge pattern, for each pattern below;
  *   2. one slot set to an edge pattern and the others random, for each
@@ -23,7 +24,8 @@
  * Slots an export does not read are random. The random bytes come from
  * splitmix64 seeded with SEED, so a run is reproducible from its
  * arguments. The output buffer is filled with a guard byte before each
- * call, and the bytes past the export's results must keep it.
+ * call, and every byte the export's results do not cover must keep it,
+ * including the end of a slot whose result is narrower than the slot.
  */
 
 #include <stdint.h>
@@ -35,13 +37,13 @@ struct insn {
   const char *name;
   void (*fn)(uint8_t *out, const uint8_t *src);
   unsigned operands; /* bit i set: slot i is an operand */
-  unsigned results;  /* number of 16-byte results */
+  unsigned results;  /* number of results, one slot each */
+  unsigned rbytes;   /* bytes of each result */
 };
 
 #include "insns.h"
 
 #define SLOTS 8
-#define SLOT 16
 #define IN_BYTES (SLOTS * SLOT)
 #define OUT_BYTES (4 * SLOT)
 #define GUARD 0xa5
@@ -84,7 +86,7 @@ static void fill64(uint8_t *p, uint64_t w)
 }
 
 /*
- * Edge patterns of one 16-byte slot: the carry and sign boundaries of
+ * Edge patterns of one slot: the carry and sign boundaries of
  * 32-bit and 64-bit lanes, alternating bits, single bits at both ends
  * of every lane, and lanes that differ from each other.
  */
@@ -115,8 +117,9 @@ static int run(const struct insn *t, int index, const uint8_t *in)
   uint8_t out[OUT_BYTES];
   memset(out, GUARD, sizeof out);
   t->fn(out, in);
-  for (unsigned i = t->results * SLOT; i < OUT_BYTES; i++) {
-    if (out[i] != GUARD) {
+  for (unsigned i = 0; i < OUT_BYTES; i++) {
+    int result = i / SLOT < t->results && i % SLOT < t->rbytes;
+    if (!result && out[i] != GUARD) {
       fprintf(stderr, "run: %s wrote past its results\n", t->name);
       return 1;
     }
