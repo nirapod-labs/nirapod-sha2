@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-x86--64%20%7C%20AArch64-lightgrey)](docs/STATUS.md)
-[![Status](https://img.shields.io/badge/status-unreleased-orange)](docs/STATUS.md)
+[![Release](https://img.shields.io/badge/release-0.1.0-blue)](CHANGELOG.md)
 
 ## About
 

@@ -1,7 +1,7 @@
 # Contributing
 
-Bug reports, reviews and patches are welcome. Nothing has been released, so
-the interface may still change. For anything beyond a small fix, open an
+Bug reports, reviews and patches are welcome. Until 1.0 the interface may
+still change. For anything beyond a small fix, open an
 issue first so the approach can be agreed. Security problems go privately,
 as [SECURITY.md](SECURITY.md) describes.
 
