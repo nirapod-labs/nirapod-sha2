@@ -511,7 +511,6 @@ clone import ByteArray as BArrayD with op size <= dsize.
 module F = {
   proc finalize (out:BArrayD.t, h:BArray64.t, buf:BArray128.t, total:W64.t, ms:W64.t) :
     BArrayD.t * BArray64.t * BArray128.t * W64.t = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -550,17 +549,15 @@ module F = {
     (h, ms) <@ M._sha512_compress (h, buf, ms);
     out <- (protect_ptr out ms);
     buf <- (protect_ptr buf ms);
-    inc <- (dsize %/ 8);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (dsize %/ 8))) {
       x <- (BArray64.get64 h i);
       x <@ M.__bswap64 (x);
       out <- (BArrayD.set64 out i x);
       i <- (i + 1);
     }
-    inc <- ((dsize + 7) %/ 8);
     i <- (dsize %/ 8);
-    while ((i < inc)) {
+    while ((i < ((dsize + 7) %/ 8))) {
       x <- (BArray64.get64 h i);
       x <- (x `>>` (W8.of_int 32));
       y <- (truncateu32 x);
@@ -673,7 +670,7 @@ seq 2 : (pend512 buf (tail 128 (mfin 128 16 m) ++ zeros (112 - size (mfin 128 16
   have hst : size (tail 128 (mfin 128 16 m)) = size (mfin 128 16 m) %% 128 by rewrite size_tail.
   move: hb1; rewrite hf -hst => hb1.
   apply (pend512_zero buf{hr}) => //; smt(modz_ge0).
-wp; while (dsize %/ 8 <= i <= (dsize + 7) %/ 8 /\ inc = (dsize + 7) %/ 8 /\
+wp; while (dsize %/ 8 <= i <= (dsize + 7) %/ 8 /\
            h512 h = SHA512.hash h0 m /\
            forall b, 0 <= b < 8 * (dsize %/ 8) + 4 * (i - dsize %/ 8) =>
              BArrayD.get8 out b = nth W8.zero (flatten (map w64_be (h512 h))) b).
@@ -691,7 +688,7 @@ wp; while (dsize %/ 8 <= i <= (dsize + 7) %/ 8 /\ inc = (dsize + 7) %/ 8 /\
   rewrite ifF 1:/#.
   apply hk.
   split => //; move: hb1 hbi; rewrite -hiq; clear hk hh; smt().
-wp; while (0 <= i <= dsize %/ 8 /\ inc = dsize %/ 8 /\ h512 h = SHA512.hash h0 m /\
+wp; while (0 <= i <= dsize %/ 8 /\ h512 h = SHA512.hash h0 m /\
            forall b, 0 <= b < 8 * i =>
              BArrayD.get8 out b = nth W8.zero (flatten (map w64_be (h512 h))) b).
 + wp; ecall (bswap64_spec x); auto => /> &hr hi0 hi8 hh hk hlt.
@@ -754,9 +751,9 @@ seq 6 : (to_uint fill <= 128 /\ two_blocks = (W64.of_int 112 \ult fill)) 1%r 1%r
   + if.
     + by wp; call K512.compress_ll; call zero128_ll; auto => />.
     by auto => /> &hr h64; rewrite W64.ultE /=; smt().
-  + wp; while (true) (inc - i).
+  + wp; while (true) ((dsize + 7) %/ 8 - i).
     + by move=> z; wp; call bswap32_ll; auto => /#.
-    wp; while (true) (inc - i).
+    wp; while (true) (dsize %/ 8 - i).
     + by move=> z; wp; call bswap64_ll; auto => /#.
     wp; call K512.compress_ll; wp; call bswap64_ll; wp; call bswap64_ll; wp; call zero128_ll.
     by auto => /#.
@@ -839,8 +836,8 @@ seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 128
 seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 112).
 + if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
   by wp; call compress512_eq; call zero128_eq; auto => /> &2 h64 h56.
-wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
-wp; while (={i, inc, out, h}); first by wp; call bswap64_eq; auto.
+wp; while (={i, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, out, h}); first by wp; call bswap64_eq; auto.
 wp; call compress512_eq; wp; call bswap64_eq; wp; call bswap64_eq; wp; call zero128_eq.
 by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
 qed.
@@ -899,8 +896,8 @@ seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 128
 seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 112).
 + if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
   by wp; call compress512_eq; call zero128_eq; auto => /> &2 h64 h56.
-wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
-wp; while (={i, inc, out, h}); first by wp; call bswap64_eq; auto.
+wp; while (={i, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, out, h}); first by wp; call bswap64_eq; auto.
 wp; call compress512_eq; wp; call bswap64_eq; wp; call bswap64_eq; wp; call zero128_eq.
 by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
 qed.
@@ -959,8 +956,8 @@ seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 128
 seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 112).
 + if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
   by wp; call compress512_eq; call zero128_eq; auto => /> &2 h64 h56.
-wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
-wp; while (={i, inc, out, h}); first by wp; call bswap64_eq; auto.
+wp; while (={i, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, out, h}); first by wp; call bswap64_eq; auto.
 wp; call compress512_eq; wp; call bswap64_eq; wp; call bswap64_eq; wp; call zero128_eq.
 by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
 qed.
@@ -1019,8 +1016,8 @@ seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 128
 seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 112).
 + if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
   by wp; call compress512_eq; call zero128_eq; auto => /> &2 h64 h56.
-wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
-wp; while (={i, inc, out, h}); first by wp; call bswap64_eq; auto.
+wp; while (={i, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, out, h}); first by wp; call bswap64_eq; auto.
 wp; call compress512_eq; wp; call bswap64_eq; wp; call bswap64_eq; wp; call zero128_eq.
 by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
 qed.

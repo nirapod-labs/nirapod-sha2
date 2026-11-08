@@ -185,7 +185,7 @@ seq 6 : (ctx = c0 /\ out = o0 /\ expect_0 = tag256h /\
 + ecall (sha2_tag_correct 7); ecall (ctx_open_correct (SBArray144_16.get_sub8 ctx 0)).
   auto => /> r -> ->; exact (head144 c0).
 sp; if.
-+ wp; while (0 <= i <= 18 /\ inc = 18 /\ z = W64.zero /\
++ wp; while (0 <= i <= 18 /\ z = W64.zero /\
              (forall b, 0 <= b < 8 * i => BArray144.get8 ctx b = W8.zero)).
   + auto => /> &hr hi0 hi18 hb hlt; split; first smt().
     move=> b hb0 hb1; rewrite BArray144.get8_set64dE.
@@ -231,7 +231,7 @@ proof.
 proc.
 seq 8 : true 1%r 1%r 0%r 0%r => //; first by wp; call sha2_tag_ll; call ctx_open_ll; auto.
 if; last by auto.
-wp; while (true) (inc - i); first by auto => /#.
+wp; while (true) (18 - i); first by auto => /#.
 wp; while (true) (4 - i); first by auto => /#.
 wp; call hmac_sha256_finalize_ll; wp; while (true) (8 - i); first by auto => /#.
 by wp; call ctx_load256_ll; auto => /#.

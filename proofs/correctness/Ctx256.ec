@@ -321,7 +321,6 @@ module C = {
                                                                  BArrayD.t *
                                                                  W64.t *
                                                                  W64.t = {
-    var inc:int;
     var status:W64.t;
     var tag:W64.t;
     var total:W64.t;
@@ -336,9 +335,8 @@ module C = {
       (ctx, digest, ms) <@ ctx_finalize (ctx, digest, 
       total, ms);
       z <- (W64.of_int 0);
-      inc <- (112 %/ 8);
       i <- 0;
-      while ((i < inc)) {
+      while ((i < (112 %/ 8))) {
         ctx <- (BArray112.set64d ctx (8 * i) z);
         i <- (i + 1);
       }
@@ -365,7 +363,7 @@ seq 1 : (ctx = c0 /\ digest = d0 /\ expect_0 = tag0 /\
 + ecall (ctx_open_correct (SBArray112_16.get_sub8 ctx 0)); auto => /> r -> ->.
   by rewrite head_tag head_total.
 sp; if.
-+ wp; while (0 <= i <= 14 /\ inc = 14 /\ z = W64.zero /\
++ wp; while (0 <= i <= 14 /\ z = W64.zero /\
              (forall b, 0 <= b < 8 * i => BArray112.get8 ctx b = W8.zero)).
   + auto => /> &hr hi0 hi14 hb hlt; split; first smt().
     move=> b hb0 hb1; rewrite BArray112.get8_set64dE.
@@ -386,7 +384,7 @@ proof.
 proc.
 seq 3 : true 1%r 1%r 0%r 0%r => //; first by wp; call ctx_open_ll; auto.
 if; last by auto.
-wp; while (true) (inc - i); first by auto => /#.
+wp; while (true) (14 - i); first by auto => /#.
 by inline C.ctx_finalize; wp; call FD.finalize_ll; auto => /#.
 qed.
 
@@ -408,7 +406,7 @@ seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 64 
 seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 56).
 + if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
   by wp; call compress256_eq; call zero64_eq; auto => /> &2 h64 h56.
-wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, out, h}); first by wp; call bswap32_eq; auto.
 wp; call compress256_eq; wp; call bswap64_eq; wp; call zero64_eq.
 by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
 qed.
@@ -422,7 +420,7 @@ equiv cf224_eq : M._sha224_ctx___sha2_ctx_final ~ CF224.C.ctx_final : ={arg} ==>
 proof.
 proc; seq 3 3 : (={ctx, digest, expect_0, ms, tag, total, status, ok}); first by sim.
 if => //; last by auto.
-wp; while (={i, inc, ctx, z}); first by auto.
+wp; while (={i, ctx, z}); first by auto.
 by wp; call cf224_fz_eq; auto.
 qed.
 
@@ -461,7 +459,7 @@ seq 6 6 : (={out, h, buf, total, fill, two_blocks, ms} /\ to_uint fill{1} <= 64 
 seq 1 1 : (={out, h, buf, total, fill} /\ to_uint fill{1} <= 56).
 + if => //; last by auto => /> &2 h64; rewrite W64.ultE /=; smt().
   by wp; call compress256_eq; call zero64_eq; auto => /> &2 h64 h56.
-wp; while (={i, inc, out, h}); first by wp; call bswap32_eq; auto.
+wp; while (={i, out, h}); first by wp; call bswap32_eq; auto.
 wp; call compress256_eq; wp; call bswap64_eq; wp; call zero64_eq.
 by auto => /> &2 h56; rewrite /protect_ptr; smt(W64.to_uint_cmp).
 qed.
@@ -475,7 +473,7 @@ equiv cf256_eq : M._sha256_ctx___sha2_ctx_final ~ CF256.C.ctx_final : ={arg} ==>
 proof.
 proc; seq 3 3 : (={ctx, digest, expect_0, ms, tag, total, status, ok}); first by sim.
 if => //; last by auto.
-wp; while (={i, inc, ctx, z}); first by auto.
+wp; while (={i, ctx, z}); first by auto.
 by wp; call cf256_fz_eq; auto.
 qed.
 

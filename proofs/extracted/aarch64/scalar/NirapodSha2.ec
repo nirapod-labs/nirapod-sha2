@@ -559,7 +559,6 @@ module M = {
   proc _sha256___sha256_finalize (out:BArray32.t, h:BArray32.t,
                                   buf:BArray64.t, total:W64.t, ms:W64.t) : 
   BArray32.t * BArray32.t * BArray64.t * W64.t = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -597,9 +596,8 @@ module M = {
     (* Erased call to unspill *)
     out <- (protect_ptr out ms);
     buf <- (protect_ptr buf ms);
-    inc <- (32 %/ 4);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (32 %/ 4))) {
       x <- (BArray32.get32 h i);
       x <@ __bswap32 (x);
       out <- (BArray32.set32 out i x);
@@ -627,7 +625,6 @@ module M = {
   proc _sha224___sha256_finalize (out:BArray28.t, h:BArray32.t,
                                   buf:BArray64.t, total:W64.t, ms:W64.t) : 
   BArray28.t * BArray32.t * BArray64.t * W64.t = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -665,9 +662,8 @@ module M = {
     (* Erased call to unspill *)
     out <- (protect_ptr out ms);
     buf <- (protect_ptr buf ms);
-    inc <- (28 %/ 4);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (28 %/ 4))) {
       x <- (BArray32.get32 h i);
       x <@ __bswap32 (x);
       out <- (BArray28.set32 out i x);
@@ -943,7 +939,6 @@ module M = {
   proc _sha512___sha512_finalize (out:BArray64.t, h:BArray64.t,
                                   buf:BArray128.t, total:W64.t, ms:W64.t) : 
   BArray64.t * BArray64.t * BArray128.t * W64.t = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -986,17 +981,15 @@ module M = {
     (* Erased call to unspill *)
     out <- (protect_ptr out ms);
     buf <- (protect_ptr buf ms);
-    inc <- (64 %/ 8);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (64 %/ 8))) {
       x <- (BArray64.get64 h i);
       x <@ __bswap64 (x);
       out <- (BArray64.set64 out i x);
       i <- (i + 1);
     }
-    inc <- ((64 + 7) %/ 8);
     i <- (64 %/ 8);
-    while ((i < inc)) {
+    while ((i < ((64 + 7) %/ 8))) {
       x <- (BArray64.get64 h i);
       x <- (x `>>` (W8.of_int 32));
       y <- (truncateu32 x);
@@ -1026,7 +1019,6 @@ module M = {
   proc _sha384___sha512_finalize (out:BArray48.t, h:BArray64.t,
                                   buf:BArray128.t, total:W64.t, ms:W64.t) : 
   BArray48.t * BArray64.t * BArray128.t * W64.t = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -1069,17 +1061,15 @@ module M = {
     (* Erased call to unspill *)
     out <- (protect_ptr out ms);
     buf <- (protect_ptr buf ms);
-    inc <- (48 %/ 8);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (48 %/ 8))) {
       x <- (BArray64.get64 h i);
       x <@ __bswap64 (x);
       out <- (BArray48.set64 out i x);
       i <- (i + 1);
     }
-    inc <- ((48 + 7) %/ 8);
     i <- (48 %/ 8);
-    while ((i < inc)) {
+    while ((i < ((48 + 7) %/ 8))) {
       x <- (BArray64.get64 h i);
       x <- (x `>>` (W8.of_int 32));
       y <- (truncateu32 x);
@@ -1109,7 +1099,6 @@ module M = {
   proc _sha512_224___sha512_finalize (out:BArray28.t, h:BArray64.t,
                                       buf:BArray128.t, total:W64.t, ms:W64.t) : 
   BArray28.t * BArray64.t * BArray128.t * W64.t = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -1152,17 +1141,15 @@ module M = {
     (* Erased call to unspill *)
     out <- (protect_ptr out ms);
     buf <- (protect_ptr buf ms);
-    inc <- (28 %/ 8);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (28 %/ 8))) {
       x <- (BArray64.get64 h i);
       x <@ __bswap64 (x);
       out <- (BArray28.set64 out i x);
       i <- (i + 1);
     }
-    inc <- ((28 + 7) %/ 8);
     i <- (28 %/ 8);
-    while ((i < inc)) {
+    while ((i < ((28 + 7) %/ 8))) {
       x <- (BArray64.get64 h i);
       x <- (x `>>` (W8.of_int 32));
       y <- (truncateu32 x);
@@ -1193,7 +1180,6 @@ module M = {
   proc _sha512_256___sha512_finalize (out:BArray32.t, h:BArray64.t,
                                       buf:BArray128.t, total:W64.t, ms:W64.t) : 
   BArray32.t * BArray64.t * BArray128.t * W64.t = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -1236,17 +1222,15 @@ module M = {
     (* Erased call to unspill *)
     out <- (protect_ptr out ms);
     buf <- (protect_ptr buf ms);
-    inc <- (32 %/ 8);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (32 %/ 8))) {
       x <- (BArray64.get64 h i);
       x <@ __bswap64 (x);
       out <- (BArray32.set64 out i x);
       i <- (i + 1);
     }
-    inc <- ((32 + 7) %/ 8);
     i <- (32 %/ 8);
-    while ((i < inc)) {
+    while ((i < ((32 + 7) %/ 8))) {
       x <- (BArray64.get64 h i);
       x <- (x `>>` (W8.of_int 32));
       y <- (truncateu32 x);
@@ -1714,7 +1698,6 @@ module M = {
                                                                  BArray28.t *
                                                                  W64.t *
                                                                  W64.t = {
-    var inc:int;
     var status:W64.t;
     var tag:W64.t;
     var total:W64.t;
@@ -1729,9 +1712,8 @@ module M = {
       (ctx, digest, ms) <@ _sha224_ctx____ctx_finalize (ctx, digest, 
       total, ms);
       z <- (W64.of_int 0);
-      inc <- (112 %/ 8);
       i <- 0;
-      while ((i < inc)) {
+      while ((i < (112 %/ 8))) {
         ctx <- (BArray112.set64d ctx (8 * i) z);
         i <- (i + 1);
       }
@@ -1763,7 +1745,6 @@ module M = {
                                                                  BArray32.t *
                                                                  W64.t *
                                                                  W64.t = {
-    var inc:int;
     var status:W64.t;
     var tag:W64.t;
     var total:W64.t;
@@ -1778,9 +1759,8 @@ module M = {
       (ctx, digest, ms) <@ _sha256_ctx____ctx_finalize (ctx, digest, 
       total, ms);
       z <- (W64.of_int 0);
-      inc <- (112 %/ 8);
       i <- 0;
-      while ((i < inc)) {
+      while ((i < (112 %/ 8))) {
         ctx <- (BArray112.set64d ctx (8 * i) z);
         i <- (i + 1);
       }
@@ -1812,7 +1792,6 @@ module M = {
                                                                  BArray48.t *
                                                                  W64.t *
                                                                  W64.t = {
-    var inc:int;
     var status:W64.t;
     var tag:W64.t;
     var total:W64.t;
@@ -1827,9 +1806,8 @@ module M = {
       (ctx, digest, ms) <@ _sha384_ctx____ctx_finalize (ctx, digest, 
       total, ms);
       z <- (W64.of_int 0);
-      inc <- (208 %/ 8);
       i <- 0;
-      while ((i < inc)) {
+      while ((i < (208 %/ 8))) {
         ctx <- (BArray208.set64d ctx (8 * i) z);
         i <- (i + 1);
       }
@@ -1861,7 +1839,6 @@ module M = {
                                                                  BArray64.t *
                                                                  W64.t *
                                                                  W64.t = {
-    var inc:int;
     var status:W64.t;
     var tag:W64.t;
     var total:W64.t;
@@ -1876,9 +1853,8 @@ module M = {
       (ctx, digest, ms) <@ _sha512_ctx____ctx_finalize (ctx, digest, 
       total, ms);
       z <- (W64.of_int 0);
-      inc <- (208 %/ 8);
       i <- 0;
-      while ((i < inc)) {
+      while ((i < (208 %/ 8))) {
         ctx <- (BArray208.set64d ctx (8 * i) z);
         i <- (i + 1);
       }
@@ -1908,7 +1884,6 @@ module M = {
   proc _sha512_224_ctx___sha2_ctx_final (ctx:BArray208.t, digest:BArray28.t,
                                          expect_0:W64.t, ms:W64.t) : 
   BArray208.t * BArray28.t * W64.t * W64.t = {
-    var inc:int;
     var status:W64.t;
     var tag:W64.t;
     var total:W64.t;
@@ -1923,9 +1898,8 @@ module M = {
       (ctx, digest, ms) <@ _sha512_224_ctx____ctx_finalize (ctx, digest,
       total, ms);
       z <- (W64.of_int 0);
-      inc <- (208 %/ 8);
       i <- 0;
-      while ((i < inc)) {
+      while ((i < (208 %/ 8))) {
         ctx <- (BArray208.set64d ctx (8 * i) z);
         i <- (i + 1);
       }
@@ -1955,7 +1929,6 @@ module M = {
   proc _sha512_256_ctx___sha2_ctx_final (ctx:BArray208.t, digest:BArray32.t,
                                          expect_0:W64.t, ms:W64.t) : 
   BArray208.t * BArray32.t * W64.t * W64.t = {
-    var inc:int;
     var status:W64.t;
     var tag:W64.t;
     var total:W64.t;
@@ -1970,9 +1943,8 @@ module M = {
       (ctx, digest, ms) <@ _sha512_256_ctx____ctx_finalize (ctx, digest,
       total, ms);
       z <- (W64.of_int 0);
-      inc <- (208 %/ 8);
       i <- 0;
-      while ((i < inc)) {
+      while ((i < (208 %/ 8))) {
         ctx <- (BArray208.set64d ctx (8 * i) z);
         i <- (i + 1);
       }
@@ -2046,7 +2018,6 @@ module M = {
   }
   proc __hmac_sha256_ctx_final (ctx:BArray144.t, out:BArray32.t, ms:W64.t) : 
   BArray144.t * BArray32.t * W64.t * W64.t = {
-    var inc:int;
     var status:W64.t;
     var tag:W64.t;
     var total:W64.t;
@@ -2091,9 +2062,8 @@ module M = {
         i <- (i + 1);
       }
       z <- (W64.of_int 0);
-      inc <- (144 %/ 8);
       i <- 0;
-      while ((i < inc)) {
+      while ((i < (144 %/ 8))) {
         ctx <- (BArray144.set64d ctx (8 * i) z);
         i <- (i + 1);
       }
@@ -2105,7 +2075,6 @@ module M = {
   }
   proc __hmac_sha512_ctx_final (ctx:BArray272.t, out:BArray64.t, ms:W64.t) : 
   BArray272.t * BArray64.t * W64.t * W64.t = {
-    var inc:int;
     var status:W64.t;
     var tag:W64.t;
     var total:W64.t;
@@ -2149,9 +2118,8 @@ module M = {
         i <- (i + 1);
       }
       z <- (W64.of_int 0);
-      inc <- (272 %/ 8);
       i <- 0;
-      while ((i < inc)) {
+      while ((i < (272 %/ 8))) {
         ctx <- (BArray272.set64d ctx (8 * i) z);
         i <- (i + 1);
       }
@@ -3366,7 +3334,6 @@ module M = {
     var aux_0:BArray256.t;
     var aux_1:BArray512.t;
     var aux_2:W64.t;
-    var inc:int;
     var status:W64.t;
     var tag:W64.t;
     var total:W64.t;
@@ -3388,9 +3355,8 @@ module M = {
       ctx <- (SBArray784_512.set_sub8 ctx 272 aux_1);
       ms <- aux_2;
       z <- (W64.of_int 0);
-      inc <- (784 %/ 8);
       i <- 0;
-      while ((i < inc)) {
+      while ((i < (784 %/ 8))) {
         ctx <- (BArray784.set64d ctx (8 * i) z);
         i <- (i + 1);
       }
@@ -3494,7 +3460,6 @@ module M = {
     var aux_0:BArray256.t;
     var aux_1:BArray512.t;
     var aux_2:W64.t;
-    var inc:int;
     var status:W64.t;
     var tag:W64.t;
     var total:W64.t;
@@ -3516,9 +3481,8 @@ module M = {
       ctx <- (SBArray784_512.set_sub8 ctx 272 aux_1);
       ms <- aux_2;
       z <- (W64.of_int 0);
-      inc <- (784 %/ 8);
       i <- 0;
-      while ((i < inc)) {
+      while ((i < (784 %/ 8))) {
         ctx <- (BArray784.set64d ctx (8 * i) z);
         i <- (i + 1);
       }

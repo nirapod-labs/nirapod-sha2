@@ -486,7 +486,7 @@ while (valid trace__sha512_x4_compress_lanes /\ ms_init /\ off_init /\ n_init /\
   move=> _ r1 [hr12 hr13].
   rewrite !valid_cat !a64x4_valid1 hr13 (a64x4_full256 _ hr12) /=.
   smt().
-auto => &m [#] <- <- _ <- <- <- _ _ _ _ _ hh hin hlt hoff v0 v1 v2 v3.
+auto => &m [#] <- <- _ <- <- <- _ hh hin hlt hoff v0 v1 v2 v3.
 have hn : W64.to_uint _n < 144115188075855872.
 + by move: hlt; rewrite W64.ultE W64.to_uint_small.
 have e : W64.to_uint (W64.of_int 128 * _n) = 128 * W64.to_uint _n.
