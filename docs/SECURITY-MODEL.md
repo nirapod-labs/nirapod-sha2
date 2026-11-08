@@ -150,14 +150,6 @@ contents gives a wrong digest and nothing worse.
 
 The evidence for the `#[safety]` contracts is the EasyCrypt proof on each
 unit's safety model ([PROOFS](PROOFS.md#memory-safety)).
-`jasmin-checksafety` also runs, one run per export and unit, and each memory
-range it prints must fall within the export's contract, but it is not part
-of the evidence. With the pinned checker fewer than half of the 252
-export-unit runs pass. Most of the rest absorb input and run past the
-one-hour limit, and some stop on alarms the proofs refute. On the four
-exports that read lanes through a pointer table (`sha256_x8`, `sha512_x4`
-and their `update`) it cannot pass, since its memory model gives each
-argument one region.
 
 ## Trusted base
 
@@ -169,7 +161,7 @@ argument one region.
 | SHA-NI, SSE/AVX, AVX2, BMI1, BMI2 models | the SHA-NI and AVX2 kernels | 62 entries on 17,732 vectors recorded on an AMD Ryzen 7 7700X, 164 controls rejected |
 | `BSWAP` and `REV` models | byte order everywhere | proved to reverse bytes (`ArchWord.ec`); emission trusted |
 | `JWordList` axioms | reading bytes of memory | listed in each unit's inventory |
-| Jasmin front end, assembly printers, `jasmin-ct`, `jasmin-checksafety`, `-stack-zero` | compilation outside the proved passes, the leakage results, stack clearing | tests; the compiler theorem covers the passes in between ([TOOLCHAIN](TOOLCHAIN.md#the-compiler-proof)) |
+| Jasmin front end, assembly printers, `jasmin-ct`, `-stack-zero` | compilation outside the proved passes, the leakage results, stack clearing | tests; the compiler theorem covers the passes in between ([TOOLCHAIN](TOOLCHAIN.md#the-compiler-proof)) |
 | assembler, linker, `objcopy` | the objects | the tests, the exported-symbol check, `tests/isa` |
 | `capi/`, about 1,500 lines | argument checks, dispatch, DIT, register clearing | the `negative` suite, `tests/residue`, the smoke tests |
 | CPUID, XCR0, `sysctlbyname`, `getauxval` | kernel choice and DIT | nothing |

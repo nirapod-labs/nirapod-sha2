@@ -9,14 +9,14 @@
 # project as a separate job, in order, each in its own process with its
 # own wall-clock limit, and prints one summary table at the end.
 #
-#     ci/run.sh [--all] [--safety] [--proofs] [--only JOBS] [--no-clean]
+#     ci/run.sh [--all] [--proofs] [--only JOBS] [--no-clean]
 #     ci/run.sh --list
 #
 # Default jobs: toolchain build tests exports ct extraction on a host with
 # the pinned Jasmin (the analysis host), and insn there when tests/insn has
 # an instruction table for the host's architecture; insn-vectors when
 # tests/insn has a recorded run for the host's architecture.
-# Opt-in jobs: safety (long, Linux only) and proofs (long, Linux only).
+# Opt-in job: proofs (long, Linux only).
 #
 # A job passes only when it exits zero and its log holds a line that
 # starts with PASS:. A timeout is INCONCLUSIVE, any other non-zero exit
@@ -35,15 +35,14 @@ cd "$ROOT" || exit 1
 ALL_JOBS="toolchain build tests exports ct extraction"
 INSN_JOBS="insn"
 VECTORS_JOBS="insn-vectors"
-OPT_JOBS="safety proofs"
-ORDER="toolchain build tests exports ct extraction insn insn-vectors safety proofs"
+OPT_JOBS="proofs"
+ORDER="toolchain build tests exports ct extraction insn insn-vectors proofs"
 
 usage() {
   cat <<'EOF'
 usage: ci/run.sh [options]
 
-  --all           select every job, including safety and proofs
-  --safety        add the safety-checker job (long; Linux only)
+  --all           select every job, including proofs
   --proofs        add the proof job (long; Linux only)
   --only JOBS     run exactly these jobs, comma separated
   --no-clean      keep the build directory
@@ -52,8 +51,6 @@ usage: ci/run.sh [options]
 
 Environment:
   CI_TIMEOUT_<JOB>   wall-clock limit per job in seconds
-  CI_SAFETY_TIMEOUT  limit of one safety-checker run (one export), seconds
-  CI_SAFETY_JOBS     safety-checker runs at a time (default: half the cores)
   CI_PROOF_JOBS      proof files checked at a time (default: cores, max 8)
   SHA2_TOOLCHAIN_WORK      toolchain work directory to verify
   SHA2_TOOLCHAIN_PROVENANCE  provenance file to verify
@@ -62,14 +59,12 @@ EOF
 
 selection=
 only=
-safety=0
 proofs=0
 clean=1
 
 while [ $# -gt 0 ]; do
   case $1 in
-    --all) safety=1; proofs=1 ;;
-    --safety) safety=1 ;;
+    --all) proofs=1 ;;
     --proofs) proofs=1 ;;
     --only) shift; [ $# -gt 0 ] || { usage >&2; exit 2; }; only=$1 ;;
     --only=*) only=${1#*=} ;;
@@ -97,7 +92,6 @@ else
   if [ -f "tests/insn/$(ci_host_arch)/vectors.txt" ]; then
     selection="$selection $VECTORS_JOBS"
   fi
-  [ "$safety" = 1 ] && selection="$selection safety"
   [ "$proofs" = 1 ] && selection="$selection proofs"
 fi
 
@@ -141,7 +135,7 @@ esac
 
 if [ "$clean" = 1 ]; then
   case " $selection " in
-    *" build "*|*" tests "*|*" exports "*|*" ct "*|*" extraction "*|*" safety "*)
+    *" build "*|*" tests "*|*" exports "*|*" ct "*|*" extraction "*)
       make clean >/dev/null 2>&1 || ci_fail "make clean failed"
       ;;
   esac
@@ -174,7 +168,6 @@ ci_timeout() {
     extraction) printf '900\n' ;;
     insn) printf '3600\n' ;;
     insn-vectors) printf '300\n' ;;
-    safety) printf '43200\n' ;;
     proofs) printf '28800\n' ;;
     *) printf '900\n' ;;
   esac

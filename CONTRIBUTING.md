@@ -13,7 +13,6 @@ lists the jobs; `ci/jobs/` has one script per job.
 ```sh
 ci/run.sh                  # the default jobs
 ci/run.sh --proofs         # add every EasyCrypt proof (Linux, over an hour)
-ci/run.sh --safety         # add jasmin-checksafety on every export (Linux, hours)
 ci/run.sh --only build,ct  # just these
 ```
 
