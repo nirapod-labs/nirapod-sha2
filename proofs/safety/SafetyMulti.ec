@@ -299,7 +299,7 @@ seq 1 : (valid trace__sha256_x8_absorb_lanes /\ total_init /\ fill_init /\ inlen
     move=> _ _ _ _ _ _ _ r hr _; split; 1: by rewrite full64_init; smt().
     split; 1: smt().
     by apply (lanes64_set _ _ _ _ _ hl) => //; smt(W64.to_uint_cmp).
-  auto => /> &m hi0 hi1 hi2 hi3 hi4 hi5 hi6 hi7 hh hb0 hb1 hb2 hb3 hb4 hb5 hb6 hb7 hult hin.
+  auto => /> &m hh hb0 hb1 hb2 hb3 hb4 hb5 hb6 hb7 hult hin.
   move=> v00 v01 v02 v10 v11 v12 v20 v21 v22 v30 v31 v32 v40 v41 v42 v50 v51 v52.
   move=> v60 v61 v62 v70 v71 v72.
   pose f := _total `&` W64.of_int 63.
@@ -714,7 +714,7 @@ seq 1 : (valid trace__sha512_x4_absorb_lanes /\ total_init /\ fill_init /\ inlen
     move=> _ _ _ _ _ _ _ r hr _; split; 1: by rewrite full32_init; smt().
     split; 1: smt().
     by apply (lanes128_set _ _ _ _ _ hl) => //; smt(W64.to_uint_cmp).
-  auto => /> &m hi0 hi1 hi2 hi3 hh hb0 hb1 hb2 hb3 hult hin.
+  auto => /> &m hh hb0 hb1 hb2 hb3 hult hin.
   move=> v00 v01 v02 v10 v11 v12 v20 v21 v22 v30 v31 v32.
   pose f := _total `&` W64.of_int 127.
   pose nn := if f = W64.of_int 0 then f

@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: nirapod-sha2 contributors
+# SPDX-License-Identifier: Apache-2.0
+# shellcheck shell=bash disable=SC2034
+#
+# toolchain/PIN
+# =============
+#
+# The toolchain the library is built and proved with: a release of
+# nirapod-labs/toolchain, pinned by commit. That repository pins the Jasmin
+# compiler (a commit of the integration branch of nirapod-labs/jasmin),
+# EasyCrypt, the SMT provers and the opam environment, and its build.sh
+# checks each of them. This file names the release and records the Jasmin,
+# EasyCrypt and coqword commits it builds, so that ci/jobs/toolchain.sh can
+# compare them with the provenance record of the tools on PATH. Shell
+# syntax, read by toolchain/build.sh and the CI; it only sets variables.
+
+TOOLCHAIN_URL=https://github.com/nirapod-labs/toolchain.git
+TOOLCHAIN_RELEASE=2026.11.1
+TOOLCHAIN_COMMIT=9feb334af135253e5c15fb69c0e93af78a3c0f1b
+
+# Recorded from the release's jasmin/PIN and easycrypt/PIN.
+JASMIN_TAG=nirapod-2026.11.1
+JASMIN_COMMIT=87a265eccd7ebd7b73f954bffa482715c6c771de
+JASMIN_BASE=af6e17f9ad34463f6dd20fdb6dfa1a0852e768a7
+EASYCRYPT_COMMIT=e7eff05dcef179fbd0b428e987632278e526b862
+COQWORD_COMMIT=86ed49aeca65a8d32e81bb386778f49b45ee505b

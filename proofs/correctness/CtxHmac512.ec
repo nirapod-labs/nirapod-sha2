@@ -186,7 +186,7 @@ seq 6 : (ctx = c0 /\ out = o0 /\ expect_0 = tag512h /\
 + ecall (sha2_tag_correct 8); ecall (ctx_open_correct (SBArray272_16.get_sub8 ctx 0)).
   auto => /> r -> ->; exact (head272 c0).
 sp; if.
-+ wp; while (0 <= i <= 34 /\ inc = 34 /\ z = W64.zero /\
++ wp; while (0 <= i <= 34 /\ z = W64.zero /\
              (forall b, 0 <= b < 8 * i => BArray272.get8 ctx b = W8.zero)).
   + auto => /> &hr hi0 hi18 hb hlt; split; first smt().
     move=> b hb0 hb1; rewrite BArray272.get8_set64dE.
@@ -232,7 +232,7 @@ proof.
 proc.
 seq 8 : true 1%r 1%r 0%r 0%r => //; first by wp; call sha2_tag_ll; call ctx_open_ll; auto.
 if; last by auto.
-wp; while (true) (inc - i); first by auto => /#.
+wp; while (true) (34 - i); first by auto => /#.
 wp; while (true) (8 - i); first by auto => /#.
 wp; call hmac_sha512_finalize_ll; wp; while (true) (8 - i); first by auto => /#.
 by wp; call ctx_load512_ll; auto => /#.

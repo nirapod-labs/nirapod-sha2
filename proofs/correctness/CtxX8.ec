@@ -344,7 +344,7 @@ seq 3 : (ctx = c0 /\ out = d0 /\ total = BArray784.get64d c0 8 /\ status = W64.o
          ok = (BArray784.get64d c0 0 = tagx8)).
 + by wp; ecall (sha2_tag_correct 9); auto => />.
 if.
-+ wp; while (0 <= i <= 98 /\ inc = 98 /\ z = W64.zero /\
++ wp; while (0 <= i <= 98 /\ z = W64.zero /\
              (forall b, 0 <= b < 8 * i => BArray784.get8 ctx b = W8.zero)).
   + auto => /> &hr hi0 hi98 hb hlt; split; first smt().
     move=> b hb0 hb1; rewrite BArray784.get8_set64dE.
@@ -364,7 +364,7 @@ proof.
 proc.
 seq 4 : true 1%r 1%r 0%r 0%r => //; first by wp; call sha2_tag_ll; call ctx_open_ll; auto.
 if; last by auto.
-wp; while (true) (inc - i); first by auto => /#.
+wp; while (true) (98 - i); first by auto => /#.
 by wp; call sha256_x8_finalize_ll; auto => /#.
 qed.
 

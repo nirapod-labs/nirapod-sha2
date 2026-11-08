@@ -142,33 +142,33 @@ lemma __sha256_avx2_proof _h _x _nb _ms _h_init _x_init :
   __sha256_avx2_spec _h _x _nb _ms _h_init _x_init.
 proof.
 rewrite /__sha256_avx2_spec; proc.
-wp; while (valid trace___sha256_avx2 /\ 0 <= l /\ inc = nb /\ 0 <= nb <= 2 /\
+wp; while (valid trace___sha256_avx2 /\ 0 <= l /\ 0 <= nb <= 2 /\
        BArray32.is_init h_init 0 32 /\ x_init = K128.full /\ v_init = K32.full /\
        BArray512.is_init wk_init 0 (if l = 0 then 128 else 512) /\
        l_init /\ nb_init /\ ms_init /\ i_init /\ lo_init /\ hi_init).
-+ wp; while (valid trace___sha256_avx2 /\ 0 <= l < inc /\ inc = nb /\ 0 <= nb <= 2 /\ 0 <= i <= 8 /\
++ wp; while (valid trace___sha256_avx2 /\ 0 <= l < nb /\ 0 <= nb <= 2 /\ 0 <= i <= 8 /\
              h_init = K32.full /\ x_init = K128.full /\ v_init = K32.full /\
              BArray512.is_init wk_init 0 512 /\
              l_init /\ nb_init /\ ms_init /\ i_init /\ s_init /\ lo_init /\ hi_init).
-  + wp; skip => &hr [[#] hval hl0 hl1 hinc hnb0 hnb1 hi0 hi1 hh hx hv hwk hli hnbi hmsi hii hsi hloi hhii] hc.
+  + wp; skip => &hr [[#] hval hl0 hl1 hnb0 hnb1 hi0 hi1 hh hx hv hwk hli hnbi hmsi hii hsi hloi hhii] hc.
     rewrite /= hh hv !K32.full_set32d !K32.full_init !valid_cat hval /valid /= hii hx hwk hli hnbi hmsi hsi /=.
-    by move: hi0 hc hl0 hl1 hinc hnb0 hnb1; clear hval hwk; smt().
-  wp; while (valid trace___sha256_avx2 /\ 0 <= l < inc /\ inc = nb /\ 0 <= nb <= 2 /\ 0 <= t <= 64 /\
+    by move: hi0 hc hl0 hl1 hnb0 hnb1; clear hval hwk; smt().
+  wp; while (valid trace___sha256_avx2 /\ 0 <= l < nb /\ 0 <= nb <= 2 /\ 0 <= t <= 64 /\
              BArray32.is_init h_init 0 32 /\ x_init = K128.full /\ v_init = K32.full /\
              BArray8.is_init m_init (4 * (t %% 2)) 4 /\
              BArray512.is_init wk_init 0 (32 * (if l = 0 /\ t <= 48 then 4 + (t + 1) %/ 4 else 16)) /\
              l_init /\ nb_init /\ ms_init /\ i_init /\ t_init /\ s_init /\ lo_init /\ hi_init).
-  + sp; seq 1 : (valid trace___sha256_avx2 /\ 0 <= l < inc /\ inc = nb /\ 0 <= nb <= 2 /\ 0 <= t < 64 /\
+  + sp; seq 1 : (valid trace___sha256_avx2 /\ 0 <= l < nb /\ 0 <= nb <= 2 /\ 0 <= t < 64 /\
                  BArray32.is_init h_init 0 32 /\ x_init = K128.full /\ v_init = K32.full /\
                  m_init = K8.full /\
                  BArray512.is_init wk_init 0 (32 * (if l = 0 /\ t <= 48 then 4 + (t + 1) %/ 4 else 16)) /\
                  l_init /\ nb_init /\ ms_init /\ i_init /\ t_init /\ s_init /\ lo_init /\ hi_init).
     + if.
       + wp; ecall (__sha256_avx2_round_proof v m s t x lo hi (t %/ 4) (t %% 4) v_init m_init x_init); wp; skip.
-        move=> &hr [[vi0 v0 tr0 [#] hv hvi htr hval hl0 hl1 hinc hnb0 hnb1 ht0 ht1 hh hx hvf hm hwk hli hnbi hmsi hii hti hsi hloi hhii ht80] _].
+        move=> &hr [[vi0 v0 tr0 [#] hv hvi htr hval hl0 hl1 hnb0 hnb1 ht0 ht1 hh hx hvf hm hwk hli hnbi hmsi hii hti hsi hloi hhii ht80] _].
         split; 1: by rewrite /= hvi hvf K32.full_set32d K32.full_init hx K128.full_init /= hm; smt().
         move=> _ r [[[hv' hm'] hx'] hval'].
-        have hl2 : 0 <= l{hr} < 2 by move: hl0 hl1 hinc hnb1; clear htr; smt().
+        have hl2 : 0 <= l{hr} < 2 by move: hl0 hl1 hnb1; clear htr; smt().
         have [hw0 hw1] := wk_idx t{hr} l{hr} _ hl2; 1: by split.
         have hwr : BArray512.is_init wk_init{hr} ((8 * (t{hr} %/ 4) + 4 * l{hr} + t{hr} %% 4) * 4) 4.
         + by apply (K512.is_init_sub _ 0 (32 * (if l{hr} = 0 /\ t{hr} <= 48 then 4 + (t{hr} + 1) %/ 4 else 16))).
@@ -178,10 +178,10 @@ wp; while (valid trace___sha256_avx2 /\ 0 <= l /\ inc = nb /\ 0 <= nb <= 2 /\
         split; 1: by move: hw1; clear htr; smt().
         by do ?split => //; move: ht0 ht80; clear htr; smt().
       wp; ecall (__sha256_avx2_round_proof v m s t x lo hi 0 3 v_init m_init x_init); wp; skip.
-      move=> &hr [[vi0 v0 tr0 [#] hv hvi htr hval hl0 hl1 hinc hnb0 hnb1 ht0 ht1 hh hx hvf hm hwk hli hnbi hmsi hii hti hsi hloi hhii ht80] _].
+      move=> &hr [[vi0 v0 tr0 [#] hv hvi htr hval hl0 hl1 hnb0 hnb1 ht0 ht1 hh hx hvf hm hwk hli hnbi hmsi hii hti hsi hloi hhii ht80] _].
       split; 1: by rewrite /= hvi hvf K32.full_set32d K32.full_init hx K128.full_init /= hm; smt().
       move=> _ r [[[hv' hm'] hx'] hval'].
-      have hl2 : 0 <= l{hr} < 2 by move: hl0 hl1 hinc hnb1; clear htr; smt().
+      have hl2 : 0 <= l{hr} < 2 by move: hl0 hl1 hnb1; clear htr; smt().
       have [hw0 hw1] := wk_idx t{hr} l{hr} _ hl2; 1: by split.
       have hwr : BArray512.is_init wk_init{hr} ((8 * (t{hr} %/ 4) + 4 * l{hr} + t{hr} %% 4) * 4) 4.
       + by apply (K512.is_init_sub _ 0 (32 * (if l{hr} = 0 /\ t{hr} <= 48 then 4 + (t{hr} + 1) %/ 4 else 16))).
@@ -190,7 +190,7 @@ wp; while (valid trace___sha256_avx2 /\ 0 <= l /\ inc = nb /\ 0 <= nb <= 2 /\
       rewrite !slot_b hw0 /=.
       split; 1: by move: hw1; clear htr; smt().
       by do ?split => //; move: ht0 ht80; clear htr; smt().
-    wp; skip => &hr [#] hval hl0 hl1 hinc hnb0 hnb1 ht0 ht1 hh hx hv hm hwk hli hnbi hmsi hii hti hsi hloi hhii.
+    wp; skip => &hr [#] hval hl0 hl1 hnb0 hnb1 ht0 ht1 hh hx hv hm hwk hli hnbi hmsi hii hti hsi hloi hhii.
     rewrite /= hx hv hm K8.full_init /=.
     case: ((l{hr} = 0 /\ t{hr} < 48) /\ t{hr} %% 4 = 2) => hc.
     + have [e1 e2] := wkn_w _ _ hc.
@@ -201,7 +201,7 @@ wp; while (valid trace___sha256_avx2 /\ 0 <= l /\ inc = nb /\ 0 <= nb <= 2 /\
     have e := wkn_nw l{hr} t{hr} _ hc; 1: by split.
     rewrite !valid_cat hval /valid /= hli hti hnbi e hwk /=.
     by do ?split => //; move: ht0 ht1; clear hval hwk; smt().
-  wp; skip => &hr [[#] hval hl0 hinc hnb0 hnb1 hh hx hv hwk hli hnbi hmsi hii hloi hhii] hl.
+  wp; skip => &hr [[#] hval hl0 hnb0 hnb1 hh hx hv hwk hli hnbi hmsi hii hloi hhii] hl.
   rewrite hv K32.full_init /=; split.
   + have hm0 : forall (m : BArray8.t),
       BArray8.is_init (BArray8.set32d m 0 (W32.of_int 4294967295)) 0 4.
@@ -210,15 +210,15 @@ wp; while (valid trace___sha256_avx2 /\ 0 <= l /\ inc = nb /\ 0 <= nb <= 2 /\
     have hwk0 : BArray512.is_init wk_init{hr} 0 (32 * if l{hr} = 0 then 4 else 16).
     + by move: hwk; case: (l{hr} = 0).
     rewrite hwk0 /=.
-    by do ?split => //; move: hl0 hl hinc hnb0 hnb1; clear hval hwk hwk0; smt().
-  move=> m0 s0 t0 tr0 vi0 wki0 xi0 hc [#] hval' _ _ _ _ _ ht0 ht1 _ hx' hv' _ hwk' _ _ _ _ hs0 _ _.
+    by do ?split => //; move: hl0 hl hnb0 hnb1; clear hval hwk hwk0; smt().
+  move=> m0 s0 t0 tr0 vi0 wki0 xi0 hc [#] hval' _ _ _ _ ht0 ht1 _ hx' hv' _ hwk' _ _ _ _ hs0 _ _.
   have h64 : t0 = 64 by move: hc ht1; clear hval' hwk'; smt().
   subst t0; move: hwk' => /= hwk'.
   rewrite hv' hx' K32.full_set32d K32.full_init /= hwk' hs0 hli hnbi hmsi hloi hhii /=.
-  split; 1: by rewrite !valid_cat hval' /valid /=; move: hl0 hl hinc hnb0 hnb1; clear hval hval' hwk'; smt().
-  move=> h' i' tr' vi' hc' [#] hval'' _ _ _ _ _ _ _ hh' hv''.
+  split; 1: by rewrite !valid_cat hval' /valid /=; move: hl0 hl hnb0 hnb1; clear hval hval' hwk'; smt().
+  move=> h' i' tr' vi' hc' [#] hval'' _ _ _ _ _ _ hh' hv''.
   rewrite hval'' hh' hv'' K32.full_init (_: (l{hr} + 1 = 0) = false) 1:/# /= ?hwk' /=.
-  by move: hl0 hinc hnb0 hnb1; clear hval hval' hval''; smt().
+  by move: hl0 hnb0 hnb1; clear hval hval' hval''; smt().
 wp; while (valid trace___sha256_avx2 /\ 0 <= i <= 8 /\ BArray32.is_init v_init 0 (4 * i) /\
            BArray32.is_init h_init 0 32 /\ BArray512.is_init wk_init 0 128 /\
            i_init /\ nb_init /\ ms_init /\ lo_init /\ hi_init).
@@ -382,7 +382,7 @@ seq 10 : (valid trace__sha256_compress_blocks /\ p_init /\ n_init /\ ms_init /\ 
     rewrite !valid_cat hv hvr /valid /= hpi hni hmi hmsi /=.
     have := valid_sub _ _ _ 128 (64 * (W64.to_uint n{hr} - 2)) hval _ _ _; 1..3: by move: h2; clear hval; smt().
     by move=> ->.
-  wp; skip => &hr [#] 5!->> _ _ _ hh hlt hval0.
+  wp; skip => &hr [#] 5!->> hh hlt hval0.
   have hn : W64.to_uint n{hr} < 288230376151711744.
   + by move: hlt; rewrite W64.ultE W64.to_uint_small.
   have e : W64.to_uint (W64.of_int 64 * n{hr}) = 64 * W64.to_uint n{hr}.

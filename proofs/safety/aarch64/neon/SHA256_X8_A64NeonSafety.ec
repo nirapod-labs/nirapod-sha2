@@ -825,7 +825,7 @@ while (valid trace__sha256_x8_compress_lanes /\ more_init /\ ms_init /\ n_init /
   move=> o3 [hb1 hb2].
   rewrite !valid_cat !a64n_valid1 hv hmi hms hn hof ho2 hq2 hb2 !a64n_I64_init /=.
   by rewrite (a64n_full256 _ hb1) hlv'.
-auto => &m [#] <- <- _ <- <- <- _ _ _ _ _ _ _ _ _ hh hin hlt hoff v0 v1 v2 v3 v4 v5 v6 v7.
+auto => &m [#] <- <- _ <- <- <- _ hh hin hlt hoff v0 v1 v2 v3 v4 v5 v6 v7.
 have hn : W64.to_uint _n < 288230376151711744.
 + by move: hlt; rewrite W64.ultE W64.to_uint_small.
 have e : W64.to_uint (W64.of_int 64 * _n) = 64 * W64.to_uint _n.

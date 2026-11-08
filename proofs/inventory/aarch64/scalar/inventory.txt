@@ -13,7 +13,7 @@
 # Generator: proofs/tools/inventory.py
 # Regenerate: make -C proofs inventory   (check: make -C proofs check-inventory)
 
-axioms 848
+axioms 872
 
 AlgTactic.Requires Cn_eq0 bdecb18de0dc9f6d
 AlgTactic.Requires Cp_idp 80a851cbf22ee9d6
@@ -389,6 +389,8 @@ JWord.W128 sdivE c17d068cd7589760
 JWord.W128 setE ce2a65ce32647558
 JWord.W128 sleE 2cd8105836c9ec91
 JWord.W128 sltE db73d8fb61024c42
+JWord.W128 smaxE e8517aa988b8463c
+JWord.W128 sminE 92a782917ed298b3
 JWord.W128 smodE cad42596ff78d557
 JWord.W128 subcE 9e709e52346ad266
 JWord.W128 to_sintE 58101a6d75efa8e6
@@ -396,6 +398,8 @@ JWord.W128 to_uintE 9ebbe6b9950f2b28
 JWord.W128 udivE 5ff3e94eec08be50
 JWord.W128 uleE 00926144894f8632
 JWord.W128 ultE d1948baff2125f29
+JWord.W128 umaxE 1168cfb7bc547ea1
+JWord.W128 uminE 2953020085690671
 JWord.W128 umodE 791b2f2c3124c693
 JWord.W128 w2bitsE 139c65fed4d96873
 JWord.W128 wlslE 84f60ecd1cbd3233
@@ -429,6 +433,8 @@ JWord.W16 sdivE c17d068cd7589760
 JWord.W16 setE 65325785c3d3d6f8
 JWord.W16 sleE ec7562dec7ee34ca
 JWord.W16 sltE 8190bfffe39fdb45
+JWord.W16 smaxE e8517aa988b8463c
+JWord.W16 sminE 92a782917ed298b3
 JWord.W16 smodE cad42596ff78d557
 JWord.W16 subcE 376a2aba1dcf34bf
 JWord.W16 to_sintE 2faf075ae9eefcec
@@ -436,6 +442,8 @@ JWord.W16 to_uintE cfb03ed38c67f23b
 JWord.W16 udivE 5ff3e94eec08be50
 JWord.W16 uleE bb92cd275faa80b3
 JWord.W16 ultE 11954adc12f7d9bb
+JWord.W16 umaxE 1168cfb7bc547ea1
+JWord.W16 uminE 2953020085690671
 JWord.W16 umodE 791b2f2c3124c693
 JWord.W16 w2bitsE 198179d98517d4a5
 JWord.W16 wlslE 55676c8c1b1ea4c5
@@ -497,6 +505,8 @@ JWord.W256 sdivE c17d068cd7589760
 JWord.W256 setE 4dc5c9d6e68f4913
 JWord.W256 sleE e93d31c9e19d9232
 JWord.W256 sltE 147eb99b3654d5b4
+JWord.W256 smaxE e8517aa988b8463c
+JWord.W256 sminE 92a782917ed298b3
 JWord.W256 smodE cad42596ff78d557
 JWord.W256 subcE 6beeac5029104a69
 JWord.W256 to_sintE 3a4f05efe2dc9414
@@ -504,6 +514,8 @@ JWord.W256 to_uintE 2b03cf809203ed7a
 JWord.W256 udivE 5ff3e94eec08be50
 JWord.W256 uleE af0728e75f9d9562
 JWord.W256 ultE 737bfd1e152075a4
+JWord.W256 umaxE 1168cfb7bc547ea1
+JWord.W256 uminE 2953020085690671
 JWord.W256 umodE 791b2f2c3124c693
 JWord.W256 w2bitsE 58a952dca3afd4ac
 JWord.W256 wlslE 85c7dbe5083f359a
@@ -607,6 +619,8 @@ JWord.W32 sdivE c17d068cd7589760
 JWord.W32 setE 2ad2457f50ad7768
 JWord.W32 sleE 68893fbdf115e0b1
 JWord.W32 sltE 7d2ea4607a16ac54
+JWord.W32 smaxE e8517aa988b8463c
+JWord.W32 sminE 92a782917ed298b3
 JWord.W32 smodE cad42596ff78d557
 JWord.W32 subcE 4db9a93827906306
 JWord.W32 to_sintE 1ae8d0eecc344400
@@ -614,6 +628,8 @@ JWord.W32 to_uintE dced10e5cfeb828c
 JWord.W32 udivE 5ff3e94eec08be50
 JWord.W32 uleE 54a7461e3ef4be90
 JWord.W32 ultE 3580a6f7c1ec7d9e
+JWord.W32 umaxE 1168cfb7bc547ea1
+JWord.W32 uminE 2953020085690671
 JWord.W32 umodE 791b2f2c3124c693
 JWord.W32 w2bitsE 882f16e368cfacc1
 JWord.W32 wlslE 259b39800fb8e475
@@ -717,6 +733,8 @@ JWord.W64 sdivE c17d068cd7589760
 JWord.W64 setE 77f8fb1d9ef00466
 JWord.W64 sleE 7437de1a156baa30
 JWord.W64 sltE a49479b1e95f5c2c
+JWord.W64 smaxE e8517aa988b8463c
+JWord.W64 sminE 92a782917ed298b3
 JWord.W64 smodE cad42596ff78d557
 JWord.W64 subcE 7ff889f105c1aedc
 JWord.W64 to_sintE 6283ca02c4a67d22
@@ -724,6 +742,8 @@ JWord.W64 to_uintE 12a4334ee2704690
 JWord.W64 udivE 5ff3e94eec08be50
 JWord.W64 uleE 2668645e4e99b448
 JWord.W64 ultE 4f4b240c1d6fbbb2
+JWord.W64 umaxE 1168cfb7bc547ea1
+JWord.W64 uminE 2953020085690671
 JWord.W64 umodE 791b2f2c3124c693
 JWord.W64 w2bitsE 302fbc1e6e55ff11
 JWord.W64 wlslE 0d65762cc19435e5
@@ -757,6 +777,8 @@ JWord.W8 sdivE c17d068cd7589760
 JWord.W8 setE ed906639b95a19a9
 JWord.W8 sleE 39d94390402ab02f
 JWord.W8 sltE 522387ee74c78c3c
+JWord.W8 smaxE e8517aa988b8463c
+JWord.W8 sminE 92a782917ed298b3
 JWord.W8 smodE cad42596ff78d557
 JWord.W8 subcE e291f12adc5019ca
 JWord.W8 to_sintE 3dc13f79db2744d6
@@ -764,6 +786,8 @@ JWord.W8 to_uintE a707b2c1bb702e91
 JWord.W8 udivE 5ff3e94eec08be50
 JWord.W8 uleE 835bc7e755a77d09
 JWord.W8 ultE 44b95ba72a768811
+JWord.W8 umaxE 1168cfb7bc547ea1
+JWord.W8 uminE 2953020085690671
 JWord.W8 umodE 791b2f2c3124c693
 JWord.W8 w2bitsE e1e36369b0ed493a
 JWord.W8 wlslE 0ec689765d1a55e3
@@ -2686,29 +2710,29 @@ Bytes.cdiv op ee7b406c0ab517a9
 Bytes.slice op 854fe90ce0fe4882
 Bytes.trunc op dbfa66b2531e919e
 Bytes.zeros op 154c3ec3ff854145
-Ctx256.CF224.* nested a1e5fee68a771173 130
+Ctx256.CF224.* nested b0a18cd08e820979 130
 Ctx256.CF224.C module 4dc7af48ff4fefaa
 Ctx256.CF224.dsize op 2b7ca625a6917047
-Ctx256.CF256.* nested bb78480abae0473d 130
+Ctx256.CF256.* nested 2af2577d2bc303c2 130
 Ctx256.CF256.C module d232f013044489e6
 Ctx256.CF256.dsize op 6b3d878b3b693e8a
-Ctx256.CtxFinal256.* nested eae2115e29bfb708 130
+Ctx256.CtxFinal256.* nested 0bef767457704475 130
 Ctx256.CtxFinal256.C module 9e74b315c6165659
 Ctx256.CtxFinal256.dsize op e70b35f75f356a46
 Ctx256.ctx256 op 560c29c38a22a7b7
-Ctx512.CFsha384.* nested d87f0d9c5b9c75ce 130
+Ctx512.CFsha384.* nested e0bcb2b33e108d47 130
 Ctx512.CFsha384.C module 9f066434bd2a9365
 Ctx512.CFsha384.dsize op 8c437b8950faab2b
-Ctx512.CFsha512.* nested 096c395a7f016806 130
+Ctx512.CFsha512.* nested e531a8b913bc1218 130
 Ctx512.CFsha512.C module 0a80a222bf849425
 Ctx512.CFsha512.dsize op 91a75b86253a918a
-Ctx512.CFsha512_224.* nested 66c75ad052048586 130
+Ctx512.CFsha512_224.* nested 6bc987ee7019cff7 130
 Ctx512.CFsha512_224.C module 12a5bfbcd3c41c8e
 Ctx512.CFsha512_224.dsize op 2b7ca625a6917047
-Ctx512.CFsha512_256.* nested 71c1a3e2db1af031 130
+Ctx512.CFsha512_256.* nested ac09a7db247093c7 130
 Ctx512.CFsha512_256.C module 2acaa7c2dc65c4d3
 Ctx512.CFsha512_256.dsize op 6b3d878b3b693e8a
-Ctx512.CtxFinal512.* nested c556d7119f56ae0f 130
+Ctx512.CtxFinal512.* nested 05913b72377e3b9f 130
 Ctx512.CtxFinal512.C module 5b919c9b1557ab6f
 Ctx512.CtxFinal512.dsize op e70b35f75f356a46
 Ctx512.ctx512 op 29a3ac8dbecdc79b
@@ -2860,13 +2884,13 @@ SHA256_A64ScalarSafety.a64s256_I32 abbrev d2d9555de11544c0
 SHA256_A64ScalarSafety.a64s256_I64 abbrev b8e2bd4c11653990
 SHA256_A64ScalarSafety.a64s256_I8 abbrev 50ae7d2c7958f10e
 SHA256_Stream.Fin224.* nested 971d228d0b086ac1 64
-SHA256_Stream.Fin224.F module b24485ff2b4180d1
+SHA256_Stream.Fin224.F module 3adc9bce626b32f2
 SHA256_Stream.Fin224.dsize op 2b7ca625a6917047
 SHA256_Stream.Fin256.* nested 46de1854c5e345e4 64
-SHA256_Stream.Fin256.F module 4554fce342002457
+SHA256_Stream.Fin256.F module 881b3afb9cf6fd03
 SHA256_Stream.Fin256.dsize op 6b3d878b3b693e8a
 SHA256_Stream.Final256.* nested 73f9f7f87905da14 64
-SHA256_Stream.Final256.F module 4433e6e7a744fc53
+SHA256_Stream.Final256.F module 882f25cf8c1418be
 SHA256_Stream.Final256.dsize op e70b35f75f356a46
 SHA256_Stream.ab256 op 3a1659c35b2f2d93
 SHA256_Stream.memread abbrev 6dc8a74f4c453673
@@ -2940,19 +2964,19 @@ SHA512_A64ScalarSafety.a64s512_IH abbrev 697067012a10abb9
 SHA512_A64ScalarSafety.a64s512_IK abbrev d7e33119cb064709
 SHA512_A64ScalarSafety.a64s512_IW abbrev 7054540373427918
 SHA512_Stream.Final512.* nested 73f9f7f87905da14 64
-SHA512_Stream.Final512.F module 330d37a6af70f7cf
+SHA512_Stream.Final512.F module 84c68f9ab2174b97
 SHA512_Stream.Final512.dsize op e70b35f75f356a46
 SHA512_Stream.Finsha384.* nested e671d2917d467f45 64
-SHA512_Stream.Finsha384.F module 0d2b89389ecc8589
+SHA512_Stream.Finsha384.F module eaade471a558da53
 SHA512_Stream.Finsha384.dsize op 8c437b8950faab2b
 SHA512_Stream.Finsha512.* nested 5a6eb4633681bc6f 64
-SHA512_Stream.Finsha512.F module 762abd338126449b
+SHA512_Stream.Finsha512.F module e46df3cff9fcd12d
 SHA512_Stream.Finsha512.dsize op 91a75b86253a918a
 SHA512_Stream.Finsha512_224.* nested 971d228d0b086ac1 64
-SHA512_Stream.Finsha512_224.F module ac5eb4899dbabebf
+SHA512_Stream.Finsha512_224.F module bc12b2f96343f187
 SHA512_Stream.Finsha512_224.dsize op 2b7ca625a6917047
 SHA512_Stream.Finsha512_256.* nested 46de1854c5e345e4 64
-SHA512_Stream.Finsha512_256.F module c6ae51640d7367bb
+SHA512_Stream.Finsha512_256.F module c4d144c3e68c28cc
 SHA512_Stream.Finsha512_256.dsize op 6b3d878b3b693e8a
 SHA512_Stream.ab512 op 86ec547b9233b1f1
 SHA512_Stream.nf512 op 6dd6c9b9f718922b

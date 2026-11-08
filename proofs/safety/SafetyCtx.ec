@@ -369,7 +369,7 @@ sp; seq 1 : (valid trace__sha224_ctx___sha2_ctx_final /\ valid M.tmp__trace
              /\ BArray112.is_init ctx_init 0 112 /\ BArray28.is_init digest_init 0 28 /\ ms_init).
 + ecall (_sha224_ctx____ctx_finalize_proof ctx digest total ms ctx_init digest_init); auto => /> *.
   exact (full112_init 0 112).
-wp; while (valid trace__sha224_ctx___sha2_ctx_final /\ i_init /\ z_init /\ inc = 14 /\ 0 <= i <= 14
+wp; while (valid trace__sha224_ctx___sha2_ctx_final /\ i_init /\ z_init /\ 0 <= i <= 14
        /\ ctx_init = full112 /\ BArray28.is_init digest_init 0 28).
 + by auto => /> &m *; rewrite full112_set64d; smt().
 auto => /> &m *; split; 1: smt(full112E).
@@ -405,7 +405,7 @@ sp; seq 1 : (valid trace__sha256_ctx___sha2_ctx_final /\ valid M.tmp__trace
              /\ BArray112.is_init ctx_init 0 112 /\ BArray32.is_init digest_init 0 32 /\ ms_init).
 + ecall (_sha256_ctx____ctx_finalize_proof ctx digest total ms ctx_init digest_init); auto => /> *.
   exact (full112_init 0 112).
-wp; while (valid trace__sha256_ctx___sha2_ctx_final /\ i_init /\ z_init /\ inc = 14 /\ 0 <= i <= 14
+wp; while (valid trace__sha256_ctx___sha2_ctx_final /\ i_init /\ z_init /\ 0 <= i <= 14
        /\ ctx_init = full112 /\ BArray32.is_init digest_init 0 32).
 + by auto => /> &m *; rewrite full112_set64d; smt().
 auto => /> &m *; split; 1: smt(full112E).
@@ -457,7 +457,7 @@ sp; seq 1 : (valid trace__sha384_ctx___sha2_ctx_final /\ valid M.tmp__trace
              /\ BArray208.is_init ctx_init 0 208 /\ BArray48.is_init digest_init 0 48 /\ ms_init).
 + ecall (_sha384_ctx____ctx_finalize_proof ctx digest total ms ctx_init digest_init); auto => /> *.
   exact (full208_init 0 208).
-wp; while (valid trace__sha384_ctx___sha2_ctx_final /\ i_init /\ z_init /\ inc = 26 /\ 0 <= i <= 26
+wp; while (valid trace__sha384_ctx___sha2_ctx_final /\ i_init /\ z_init /\ 0 <= i <= 26
        /\ ctx_init = full208 /\ BArray48.is_init digest_init 0 48).
 + by auto => /> &m *; rewrite full208_set64d; smt().
 auto => /> &m *; split; 1: smt(full208E).
@@ -493,7 +493,7 @@ sp; seq 1 : (valid trace__sha512_ctx___sha2_ctx_final /\ valid M.tmp__trace
              /\ BArray208.is_init ctx_init 0 208 /\ BArray64.is_init digest_init 0 64 /\ ms_init).
 + ecall (_sha512_ctx____ctx_finalize_proof ctx digest total ms ctx_init digest_init); auto => /> *.
   exact (full208_init 0 208).
-wp; while (valid trace__sha512_ctx___sha2_ctx_final /\ i_init /\ z_init /\ inc = 26 /\ 0 <= i <= 26
+wp; while (valid trace__sha512_ctx___sha2_ctx_final /\ i_init /\ z_init /\ 0 <= i <= 26
        /\ ctx_init = full208 /\ BArray64.is_init digest_init 0 64).
 + by auto => /> &m *; rewrite full208_set64d; smt().
 auto => /> &m *; split; 1: smt(full208E).
@@ -529,7 +529,7 @@ sp; seq 1 : (valid trace__sha512_224_ctx___sha2_ctx_final /\ valid M.tmp__trace
              /\ BArray208.is_init ctx_init 0 208 /\ BArray28.is_init digest_init 0 28 /\ ms_init).
 + ecall (_sha512_224_ctx____ctx_finalize_proof ctx digest total ms ctx_init digest_init); auto => /> *.
   exact (full208_init 0 208).
-wp; while (valid trace__sha512_224_ctx___sha2_ctx_final /\ i_init /\ z_init /\ inc = 26 /\ 0 <= i <= 26
+wp; while (valid trace__sha512_224_ctx___sha2_ctx_final /\ i_init /\ z_init /\ 0 <= i <= 26
        /\ ctx_init = full208 /\ BArray28.is_init digest_init 0 28).
 + by auto => /> &m *; rewrite full208_set64d; smt().
 auto => /> &m *; split; 1: smt(full208E).
@@ -565,7 +565,7 @@ sp; seq 1 : (valid trace__sha512_256_ctx___sha2_ctx_final /\ valid M.tmp__trace
              /\ BArray208.is_init ctx_init 0 208 /\ BArray32.is_init digest_init 0 32 /\ ms_init).
 + ecall (_sha512_256_ctx____ctx_finalize_proof ctx digest total ms ctx_init digest_init); auto => /> *.
   exact (full208_init 0 208).
-wp; while (valid trace__sha512_256_ctx___sha2_ctx_final /\ i_init /\ z_init /\ inc = 26 /\ 0 <= i <= 26
+wp; while (valid trace__sha512_256_ctx___sha2_ctx_final /\ i_init /\ z_init /\ 0 <= i <= 26
        /\ ctx_init = full208 /\ BArray32.is_init digest_init 0 32).
 + by auto => /> &m *; rewrite full208_set64d; smt().
 auto => /> &m *; split; 1: smt(full208E).
@@ -618,7 +618,7 @@ sp; if; last first.
 + auto => /> *; split; 1: exact (full144_init 0 144).
   have -> : (W64.one = W64.zero) = false by smt(one_neq_zero).
   by move=> j /#.
-wp; while (valid trace___hmac_sha256_ctx_final /\ i_init /\ z_init /\ inc = 18 /\ 0 <= i <= 18
+wp; while (valid trace___hmac_sha256_ctx_final /\ i_init /\ z_init /\ 0 <= i <= 18
            /\ ctx_init = full144 /\ out_init = full32).
 + by auto => /> &m *; rewrite full144_set64d; smt().
 wp; while (valid trace___hmac_sha256_ctx_final /\ i_init /\ 0 <= i <= 4
@@ -692,7 +692,7 @@ sp; if; last first.
 + auto => /> *; split; 1: exact (full272_init 0 272).
   have -> : (W64.one = W64.zero) = false by smt(one_neq_zero).
   by move=> j /#.
-wp; while (valid trace___hmac_sha512_ctx_final /\ i_init /\ z_init /\ inc = 34 /\ 0 <= i <= 34
+wp; while (valid trace___hmac_sha512_ctx_final /\ i_init /\ z_init /\ 0 <= i <= 34
            /\ ctx_init = full272 /\ out_init = full64).
 + by auto => /> &m *; rewrite full272_set64d; smt().
 wp; while (valid trace___hmac_sha512_ctx_final /\ i_init /\ 0 <= i <= 8

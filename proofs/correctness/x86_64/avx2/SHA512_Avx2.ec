@@ -84,27 +84,27 @@ seq 2 : (iinv h0 nb0 m0 m1 h nb x wk 8 /\
   wp; skip => &hr hI; split; 1: by rewrite hI /=; smt().
   move=> i v hc [#] hJ hi0 hi1 hv; split; 1: exact hJ.
   by move=> k hk; apply hv; move: hk hc hi1; clear hI hJ hv; smt().
-seq 2 : (linv h0 nb0 m0 m1 h v x wk inc l).
+seq 1 : (linv h0 nb0 m0 m1 h v x wk nb l).
 + by wp; skip => &hr [hI hv]; exact (linv_init _ _ _ _ _ _ _ _ _ hI hv).
-while (linv h0 nb0 m0 m1 h v x wk inc l); last first.
+while (linv h0 nb0 m0 m1 h v x wk nb l); last first.
 + skip => &hr hI; split; 1: exact hI.
   move=> h1 l0 v0 wk0 x0 hc; rewrite /linv => [#] hi _ _ _ hl0 hl1 hh _ _.
   have hl : l0 = nb0 by move: hc hi hl1; clear hh; smt().
   by rewrite -hl -hh.
-seq 4 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 l t /\ rst v m s (sl m0 m1 h l t) t /\ t = 0).
+seq 4 : (oinv h0 nb0 m0 m1 h nb l /\ tctx x wk m0 m1 l t /\ rst v m s (sl m0 m1 h l t) t /\ t = 0).
 + wp; skip => &hr [hI hl].
   have [h1 [h2 h3]] := tinv_init _ _ _ _ _ _ _ _ _ _ m{hr} hI hl.
   by split; [exact h1 | split; [exact h2 | split; [exact h3 | done]]].
-seq 1 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 l 80 /\ rst v m s (sl m0 m1 h l 80) 80).
-+ while (oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 l t /\ rst v m s (sl m0 m1 h l t) t).
-  + seq 1 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 l t /\ t < 80 /\
+seq 1 : (oinv h0 nb0 m0 m1 h nb l /\ tctx x wk m0 m1 l 80 /\ rst v m s (sl m0 m1 h l 80) 80).
++ while (oinv h0 nb0 m0 m1 h nb l /\ tctx x wk m0 m1 l t /\ rst v m s (sl m0 m1 h l t) t).
+  + seq 1 : (oinv h0 nb0 m0 m1 h nb l /\ tctx x wk m0 m1 l t /\ t < 80 /\
              rinw v m s (schedule (lane l m0 m1)) (sl m0 m1 h l t) t).
     + wp; skip => &hr [[ho [hc hr]] ht].
       split; 1: exact ho. split; 1: exact hc. split; 1: exact ht.
       exact (tpre_step _ _ _ _ _ _ _ _ _ _ _ _ _ ho hc hr ht).
     exlim x, t => x0 t0.
     if.
-    + seq 1 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x0 wk m0 m1 l t0 /\ t0 < 80 /\ l = 0 /\ t0 < 64 /\
+    + seq 1 : (oinv h0 nb0 m0 m1 h nb l /\ tctx x0 wk m0 m1 l t0 /\ t0 < 80 /\ l = 0 /\ t0 < 64 /\
                t = t0 /\ rst v m s (sl m0 m1 h l (t0 + 1)) (t0 + 1) /\ x = xnext x0 (t0 %/ 2) (t0 %% 2)).
       + ecall (round_call (schedule (lane l m0 m1)) (sl m0 m1 h l t) t x (t %/ 2) (t %% 2)).
         skip => &hr [[[hx ht] [ho [hc [ht8 hri]]]] [hl hl64]].
@@ -126,7 +126,7 @@ seq 1 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 l 80 /\ rst v m s (sl m0 m
       rewrite hx ht.
       split; 1: exact ho. split; last exact hr.
       exact (tctx_even _ _ _ _ _ _ hc hl hl64 hodd).
-    seq 1 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x0 wk m0 m1 l t0 /\ t0 < 80 /\ !(l = 0 /\ t0 < 64) /\
+    seq 1 : (oinv h0 nb0 m0 m1 h nb l /\ tctx x0 wk m0 m1 l t0 /\ t0 < 80 /\ !(l = 0 /\ t0 < 64) /\
              t = t0 /\ rst v m s (sl m0 m1 h l (t0 + 1)) (t0 + 1) /\ x = xnext x0 0 2).
     + ecall (round_call (schedule (lane l m0 m1)) (sl m0 m1 h l t) t x 0 2).
       skip => &hr [[[hx ht] [ho [hc [ht8 hri]]]] hn].
@@ -145,13 +145,13 @@ seq 1 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 l 80 /\ rst v m s (sl m0 m
   have h80 : t0 = 80 by move: hc' => @/tctx [#] _ ht1; move: hn ht1; clear ho' hr'; smt().
   by subst t0; split; [exact ho' | split; [exact hc' | exact hr']].
 exlim h => hb.
-seq 3 : (finv h0 nb0 m0 m1 hb h v x wk inc l i /\ i = 0).
+seq 3 : (finv h0 nb0 m0 m1 hb h v x wk nb l i /\ i = 0).
 + wp; skip => &hr [hb' [ho [hc hr]]].
   move: ho hr; rewrite /SLH64.protect_ptr -hb' => ho hr.
   split; 2: done. split; 1: exact ho. split; 1: exact hc. split; 1: done.
   split; 1: by move=> k [hk0 hk1]; move: hk0 hk1; clear ho hc hr; smt().
   by move=> k hk; split; [done | exact (fin_v _ _ _ _ hr k hk)].
-wp; while (finv h0 nb0 m0 m1 hb h v x wk inc l i).
+wp; while (finv h0 nb0 m0 m1 hb h v x wk nb l i).
 + by wp; skip => &hr [hI hc]; exact (ff_step _ _ _ _ _ _ _ _ _ _ _ _ hI hc).
 skip => &hr [hI _]; split; 1: exact hI.
 move=> h' i' v' hc; rewrite /finv => [#] ho hc' hi0 hi1 hlo _.

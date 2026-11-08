@@ -109,33 +109,33 @@ lemma __sha512_avx2_proof _h _x _nb _ms _h_init _x_init :
   __sha512_avx2_spec _h _x _nb _ms _h_init _x_init.
 proof.
 rewrite /__sha512_avx2_spec; proc.
-wp; while (valid trace___sha512_avx2 /\ 0 <= l /\ inc = nb /\ 0 <= nb <= 2 /\
+wp; while (valid trace___sha512_avx2 /\ 0 <= l /\ 0 <= nb <= 2 /\
        BArray64.is_init h_init 0 64 /\ x_init = K256.full /\ v_init = K64.full /\
        BArray1280.is_init wk_init 0 (if l = 0 then 256 else 1280) /\
        l_init /\ nb_init /\ ms_init /\ i_init).
-+ wp; while (valid trace___sha512_avx2 /\ 0 <= l < inc /\ inc = nb /\ 0 <= nb <= 2 /\ 0 <= i <= 8 /\
++ wp; while (valid trace___sha512_avx2 /\ 0 <= l < nb /\ 0 <= nb <= 2 /\ 0 <= i <= 8 /\
              h_init = K64.full /\ x_init = K256.full /\ v_init = K64.full /\
              BArray1280.is_init wk_init 0 1280 /\
              l_init /\ nb_init /\ ms_init /\ i_init /\ s_init).
-  + wp; skip => &hr [[#] hval hl0 hl1 hinc hnb0 hnb1 hi0 hi1 hh hx hv hwk hli hnbi hmsi hii hsi] hc.
+  + wp; skip => &hr [[#] hval hl0 hl1 hnb0 hnb1 hi0 hi1 hh hx hv hwk hli hnbi hmsi hii hsi] hc.
     rewrite /= hh hv !K64.full_set64d !K64.full_init !valid_cat hval /valid /= hii hx hwk hli hnbi hmsi hsi /=.
-    by move: hi0 hc hl0 hl1 hinc hnb0 hnb1; clear hval hwk; smt().
-  wp; while (valid trace___sha512_avx2 /\ 0 <= l < inc /\ inc = nb /\ 0 <= nb <= 2 /\ 0 <= t <= 80 /\
+    by move: hi0 hc hl0 hl1 hnb0 hnb1; clear hval hwk; smt().
+  wp; while (valid trace___sha512_avx2 /\ 0 <= l < nb /\ 0 <= nb <= 2 /\ 0 <= t <= 80 /\
              BArray64.is_init h_init 0 64 /\ x_init = K256.full /\ v_init = K64.full /\
              BArray16.is_init m_init (8 * (t %% 2)) 8 /\
              BArray1280.is_init wk_init 0 (32 * (if l = 0 /\ t <= 64 then 8 + t %/ 2 else 40)) /\
              l_init /\ nb_init /\ ms_init /\ i_init /\ t_init /\ s_init).
-  + sp; seq 1 : (valid trace___sha512_avx2 /\ 0 <= l < inc /\ inc = nb /\ 0 <= nb <= 2 /\ 0 <= t < 80 /\
+  + sp; seq 1 : (valid trace___sha512_avx2 /\ 0 <= l < nb /\ 0 <= nb <= 2 /\ 0 <= t < 80 /\
                  BArray64.is_init h_init 0 64 /\ x_init = K256.full /\ v_init = K64.full /\
                  m_init = K16.full /\
                  BArray1280.is_init wk_init 0 (32 * (if l = 0 /\ t <= 64 then 8 + t %/ 2 else 40)) /\
                  l_init /\ nb_init /\ ms_init /\ i_init /\ t_init /\ s_init).
     + if.
       + wp; ecall (__sha512_avx2_round_proof v m s t x (t %/ 2) (t %% 2) v_init m_init x_init); wp; skip.
-        move=> &hr [[vi0 v0 tr0 [#] hv hvi htr hval hl0 hl1 hinc hnb0 hnb1 ht0 ht1 hh hx hvf hm hwk hli hnbi hmsi hii hti hsi ht80] _].
+        move=> &hr [[vi0 v0 tr0 [#] hv hvi htr hval hl0 hl1 hnb0 hnb1 ht0 ht1 hh hx hvf hm hwk hli hnbi hmsi hii hti hsi ht80] _].
         split; 1: by rewrite /= hvi hvf K64.full_set64d K64.full_init hx K256.full_init /= hm; smt().
         move=> _ r [[[hv' hm'] hx'] hval'].
-        have hl2 : 0 <= l{hr} < 2 by move: hl0 hl1 hinc hnb1; clear htr; smt().
+        have hl2 : 0 <= l{hr} < 2 by move: hl0 hl1 hnb1; clear htr; smt().
         have [hw0 hw1] := wk_idx t{hr} l{hr} _ hl2; 1: by split.
         have hwr : BArray1280.is_init wk_init{hr} ((4 * (t{hr} %/ 2) + 2 * l{hr} + t{hr} %% 2) * 8) 8.
         + by apply (K1280.is_init_sub _ 0 (32 * (if l{hr} = 0 /\ t{hr} <= 64 then 8 + t{hr} %/ 2 else 40))).
@@ -145,10 +145,10 @@ wp; while (valid trace___sha512_avx2 /\ 0 <= l /\ inc = nb /\ 0 <= nb <= 2 /\
         split; 1: by move: hw1; clear htr; smt().
         by do ?split => //; move: ht0 ht80; clear htr; smt().
     wp; ecall (__sha512_avx2_round_proof v m s t x 0 2 v_init m_init x_init); wp; skip.
-      move=> &hr [[vi0 v0 tr0 [#] hv hvi htr hval hl0 hl1 hinc hnb0 hnb1 ht0 ht1 hh hx hvf hm hwk hli hnbi hmsi hii hti hsi ht80] _].
+      move=> &hr [[vi0 v0 tr0 [#] hv hvi htr hval hl0 hl1 hnb0 hnb1 ht0 ht1 hh hx hvf hm hwk hli hnbi hmsi hii hti hsi ht80] _].
       split; 1: by rewrite /= hvi hvf K64.full_set64d K64.full_init hx K256.full_init /= hm; smt().
       move=> _ r [[[hv' hm'] hx'] hval'].
-      have hl2 : 0 <= l{hr} < 2 by move: hl0 hl1 hinc hnb1; clear htr; smt().
+      have hl2 : 0 <= l{hr} < 2 by move: hl0 hl1 hnb1; clear htr; smt().
       have [hw0 hw1] := wk_idx t{hr} l{hr} _ hl2; 1: by split.
       have hwr : BArray1280.is_init wk_init{hr} ((4 * (t{hr} %/ 2) + 2 * l{hr} + t{hr} %% 2) * 8) 8.
       + by apply (K1280.is_init_sub _ 0 (32 * (if l{hr} = 0 /\ t{hr} <= 64 then 8 + t{hr} %/ 2 else 40))).
@@ -157,7 +157,7 @@ wp; while (valid trace___sha512_avx2 /\ 0 <= l /\ inc = nb /\ 0 <= nb <= 2 /\
       rewrite !slot_b hw0 /=.
       split; 1: by move: hw1; clear htr; smt().
       by do ?split => //; move: ht0 ht80; clear htr; smt().
-    wp; skip => &hr [#] hval hl0 hl1 hinc hnb0 hnb1 ht0 ht1 hh hx hv hm hwk hli hnbi hmsi hii hti hsi.
+    wp; skip => &hr [#] hval hl0 hl1 hnb0 hnb1 ht0 ht1 hh hx hv hm hwk hli hnbi hmsi hii hti hsi.
     rewrite /= hx hv hm K16.full_init /=.
     case: ((l{hr} = 0 /\ t{hr} < 64) /\ t{hr} %% 2 = 1) => hc.
     + have [e1 e2] := wkn_odd _ _ hc.
@@ -168,7 +168,7 @@ wp; while (valid trace___sha512_avx2 /\ 0 <= l /\ inc = nb /\ 0 <= nb <= 2 /\
     have e := wkn_even l{hr} t{hr} _ hc; 1: by split.
     rewrite !valid_cat hval /valid /= hli hti hnbi e hwk /=.
     by do ?split => //; move: ht0 ht1; clear hval hwk; smt().
-  wp; skip => &hr [[#] hval hl0 hinc hnb0 hnb1 hh hx hv hwk hli hnbi hmsi hii] hl.
+  wp; skip => &hr [[#] hval hl0 hnb0 hnb1 hh hx hv hwk hli hnbi hmsi hii] hl.
   rewrite hv K64.full_init /=; split.
   + have hm0 : forall (m : BArray16.t),
       BArray16.is_init (BArray16.set64d m 0 (W64.of_int 18446744073709551615)) 0 8.
@@ -177,15 +177,15 @@ wp; while (valid trace___sha512_avx2 /\ 0 <= l /\ inc = nb /\ 0 <= nb <= 2 /\
     have hwk0 : BArray1280.is_init wk_init{hr} 0 (32 * if l{hr} = 0 then 8 else 40).
     + by move: hwk; case: (l{hr} = 0).
     rewrite hwk0 /=.
-    by do ?split => //; move: hl0 hl hinc hnb0 hnb1; clear hval hwk hwk0; smt().
-  move=> m0 s0 t0 tr0 vi0 wki0 xi0 hc [#] hval' _ _ _ _ _ ht0 ht1 _ hx' hv' _ hwk' _ _ _ _ hs0.
+    by do ?split => //; move: hl0 hl hnb0 hnb1; clear hval hwk hwk0; smt().
+  move=> m0 s0 t0 tr0 vi0 wki0 xi0 hc [#] hval' _ _ _ _ ht0 ht1 _ hx' hv' _ hwk' _ _ _ _ hs0.
   have h80 : t0 = 80 by move: hc ht1; clear hval' hwk'; smt().
   subst t0; move: hwk' => /= hwk'.
   rewrite hv' hx' K64.full_set64d K64.full_init /= hwk' hs0 /=.
   split; 1: by rewrite !valid_cat hval' /valid /= hmsi.
-  move=> h' i' tr' vi' hc' [#] hval'' _ _ _ _ _ _ _ hh' hv'' _ _ _.
+  move=> h' i' tr' vi' hc' [#] hval'' _ _ _ _ _ _ hh' hv'' _ _ _.
   rewrite hval'' hh' hv'' K64.full_init (_: (l{hr} + 1 = 0) = false) 1:/# /= hwk' /=.
-  by move: hl0 hinc hnb0 hnb1; clear hval hval' hval''; smt().
+  by move: hl0 hnb0 hnb1; clear hval hval' hval''; smt().
 wp; while (valid trace___sha512_avx2 /\ 0 <= i <= 8 /\ BArray64.is_init v_init 0 (8 * i) /\
            BArray64.is_init h_init 0 64 /\ BArray1280.is_init wk_init 0 256 /\
            i_init /\ nb_init /\ ms_init).
@@ -349,7 +349,7 @@ seq 10 : (valid trace__sha512_compress_blocks /\ p_init /\ n_init /\ ms_init /\ 
     rewrite !valid_cat hv hvr /valid /= hpi hni hmi hmsi /=.
     have := valid_sub _ _ _ 256 (128 * (W64.to_uint n{hr} - 2)) hval _ _ _; 1..3: by move: h2; clear hval; smt().
     by move=> ->.
-  wp; skip => &hr [#] 5!->> _ _ _ hh hlt hval0.
+  wp; skip => &hr [#] 5!->> hh hlt hval0.
   have hn : W64.to_uint n{hr} < 144115188075855872.
   + by move: hlt; rewrite W64.ultE W64.to_uint_small.
   have e : W64.to_uint (W64.of_int 128 * n{hr}) = 128 * W64.to_uint n{hr}.

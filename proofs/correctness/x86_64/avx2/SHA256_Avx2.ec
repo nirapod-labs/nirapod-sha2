@@ -103,27 +103,27 @@ seq 6 : (iinv h0 nb0 m0 m1 h nb x wk 4 /\ twice lo lo_mask128 /\ twice hi hi_mas
   move=> i v hc [#] hJ hlo hhi hi0 hi1 hv; split; 1: exact hJ.
   split; 1: exact hlo. split; 1: exact hhi.
   by move=> k hk; apply hv; move: hk hc hi1; clear hI hJ hv; smt().
-seq 2 : (linv h0 nb0 m0 m1 h v x wk lo hi inc l).
+seq 1 : (linv h0 nb0 m0 m1 h v x wk lo hi nb l).
 + by wp; skip => &hr [hI [hlo [hhi hv]]]; exact (linv_init _ _ _ _ _ _ _ _ _ _ _ hI hlo hhi hv).
-while (linv h0 nb0 m0 m1 h v x wk lo hi inc l); last first.
+while (linv h0 nb0 m0 m1 h v x wk lo hi nb l); last first.
 + skip => &hr hI; split; 1: exact hI.
   move=> h1 l0 v0 wk0 x0 hc; rewrite /linv => [#] hinc _ _ _ hl0 hl1 hh _ _ _ _.
   have hl : l0 = nb0 by move: hc hinc hl1; clear hh; smt().
   by rewrite -hl -hh.
-seq 4 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 lo hi l t /\ rst v m s (sl m0 m1 h l t) t /\ t = 0).
+seq 4 : (oinv h0 nb0 m0 m1 h nb l /\ tctx x wk m0 m1 lo hi l t /\ rst v m s (sl m0 m1 h l t) t /\ t = 0).
 + wp; skip => &hr [hI hl].
   have [h1 [h2 h3]] := tinv_init _ _ _ _ _ _ _ _ _ _ _ _ m{hr} hI hl.
   by split; [exact h1 | split; [exact h2 | split; [exact h3 | done]]].
-seq 1 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 lo hi l 64 /\ rst v m s (sl m0 m1 h l 64) 64).
-+ while (oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 lo hi l t /\ rst v m s (sl m0 m1 h l t) t).
-  + seq 1 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 lo hi l t /\ t < 64 /\
+seq 1 : (oinv h0 nb0 m0 m1 h nb l /\ tctx x wk m0 m1 lo hi l 64 /\ rst v m s (sl m0 m1 h l 64) 64).
++ while (oinv h0 nb0 m0 m1 h nb l /\ tctx x wk m0 m1 lo hi l t /\ rst v m s (sl m0 m1 h l t) t).
+  + seq 1 : (oinv h0 nb0 m0 m1 h nb l /\ tctx x wk m0 m1 lo hi l t /\ t < 64 /\
              rinw v m s (schedule (lane l m0 m1)) (sl m0 m1 h l t) t).
     + wp; skip => &hr [[ho [hc hr]] ht].
       split; 1: exact ho. split; 1: exact hc. split; 1: exact ht.
       exact (tpre_step _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ho hc hr ht).
     exlim x, t => x0 t0.
     if.
-    + seq 1 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x0 wk m0 m1 lo hi l t0 /\ t0 < 64 /\ l = 0 /\ t0 < 48 /\
+    + seq 1 : (oinv h0 nb0 m0 m1 h nb l /\ tctx x0 wk m0 m1 lo hi l t0 /\ t0 < 64 /\ l = 0 /\ t0 < 48 /\
                t = t0 /\ rst v m s (sl m0 m1 h l (t0 + 1)) (t0 + 1) /\
                x = xnext x0 lo hi (t0 %/ 4) (t0 %% 4)).
       + ecall (round_call (schedule (lane l m0 m1)) (sl m0 m1 h l t) t x lo hi (t %/ 4) (t %% 4)).
@@ -146,7 +146,7 @@ seq 1 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 lo hi l 64 /\ rst v m s (s
       rewrite hx ht.
       split; 1: exact ho. split; last exact hr.
       exact (tctx_nw _ _ _ _ _ _ _ _ hc hl hl48 h2).
-    seq 1 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x0 wk m0 m1 lo hi l t0 /\ t0 < 64 /\ !(l = 0 /\ t0 < 48) /\
+    seq 1 : (oinv h0 nb0 m0 m1 h nb l /\ tctx x0 wk m0 m1 lo hi l t0 /\ t0 < 64 /\ !(l = 0 /\ t0 < 48) /\
              t = t0 /\ rst v m s (sl m0 m1 h l (t0 + 1)) (t0 + 1) /\ x = xnext x0 lo hi 0 3).
     + ecall (round_call (schedule (lane l m0 m1)) (sl m0 m1 h l t) t x lo hi 0 3).
       skip => &hr [[[hx ht] [ho [hc [ht8 hri]]]] hn].
@@ -165,13 +165,13 @@ seq 1 : (oinv h0 nb0 m0 m1 h inc l /\ tctx x wk m0 m1 lo hi l 64 /\ rst v m s (s
   have h64 : t0 = 64 by move: hc' => @/tctx [#] _ ht1; move: hn ht1; clear ho' hr'; smt().
   by subst t0; split; [exact ho' | split; [exact hc' | exact hr']].
 exlim h => hb.
-seq 3 : (finv h0 nb0 m0 m1 hb h v x wk lo hi inc l i /\ i = 0).
+seq 3 : (finv h0 nb0 m0 m1 hb h v x wk lo hi nb l i /\ i = 0).
 + wp; skip => &hr [hb' [ho [hc hr]]].
   move: ho hr; rewrite /SLH64.protect_ptr -hb' => ho hr.
   split; 2: done. split; 1: exact ho. split; 1: exact hc. split; 1: done.
   split; 1: by move=> k [hk0 hk1]; move: hk0 hk1; clear ho hc hr; smt().
   by move=> k hk; split; [done | exact (fin_v _ _ _ _ hr k hk)].
-wp; while (finv h0 nb0 m0 m1 hb h v x wk lo hi inc l i).
+wp; while (finv h0 nb0 m0 m1 hb h v x wk lo hi nb l i).
 + by wp; skip => &hr [hI hc]; exact (ff_step _ _ _ _ _ _ _ _ _ _ _ _ _ _ hI hc).
 skip => &hr [hI _]; split; 1: exact hI.
 move=> h' i' v' hc; rewrite /finv => [#] ho hc' hi0 hi1 hlo _.

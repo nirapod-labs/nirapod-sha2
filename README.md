@@ -17,7 +17,7 @@ What is proved, and under which assumptions, is in
 
 ## Building
 
-The pinned toolchain and its patch series are described in
+The pinned toolchain is described in
 [toolchain](docs/TOOLCHAIN.md).
 
 If you just want to build and test the library, here is a TL;DR:

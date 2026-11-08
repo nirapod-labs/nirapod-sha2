@@ -409,7 +409,7 @@ while (valid trace__sha256_x8_compress_lanes /\ ms_init /\ off_init /\ n_init /\
   rewrite a64x8_I128_init /=; split; 1: smt().
   move=> _ r1 [hr12 hr13].
   by rewrite !valid_cat !a64x8_valid1 htr hr13 hmsi (a64x8_full256 _ hr12) /=; smt().
-auto => &m [#] <- <- _ <- <- <- _ _ _ _ _ _ _ _ _ hh hin hlt hoff v0 v1 v2 v3 v4 v5 v6 v7.
+auto => &m [#] <- <- _ <- <- <- _ hh hin hlt hoff v0 v1 v2 v3 v4 v5 v6 v7.
 have hn : W64.to_uint _n < 288230376151711744.
 + by move: hlt; rewrite W64.ultE W64.to_uint_small.
 have e : W64.to_uint (W64.of_int 64 * _n) = 64 * W64.to_uint _n.

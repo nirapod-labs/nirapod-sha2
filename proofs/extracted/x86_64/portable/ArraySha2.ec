@@ -581,7 +581,6 @@ module M = {
   proc _sha256___sha256_finalize (out:BArray32.t, h:BArray32.t,
                                   buf:BArray64.t, total:W64.t, ms:W64.t) : 
   BArray32.t * BArray32.t * BArray64.t * W64.t = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -619,9 +618,8 @@ module M = {
     (* Erased call to unspill *)
     out <- (protect_ptr out ms);
     buf <- (protect_ptr buf ms);
-    inc <- (32 %/ 4);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (32 %/ 4))) {
       x <- (BArray32.get32 h i);
       x <@ __bswap32 (x);
       out <- (BArray32.set32 out i x);
@@ -649,7 +647,6 @@ module M = {
   proc _sha224___sha256_finalize (out:BArray28.t, h:BArray32.t,
                                   buf:BArray64.t, total:W64.t, ms:W64.t) : 
   BArray28.t * BArray32.t * BArray64.t * W64.t = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -687,9 +684,8 @@ module M = {
     (* Erased call to unspill *)
     out <- (protect_ptr out ms);
     buf <- (protect_ptr buf ms);
-    inc <- (28 %/ 4);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (28 %/ 4))) {
       x <- (BArray32.get32 h i);
       x <@ __bswap32 (x);
       out <- (BArray28.set32 out i x);
@@ -991,7 +987,6 @@ module M = {
   proc _sha512___sha512_finalize (out:BArray64.t, h:BArray64.t,
                                   buf:BArray128.t, total:W64.t, ms:W64.t) : 
   BArray64.t * BArray64.t * BArray128.t * W64.t = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -1034,17 +1029,15 @@ module M = {
     (* Erased call to unspill *)
     out <- (protect_ptr out ms);
     buf <- (protect_ptr buf ms);
-    inc <- (64 %/ 8);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (64 %/ 8))) {
       x <- (BArray64.get64 h i);
       x <@ __bswap64 (x);
       out <- (BArray64.set64 out i x);
       i <- (i + 1);
     }
-    inc <- ((64 + 7) %/ 8);
     i <- (64 %/ 8);
-    while ((i < inc)) {
+    while ((i < ((64 + 7) %/ 8))) {
       x <- (BArray64.get64 h i);
       x <- (x `>>` (W8.of_int 32));
       y <- (truncateu32 x);
@@ -1074,7 +1067,6 @@ module M = {
   proc _sha384___sha512_finalize (out:BArray48.t, h:BArray64.t,
                                   buf:BArray128.t, total:W64.t, ms:W64.t) : 
   BArray48.t * BArray64.t * BArray128.t * W64.t = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -1117,17 +1109,15 @@ module M = {
     (* Erased call to unspill *)
     out <- (protect_ptr out ms);
     buf <- (protect_ptr buf ms);
-    inc <- (48 %/ 8);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (48 %/ 8))) {
       x <- (BArray64.get64 h i);
       x <@ __bswap64 (x);
       out <- (BArray48.set64 out i x);
       i <- (i + 1);
     }
-    inc <- ((48 + 7) %/ 8);
     i <- (48 %/ 8);
-    while ((i < inc)) {
+    while ((i < ((48 + 7) %/ 8))) {
       x <- (BArray64.get64 h i);
       x <- (x `>>` (W8.of_int 32));
       y <- (truncateu32 x);
@@ -1157,7 +1147,6 @@ module M = {
   proc _sha512_224___sha512_finalize (out:BArray28.t, h:BArray64.t,
                                       buf:BArray128.t, total:W64.t, ms:W64.t) : 
   BArray28.t * BArray64.t * BArray128.t * W64.t = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -1200,17 +1189,15 @@ module M = {
     (* Erased call to unspill *)
     out <- (protect_ptr out ms);
     buf <- (protect_ptr buf ms);
-    inc <- (28 %/ 8);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (28 %/ 8))) {
       x <- (BArray64.get64 h i);
       x <@ __bswap64 (x);
       out <- (BArray28.set64 out i x);
       i <- (i + 1);
     }
-    inc <- ((28 + 7) %/ 8);
     i <- (28 %/ 8);
-    while ((i < inc)) {
+    while ((i < ((28 + 7) %/ 8))) {
       x <- (BArray64.get64 h i);
       x <- (x `>>` (W8.of_int 32));
       y <- (truncateu32 x);
@@ -1241,7 +1228,6 @@ module M = {
   proc _sha512_256___sha512_finalize (out:BArray32.t, h:BArray64.t,
                                       buf:BArray128.t, total:W64.t, ms:W64.t) : 
   BArray32.t * BArray64.t * BArray128.t * W64.t = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -1284,17 +1270,15 @@ module M = {
     (* Erased call to unspill *)
     out <- (protect_ptr out ms);
     buf <- (protect_ptr buf ms);
-    inc <- (32 %/ 8);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (32 %/ 8))) {
       x <- (BArray64.get64 h i);
       x <@ __bswap64 (x);
       out <- (BArray32.set64 out i x);
       i <- (i + 1);
     }
-    inc <- ((32 + 7) %/ 8);
     i <- (32 %/ 8);
-    while ((i < inc)) {
+    while ((i < ((32 + 7) %/ 8))) {
       x <- (BArray64.get64 h i);
       x <- (x `>>` (W8.of_int 32));
       y <- (truncateu32 x);

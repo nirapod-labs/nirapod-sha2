@@ -2210,7 +2210,6 @@ module M = {
                                                          BArray32.t *
                                                          BArray32.t *
                                                          BArray64.t * trace = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -2434,9 +2433,8 @@ module M = {
     buf <- (protect_ptr buf ms);
     buf_init <- (BArray64.init_arr (W8.of_int 255));
     i_init <- true;
-    inc <- (32 %/ 4);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (32 %/ 4))) {
       trace__sha256___sha256_finalize <-
       (trace__sha256___sha256_finalize ++ [(Assert, i_init)]);
       trace__sha256___sha256_finalize <-
@@ -2554,7 +2552,6 @@ module M = {
                                                          BArray28.t *
                                                          BArray32.t *
                                                          BArray64.t * trace = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -2778,9 +2775,8 @@ module M = {
     buf <- (protect_ptr buf ms);
     buf_init <- (BArray64.init_arr (W8.of_int 255));
     i_init <- true;
-    inc <- (28 %/ 4);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (28 %/ 4))) {
       trace__sha224___sha256_finalize <-
       (trace__sha224___sha256_finalize ++ [(Assert, i_init)]);
       trace__sha224___sha256_finalize <-
@@ -4220,7 +4216,6 @@ module M = {
                                                           BArray64.t *
                                                           BArray64.t *
                                                           BArray128.t * trace = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -4473,9 +4468,8 @@ module M = {
     buf <- (protect_ptr buf ms);
     buf_init <- (BArray128.init_arr (W8.of_int 255));
     i_init <- true;
-    inc <- (64 %/ 8);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (64 %/ 8))) {
       trace__sha512___sha512_finalize <-
       (trace__sha512___sha512_finalize ++ [(Assert, i_init)]);
       trace__sha512___sha512_finalize <-
@@ -4511,9 +4505,8 @@ module M = {
       i <- (i + 1);
     }
     i_init <- true;
-    inc <- ((64 + 7) %/ 8);
     i <- (64 %/ 8);
-    while ((i < inc)) {
+    while ((i < ((64 + 7) %/ 8))) {
       trace__sha512___sha512_finalize <-
       (trace__sha512___sha512_finalize ++ [(Assert, i_init)]);
       trace__sha512___sha512_finalize <-
@@ -4640,7 +4633,6 @@ module M = {
                                                           BArray48.t *
                                                           BArray64.t *
                                                           BArray128.t * trace = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -4893,9 +4885,8 @@ module M = {
     buf <- (protect_ptr buf ms);
     buf_init <- (BArray128.init_arr (W8.of_int 255));
     i_init <- true;
-    inc <- (48 %/ 8);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (48 %/ 8))) {
       trace__sha384___sha512_finalize <-
       (trace__sha384___sha512_finalize ++ [(Assert, i_init)]);
       trace__sha384___sha512_finalize <-
@@ -4931,9 +4922,8 @@ module M = {
       i <- (i + 1);
     }
     i_init <- true;
-    inc <- ((48 + 7) %/ 8);
     i <- (48 %/ 8);
-    while ((i < inc)) {
+    while ((i < ((48 + 7) %/ 8))) {
       trace__sha384___sha512_finalize <-
       (trace__sha384___sha512_finalize ++ [(Assert, i_init)]);
       trace__sha384___sha512_finalize <-
@@ -5061,7 +5051,6 @@ module M = {
                                                               BArray64.t *
                                                               BArray128.t *
                                                               trace = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -5314,9 +5303,8 @@ module M = {
     buf <- (protect_ptr buf ms);
     buf_init <- (BArray128.init_arr (W8.of_int 255));
     i_init <- true;
-    inc <- (28 %/ 8);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (28 %/ 8))) {
       trace__sha512_224___sha512_finalize <-
       (trace__sha512_224___sha512_finalize ++ [(Assert, i_init)]);
       trace__sha512_224___sha512_finalize <-
@@ -5352,9 +5340,8 @@ module M = {
       i <- (i + 1);
     }
     i_init <- true;
-    inc <- ((28 + 7) %/ 8);
     i <- (28 %/ 8);
-    while ((i < inc)) {
+    while ((i < ((28 + 7) %/ 8))) {
       trace__sha512_224___sha512_finalize <-
       (trace__sha512_224___sha512_finalize ++ [(Assert, i_init)]);
       trace__sha512_224___sha512_finalize <-
@@ -5482,7 +5469,6 @@ module M = {
                                                               BArray64.t *
                                                               BArray128.t *
                                                               trace = {
-    var inc:int;
     var fill:W64.t;
     var t:W64.t;
     var two_blocks:bool;
@@ -5735,9 +5721,8 @@ module M = {
     buf <- (protect_ptr buf ms);
     buf_init <- (BArray128.init_arr (W8.of_int 255));
     i_init <- true;
-    inc <- (32 %/ 8);
     i <- 0;
-    while ((i < inc)) {
+    while ((i < (32 %/ 8))) {
       trace__sha512_256___sha512_finalize <-
       (trace__sha512_256___sha512_finalize ++ [(Assert, i_init)]);
       trace__sha512_256___sha512_finalize <-
@@ -5773,9 +5758,8 @@ module M = {
       i <- (i + 1);
     }
     i_init <- true;
-    inc <- ((32 + 7) %/ 8);
     i <- (32 %/ 8);
-    while ((i < inc)) {
+    while ((i < ((32 + 7) %/ 8))) {
       trace__sha512_256___sha512_finalize <-
       (trace__sha512_256___sha512_finalize ++ [(Assert, i_init)]);
       trace__sha512_256___sha512_finalize <-
@@ -17653,19 +17637,11 @@ op __fill64_mem_spec _buf _dst_ _p_ _n_ _ms _buf_init =
    (((_buf_init = buf_init) /\
     ((_ms = ms) /\
     ((_n_ = n_) /\ ((_p_ = p_) /\ ((_dst_ = dst_) /\ (_buf = buf)))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((_dst_ \ule (W64.of_int 64)) /\ (_n_ \ule (W64.of_int 64))) /\
      ((_dst_ + _n_) \ule (W64.of_int 64))) /\
     (BArray64.is_init _buf_init 0 (W64.to_uint _dst_))) /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _p_) (W64.to_uint _n_))))))))))) ==>
-   ((true /\
-    (true /\ (BArray64.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))))) /\
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _p_) (W64.to_uint _n_)))) ==>
+   ((BArray64.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))) /\
    (valid res.`4))].
 
 op __fill128_mem_spec _buf _dst_ _p_ _n_ _ms _buf_init =
@@ -17673,46 +17649,28 @@ op __fill128_mem_spec _buf _dst_ _p_ _n_ _ms _buf_init =
    (((_buf_init = buf_init) /\
     ((_ms = ms) /\
     ((_n_ = n_) /\ ((_p_ = p_) /\ ((_dst_ = dst_) /\ (_buf = buf)))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((_dst_ \ule (W64.of_int 128)) /\ (_n_ \ule (W64.of_int 128))) /\
      ((_dst_ + _n_) \ule (W64.of_int 128))) /\
     (BArray128.is_init _buf_init 0 (W64.to_uint _dst_))) /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _p_) (W64.to_uint _n_))))))))))) ==>
-   ((true /\
-    (true /\ (BArray128.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))))) /\
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _p_) (W64.to_uint _n_)))) ==>
+   ((BArray128.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))) /\
    (valid res.`4))].
 
 op __zero64_spec _buf _lo_ _hi _ms _buf_init =
    hoare [M.__zero64 :
    (((_buf_init = buf_init) /\
     ((_ms = ms) /\ ((_hi = hi) /\ ((_lo_ = lo_) /\ (_buf = buf))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((_lo_ \ule _hi) /\ (_hi \ule (W64.of_int 64))) /\
-   (BArray64.is_init _buf_init 0 (W64.to_uint _lo_)))))))) ==>
-   ((true /\ (BArray64.is_init res.`3 0 (W64.to_uint _hi))) /\
-   (valid res.`4))].
+   (BArray64.is_init _buf_init 0 (W64.to_uint _lo_)))) ==>
+   ((BArray64.is_init res.`3 0 (W64.to_uint _hi)) /\ (valid res.`4))].
 
 op __zero128_spec _buf _lo_ _hi _ms _buf_init =
    hoare [M.__zero128 :
    (((_buf_init = buf_init) /\
     ((_ms = ms) /\ ((_hi = hi) /\ ((_lo_ = lo_) /\ (_buf = buf))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((_lo_ \ule _hi) /\ (_hi \ule (W64.of_int 128))) /\
-   (BArray128.is_init _buf_init 0 (W64.to_uint _lo_)))))))) ==>
-   ((true /\ (BArray128.is_init res.`3 0 (W64.to_uint _hi))) /\
-   (valid res.`4))].
+   (BArray128.is_init _buf_init 0 (W64.to_uint _lo_)))) ==>
+   ((BArray128.is_init res.`3 0 (W64.to_uint _hi)) /\ (valid res.`4))].
 
 op __Sigma0_256_spec _x =
    hoare [M.__Sigma0_256 : ((_x = x) /\ true) ==> (true /\ (valid res.`2))].
@@ -17742,22 +17700,18 @@ op _sha256_compress_spec _h _block _ms _h_init _block_init =
 op _sha256_compress_one_spec _h _p _ms _h_init =
    hoare [M._sha256_compress_one :
    (((_h_init = h_init) /\ ((_ms = ms) /\ ((_p = p) /\ (_h = h)))) /\
-   (true /\
    ((BArray32.is_init _h_init 0 32) /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _p) 64)))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _p) 64))) ==>
    ((BArray32.is_init res.`3 0 32) /\ (valid res.`4))].
 
 op _sha256_compress_blocks_spec _h _p _n _ms _h_init =
    hoare [M._sha256_compress_blocks :
    (((_h_init = h_init) /\
     ((_ms = ms) /\ ((_n = n) /\ ((_p = p) /\ (_h = h))))) /\
-   (true /\
-   (true /\
-   (true /\
    (((BArray32.is_init _h_init 0 32) /\
     (_n \ult (W64.of_int 288230376151711744))) /\
    (is_valid ptr_modulus Glob.mem_v (W64.to_uint _p)
-   (W64.to_uint ((W64.of_int 64) * _n)))))))) ==>
+   (W64.to_uint ((W64.of_int 64) * _n))))) ==>
    ((BArray32.is_init res.`3 0 32) /\ (valid res.`4))].
 
 op __sha256_init_spec _h _h_init =
@@ -17777,22 +17731,13 @@ op _sha256_absorb_mem_spec _h _buf _total _in _inlen _ms _h_init _buf_init =
     ((_ms = ms) /\
     ((_inlen = inlen) /\
     ((_in = in_0) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h)))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (true /\
    (((BArray32.is_init _h_init 0 32) /\
     (BArray64.is_init _buf_init 0
     (W64.to_uint (_total \umod (W64.of_int 64))))) /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    (((BArray32.is_init res.`5 0 32) /\
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))) ==>
+   ((((BArray32.is_init res.`5 0 32) /\
      (BArray64.is_init res.`6 0 (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
-    (res.`3 = (_total + _inlen)))))))) /\
+    (res.`3 = (_total + _inlen))) /\
    (valid res.`7))].
 
 op _sha256___sha256_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init =
@@ -17802,11 +17747,9 @@ op _sha256___sha256_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_total = total) /\ ((_buf = buf) /\ ((_h = h) /\ (_out = out)))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
    ((BArray32.is_init _h_init 0 32) /\
    (BArray64.is_init _buf_init 0 (W64.to_uint (_total \umod (W64.of_int 64)))
-   ))))) ==>
+   ))) ==>
    ((((BArray32.is_init res.`5 0 32) /\ (BArray32.is_init res.`6 0 32)) /\
     (BArray64.is_init res.`7 0 64)) /\
    (valid res.`8))].
@@ -17817,10 +17760,8 @@ op _sha256____sha256_mem_from_spec _out _h _in _inlen _ms _out_init _h_init =
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_inlen = inlen) /\ ((_in = in_0) /\ ((_h = h) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
    ((BArray32.is_init _h_init 0 32) /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))) ==>
    ((BArray32.is_init res.`3 0 32) /\ (valid res.`4))].
 
 op _sha224___sha256_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init =
@@ -17830,11 +17771,9 @@ op _sha224___sha256_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_total = total) /\ ((_buf = buf) /\ ((_h = h) /\ (_out = out)))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
    ((BArray32.is_init _h_init 0 32) /\
    (BArray64.is_init _buf_init 0 (W64.to_uint (_total \umod (W64.of_int 64)))
-   ))))) ==>
+   ))) ==>
    ((((BArray28.is_init res.`5 0 28) /\ (BArray32.is_init res.`6 0 32)) /\
     (BArray64.is_init res.`7 0 64)) /\
    (valid res.`8))].
@@ -17845,28 +17784,22 @@ op _sha224____sha256_mem_from_spec _out _h _in _inlen _ms _out_init _h_init =
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_inlen = inlen) /\ ((_in = in_0) /\ ((_h = h) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
    ((BArray32.is_init _h_init 0 32) /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))) ==>
    ((BArray28.is_init res.`3 0 28) /\ (valid res.`4))].
 
 op _sha256_mem_spec _out _in _inlen _ms _out_init =
    hoare [M._sha256_mem :
    (((_out_init = out_init) /\
     ((_ms = ms) /\ ((_inlen = inlen) /\ ((_in = in_0) /\ (_out = out))))) /\
-   (true /\
-   (true /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen))))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen))) ==>
    ((BArray32.is_init res.`3 0 32) /\ (valid res.`4))].
 
 op _sha224_mem_spec _out _in _inlen _ms _out_init =
    hoare [M._sha224_mem :
    (((_out_init = out_init) /\
     ((_ms = ms) /\ ((_inlen = inlen) /\ ((_in = in_0) /\ (_out = out))))) /\
-   (true /\
-   (true /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen))))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen))) ==>
    ((BArray28.is_init res.`3 0 28) /\ (valid res.`4))].
 
 op __Sigma0_512_spec _x =
@@ -17897,22 +17830,18 @@ op _sha512_compress_spec _h _block _ms _h_init _block_init =
 op _sha512_compress_one_spec _h _p _ms _h_init =
    hoare [M._sha512_compress_one :
    (((_h_init = h_init) /\ ((_ms = ms) /\ ((_p = p) /\ (_h = h)))) /\
-   (true /\
    ((BArray64.is_init _h_init 0 64) /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _p) 128)))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _p) 128))) ==>
    ((BArray64.is_init res.`3 0 64) /\ (valid res.`4))].
 
 op _sha512_compress_blocks_spec _h _p _n _ms _h_init =
    hoare [M._sha512_compress_blocks :
    (((_h_init = h_init) /\
     ((_ms = ms) /\ ((_n = n) /\ ((_p = p) /\ (_h = h))))) /\
-   (true /\
-   (true /\
-   (true /\
    (((BArray64.is_init _h_init 0 64) /\
     (_n \ult (W64.of_int 144115188075855872))) /\
    (is_valid ptr_modulus Glob.mem_v (W64.to_uint _p)
-   (W64.to_uint ((W64.of_int 128) * _n)))))))) ==>
+   (W64.to_uint ((W64.of_int 128) * _n))))) ==>
    ((BArray64.is_init res.`3 0 64) /\ (valid res.`4))].
 
 op __sha512_load_iv_spec _h _iv _h_init _iv_init =
@@ -17949,23 +17878,14 @@ op _sha512_absorb_mem_spec _h _buf _total _in _inlen _ms _h_init _buf_init =
     ((_ms = ms) /\
     ((_inlen = inlen) /\
     ((_in = in_0) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h)))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (true /\
    (((BArray64.is_init _h_init 0 64) /\
     (BArray128.is_init _buf_init 0
     (W64.to_uint (_total \umod (W64.of_int 128))))) /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    (((BArray64.is_init res.`5 0 64) /\
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))) ==>
+   ((((BArray64.is_init res.`5 0 64) /\
      (BArray128.is_init res.`6 0
      (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
-    (res.`3 = (_total + _inlen)))))))) /\
+    (res.`3 = (_total + _inlen))) /\
    (valid res.`7))].
 
 op _sha512___sha512_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init =
@@ -17975,11 +17895,9 @@ op _sha512___sha512_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_total = total) /\ ((_buf = buf) /\ ((_h = h) /\ (_out = out)))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
    ((BArray64.is_init _h_init 0 64) /\
    (BArray128.is_init _buf_init 0
-   (W64.to_uint (_total \umod (W64.of_int 128)))))))) ==>
+   (W64.to_uint (_total \umod (W64.of_int 128)))))) ==>
    ((((BArray64.is_init res.`5 0 64) /\ (BArray64.is_init res.`6 0 64)) /\
     (BArray128.is_init res.`7 0 128)) /\
    (valid res.`8))].
@@ -17990,10 +17908,8 @@ op _sha512____sha512_mem_from_spec _out _h _in _inlen _ms _out_init _h_init =
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_inlen = inlen) /\ ((_in = in_0) /\ ((_h = h) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
    ((BArray64.is_init _h_init 0 64) /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))) ==>
    ((BArray64.is_init res.`3 0 64) /\ (valid res.`4))].
 
 op _sha384___sha512_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init =
@@ -18003,11 +17919,9 @@ op _sha384___sha512_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_total = total) /\ ((_buf = buf) /\ ((_h = h) /\ (_out = out)))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
    ((BArray64.is_init _h_init 0 64) /\
    (BArray128.is_init _buf_init 0
-   (W64.to_uint (_total \umod (W64.of_int 128)))))))) ==>
+   (W64.to_uint (_total \umod (W64.of_int 128)))))) ==>
    ((((BArray48.is_init res.`5 0 48) /\ (BArray64.is_init res.`6 0 64)) /\
     (BArray128.is_init res.`7 0 128)) /\
    (valid res.`8))].
@@ -18018,10 +17932,8 @@ op _sha384____sha512_mem_from_spec _out _h _in _inlen _ms _out_init _h_init =
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_inlen = inlen) /\ ((_in = in_0) /\ ((_h = h) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
    ((BArray64.is_init _h_init 0 64) /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))) ==>
    ((BArray48.is_init res.`3 0 48) /\ (valid res.`4))].
 
 op _sha512_224___sha512_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init =
@@ -18031,11 +17943,9 @@ op _sha512_224___sha512_finalize_spec _out _h _buf _total _ms _out_init _h_init 
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_total = total) /\ ((_buf = buf) /\ ((_h = h) /\ (_out = out)))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
    ((BArray64.is_init _h_init 0 64) /\
    (BArray128.is_init _buf_init 0
-   (W64.to_uint (_total \umod (W64.of_int 128)))))))) ==>
+   (W64.to_uint (_total \umod (W64.of_int 128)))))) ==>
    ((((BArray28.is_init res.`5 0 28) /\ (BArray64.is_init res.`6 0 64)) /\
     (BArray128.is_init res.`7 0 128)) /\
    (valid res.`8))].
@@ -18046,10 +17956,8 @@ op _sha512_224____sha512_mem_from_spec _out _h _in _inlen _ms _out_init _h_init 
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_inlen = inlen) /\ ((_in = in_0) /\ ((_h = h) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
    ((BArray64.is_init _h_init 0 64) /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))) ==>
    ((BArray28.is_init res.`3 0 28) /\ (valid res.`4))].
 
 op _sha512_256___sha512_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init =
@@ -18059,11 +17967,9 @@ op _sha512_256___sha512_finalize_spec _out _h _buf _total _ms _out_init _h_init 
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_total = total) /\ ((_buf = buf) /\ ((_h = h) /\ (_out = out)))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
    ((BArray64.is_init _h_init 0 64) /\
    (BArray128.is_init _buf_init 0
-   (W64.to_uint (_total \umod (W64.of_int 128)))))))) ==>
+   (W64.to_uint (_total \umod (W64.of_int 128)))))) ==>
    ((((BArray32.is_init res.`5 0 32) /\ (BArray64.is_init res.`6 0 64)) /\
     (BArray128.is_init res.`7 0 128)) /\
    (valid res.`8))].
@@ -18074,46 +17980,36 @@ op _sha512_256____sha512_mem_from_spec _out _h _in _inlen _ms _out_init _h_init 
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_inlen = inlen) /\ ((_in = in_0) /\ ((_h = h) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
    ((BArray64.is_init _h_init 0 64) /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen)))) ==>
    ((BArray32.is_init res.`3 0 32) /\ (valid res.`4))].
 
 op _sha512_mem_spec _out _in _inlen _ms _out_init =
    hoare [M._sha512_mem :
    (((_out_init = out_init) /\
     ((_ms = ms) /\ ((_inlen = inlen) /\ ((_in = in_0) /\ (_out = out))))) /\
-   (true /\
-   (true /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen))))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen))) ==>
    ((BArray64.is_init res.`3 0 64) /\ (valid res.`4))].
 
 op _sha384_mem_spec _out _in _inlen _ms _out_init =
    hoare [M._sha384_mem :
    (((_out_init = out_init) /\
     ((_ms = ms) /\ ((_inlen = inlen) /\ ((_in = in_0) /\ (_out = out))))) /\
-   (true /\
-   (true /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen))))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen))) ==>
    ((BArray48.is_init res.`3 0 48) /\ (valid res.`4))].
 
 op _sha512_224_mem_spec _out _in _inlen _ms _out_init =
    hoare [M._sha512_224_mem :
    (((_out_init = out_init) /\
     ((_ms = ms) /\ ((_inlen = inlen) /\ ((_in = in_0) /\ (_out = out))))) /\
-   (true /\
-   (true /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen))))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen))) ==>
    ((BArray28.is_init res.`3 0 28) /\ (valid res.`4))].
 
 op _sha512_256_mem_spec _out _in _inlen _ms _out_init =
    hoare [M._sha512_256_mem :
    (((_out_init = out_init) /\
     ((_ms = ms) /\ ((_inlen = inlen) /\ ((_in = in_0) /\ (_out = out))))) /\
-   (true /\
-   (true /\
-   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen))))) ==>
+   (is_valid ptr_modulus Glob.mem_v (W64.to_uint _in) (W64.to_uint _inlen))) ==>
    ((BArray32.is_init res.`3 0 32) /\ (valid res.`4))].
 
 op _sha256_x8_compress_spec _h8 _blocks _ms _h8_init _blocks_init =
@@ -18131,48 +18027,6 @@ op _sha256_x8_compress_lanes_spec _h8 _in _off _n _ms _h8_init _in_init =
     ((_h8_init = h8_init) /\
     ((_ms = ms) /\
     ((_n = n) /\ ((_off = off) /\ ((_in = in_0) /\ (_h8 = h8))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (((0 <= (0 * 8)) /\ (((0 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (0 * 8) 8) /\
-   (true /\
-   (true /\
-   (true /\
-   (((0 <= (1 * 8)) /\ (((1 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (1 * 8) 8) /\
-   (true /\
-   (true /\
-   (true /\
-   (((0 <= (2 * 8)) /\ (((2 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (2 * 8) 8) /\
-   (true /\
-   (true /\
-   (true /\
-   (((0 <= (3 * 8)) /\ (((3 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (3 * 8) 8) /\
-   (true /\
-   (true /\
-   (true /\
-   (((0 <= (4 * 8)) /\ (((4 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (4 * 8) 8) /\
-   (true /\
-   (true /\
-   (true /\
-   (((0 <= (5 * 8)) /\ (((5 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (5 * 8) 8) /\
-   (true /\
-   (true /\
-   (true /\
-   (((0 <= (6 * 8)) /\ (((6 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (6 * 8) 8) /\
-   (true /\
-   (true /\
-   (true /\
-   (((0 <= (7 * 8)) /\ (((7 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (7 * 8) 8) /\
-   (true /\
-   (true /\
    ((((((((((((BArray256.is_init _h8_init 0 256) /\
              (BArray64.is_init _in_init 0 64)) /\
             (_n \ult (W64.of_int 288230376151711744))) /\
@@ -18200,7 +18054,7 @@ op _sha256_x8_compress_lanes_spec _h8 _in _off _n _ms _h8_init _in_init =
     (W64.to_uint ((W64.of_int 64) * _n)))) /\
    (is_valid ptr_modulus Glob.mem_v
    (W64.to_uint ((BArray64.get64 _in 7) + _off))
-   (W64.to_uint ((W64.of_int 64) * _n))))))))))))))))))))))))))))))))))))))))))))))) ==>
+   (W64.to_uint ((W64.of_int 64) * _n))))) ==>
    ((BArray256.is_init res.`3 0 256) /\ (valid res.`4))].
 
 op __sha256_x8_init_spec _h _h_init =
@@ -18227,55 +18081,6 @@ op _sha256_x8_absorb_lanes_spec _h _buf _total _in _inlen _ms _h_init _buf_init 
     ((_ms = ms) /\
     ((_inlen = inlen) /\
     ((_in = in_0) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (true /\
-   (((0 <= (0 * 8)) /\ (((0 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (0 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (1 * 8)) /\ (((1 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (1 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (2 * 8)) /\ (((2 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (2 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (3 * 8)) /\ (((3 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (3 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (4 * 8)) /\ (((4 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (4 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (5 * 8)) /\ (((5 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (5 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (6 * 8)) /\ (((6 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (6 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (7 * 8)) /\ (((7 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (7 * 8) 8) /\
-   (true /\
    (((((((((((((((((((BArray256.is_init _h_init 0 256) /\
                     (BArray512.is_init _buf_init 0
                     (W64.to_uint (_total \umod (W64.of_int 64))))) /\
@@ -18310,27 +18115,8 @@ op _sha256_x8_absorb_lanes_spec _h _buf _total _in _inlen _ms _h_init _buf_init 
     (is_valid ptr_modulus Glob.mem_v (W64.to_uint (BArray64.get64 _in 6))
     (W64.to_uint _inlen))) /\
    (is_valid ptr_modulus Glob.mem_v (W64.to_uint (BArray64.get64 _in 7))
-   (W64.to_uint _inlen))))))))))))))))))))))))))))))))))))))))))))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    ((((((((((BArray256.is_init res.`5 0 256) /\
+   (W64.to_uint _inlen)))) ==>
+   (((((((((((BArray256.is_init res.`5 0 256) /\
             (BArray512.is_init res.`6 0
             (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
            (BArray512.is_init res.`6 64
@@ -18347,7 +18133,7 @@ op _sha256_x8_absorb_lanes_spec _h _buf _total _in _inlen _ms _h_init _buf_init 
       (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
      (BArray512.is_init res.`6 448
      (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
-    (res.`3 = (_total + _inlen)))))))))))))))))))))) /\
+    (res.`3 = (_total + _inlen))) /\
    (valid res.`7))].
 
 op _sha256_x8_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init =
@@ -18357,22 +18143,6 @@ op _sha256_x8_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init 
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_total = total) /\ ((_buf = buf) /\ ((_h = h) /\ (_out = out)))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
    (((((((((BArray256.is_init _h_init 0 256) /\
           (BArray512.is_init _buf_init 0
           (W64.to_uint (_total \umod (W64.of_int 64))))) /\
@@ -18389,7 +18159,7 @@ op _sha256_x8_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init 
     (BArray512.is_init _buf_init 384
     (W64.to_uint (_total \umod (W64.of_int 64))))) /\
    (BArray512.is_init _buf_init 448
-   (W64.to_uint (_total \umod (W64.of_int 64)))))))))))))))))))))) ==>
+   (W64.to_uint (_total \umod (W64.of_int 64)))))) ==>
    ((((BArray256.is_init res.`5 0 256) /\ (BArray256.is_init res.`6 0 256)) /\
     (BArray512.is_init res.`7 0 512)) /\
    (valid res.`8))].
@@ -18399,39 +18169,6 @@ op _sha256_x8_lanes_spec _out _in _len _ms _out_init _in_init =
    (((_in_init = in_init) /\
     ((_out_init = out_init) /\
     ((_ms = ms) /\ ((_len = len) /\ ((_in = in_0) /\ (_out = out)))))) /\
-   (true /\
-   (true /\
-   (((0 <= (0 * 8)) /\ (((0 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (0 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (1 * 8)) /\ (((1 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (1 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (2 * 8)) /\ (((2 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (2 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (3 * 8)) /\ (((3 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (3 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (4 * 8)) /\ (((4 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (4 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (5 * 8)) /\ (((5 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (5 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (6 * 8)) /\ (((6 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (6 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (7 * 8)) /\ (((7 * 8) + 8) <= 64)) /\
-   ((BArray64.is_init _in_init (7 * 8) 8) /\
-   (true /\
    ((((((((((_len \ult (W64.of_int 2305843009213693952)) /\
            (BArray64.is_init _in_init 0 64)) /\
           (is_valid ptr_modulus Glob.mem_v
@@ -18449,7 +18186,7 @@ op _sha256_x8_lanes_spec _out _in _len _ms _out_init _in_init =
     (is_valid ptr_modulus Glob.mem_v (W64.to_uint (BArray64.get64 _in 6))
     (W64.to_uint _len))) /\
    (is_valid ptr_modulus Glob.mem_v (W64.to_uint (BArray64.get64 _in 7))
-   (W64.to_uint _len))))))))))))))))))))))))))))))))))))) ==>
+   (W64.to_uint _len)))) ==>
    ((BArray256.is_init res.`3 0 256) /\ (valid res.`4))].
 
 op _sha512_x4_compress_spec _h4 _blocks _ms _h4_init _blocks_init =
@@ -18467,28 +18204,6 @@ op _sha512_x4_compress_lanes_spec _h4 _in _off _n _ms _h4_init _in_init =
     ((_h4_init = h4_init) /\
     ((_ms = ms) /\
     ((_n = n) /\ ((_off = off) /\ ((_in = in_0) /\ (_h4 = h4))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (((0 <= (0 * 8)) /\ (((0 * 8) + 8) <= 32)) /\
-   ((BArray32.is_init _in_init (0 * 8) 8) /\
-   (true /\
-   (true /\
-   (true /\
-   (((0 <= (1 * 8)) /\ (((1 * 8) + 8) <= 32)) /\
-   ((BArray32.is_init _in_init (1 * 8) 8) /\
-   (true /\
-   (true /\
-   (true /\
-   (((0 <= (2 * 8)) /\ (((2 * 8) + 8) <= 32)) /\
-   ((BArray32.is_init _in_init (2 * 8) 8) /\
-   (true /\
-   (true /\
-   (true /\
-   (((0 <= (3 * 8)) /\ (((3 * 8) + 8) <= 32)) /\
-   ((BArray32.is_init _in_init (3 * 8) 8) /\
-   (true /\
-   (true /\
    ((((((((BArray256.is_init _h4_init 0 256) /\
          (BArray32.is_init _in_init 0 32)) /\
         (_n \ult (W64.of_int 144115188075855872))) /\
@@ -18504,7 +18219,7 @@ op _sha512_x4_compress_lanes_spec _h4 _in _off _n _ms _h4_init _in_init =
     (W64.to_uint ((W64.of_int 128) * _n)))) /\
    (is_valid ptr_modulus Glob.mem_v
    (W64.to_uint ((BArray32.get64 _in 3) + _off))
-   (W64.to_uint ((W64.of_int 128) * _n))))))))))))))))))))))))))) ==>
+   (W64.to_uint ((W64.of_int 128) * _n))))) ==>
    ((BArray256.is_init res.`3 0 256) /\ (valid res.`4))].
 
 op __sha512_x4_init_spec _h _h_init =
@@ -18531,31 +18246,6 @@ op _sha512_x4_absorb_lanes_spec _h _buf _total _in _inlen _ms _h_init _buf_init 
     ((_ms = ms) /\
     ((_inlen = inlen) /\
     ((_in = in_0) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (true /\
-   (((0 <= (0 * 8)) /\ (((0 * 8) + 8) <= 32)) /\
-   ((BArray32.is_init _in_init (0 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (1 * 8)) /\ (((1 * 8) + 8) <= 32)) /\
-   ((BArray32.is_init _in_init (1 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (2 * 8)) /\ (((2 * 8) + 8) <= 32)) /\
-   ((BArray32.is_init _in_init (2 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (3 * 8)) /\ (((3 * 8) + 8) <= 32)) /\
-   ((BArray32.is_init _in_init (3 * 8) 8) /\
-   (true /\
    (((((((((((BArray256.is_init _h_init 0 256) /\
             (BArray512.is_init _buf_init 0
             (W64.to_uint (_total \umod (W64.of_int 128))))) /\
@@ -18574,19 +18264,8 @@ op _sha512_x4_absorb_lanes_spec _h _buf _total _in _inlen _ms _h_init _buf_init 
     (is_valid ptr_modulus Glob.mem_v (W64.to_uint (BArray32.get64 _in 2))
     (W64.to_uint _inlen))) /\
    (is_valid ptr_modulus Glob.mem_v (W64.to_uint (BArray32.get64 _in 3))
-   (W64.to_uint _inlen))))))))))))))))))))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    ((((((BArray256.is_init res.`5 0 256) /\
+   (W64.to_uint _inlen)))) ==>
+   (((((((BArray256.is_init res.`5 0 256) /\
         (BArray512.is_init res.`6 0
         (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
        (BArray512.is_init res.`6 128
@@ -18595,7 +18274,7 @@ op _sha512_x4_absorb_lanes_spec _h _buf _total _in _inlen _ms _h_init _buf_init 
       (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
      (BArray512.is_init res.`6 384
      (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
-    (res.`3 = (_total + _inlen)))))))))))))) /\
+    (res.`3 = (_total + _inlen))) /\
    (valid res.`7))].
 
 op _sha512_x4_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init =
@@ -18605,14 +18284,6 @@ op _sha512_x4_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init 
     ((_out_init = out_init) /\
     ((_ms = ms) /\
     ((_total = total) /\ ((_buf = buf) /\ ((_h = h) /\ (_out = out)))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
    (((((BArray256.is_init _h_init 0 256) /\
       (BArray512.is_init _buf_init 0
       (W64.to_uint (_total \umod (W64.of_int 128))))) /\
@@ -18621,7 +18292,7 @@ op _sha512_x4_finalize_spec _out _h _buf _total _ms _out_init _h_init _buf_init 
     (BArray512.is_init _buf_init 256
     (W64.to_uint (_total \umod (W64.of_int 128))))) /\
    (BArray512.is_init _buf_init 384
-   (W64.to_uint (_total \umod (W64.of_int 128)))))))))))))) ==>
+   (W64.to_uint (_total \umod (W64.of_int 128)))))) ==>
    ((((BArray256.is_init res.`5 0 256) /\ (BArray256.is_init res.`6 0 256)) /\
     (BArray512.is_init res.`7 0 512)) /\
    (valid res.`8))].
@@ -18631,23 +18302,6 @@ op _sha512_x4_lanes_spec _out _in _len _ms _out_init _in_init =
    (((_in_init = in_init) /\
     ((_out_init = out_init) /\
     ((_ms = ms) /\ ((_len = len) /\ ((_in = in_0) /\ (_out = out)))))) /\
-   (true /\
-   (true /\
-   (((0 <= (0 * 8)) /\ (((0 * 8) + 8) <= 32)) /\
-   ((BArray32.is_init _in_init (0 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (1 * 8)) /\ (((1 * 8) + 8) <= 32)) /\
-   ((BArray32.is_init _in_init (1 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (2 * 8)) /\ (((2 * 8) + 8) <= 32)) /\
-   ((BArray32.is_init _in_init (2 * 8) 8) /\
-   (true /\
-   (true /\
-   (((0 <= (3 * 8)) /\ (((3 * 8) + 8) <= 32)) /\
-   ((BArray32.is_init _in_init (3 * 8) 8) /\
-   (true /\
    ((((((_len \ult (W64.of_int 2305843009213693952)) /\
        (BArray32.is_init _in_init 0 32)) /\
       (is_valid ptr_modulus Glob.mem_v (W64.to_uint (BArray32.get64 _in 0))
@@ -18657,7 +18311,7 @@ op _sha512_x4_lanes_spec _out _in _len _ms _out_init _in_init =
     (is_valid ptr_modulus Glob.mem_v (W64.to_uint (BArray32.get64 _in 2))
     (W64.to_uint _len))) /\
    (is_valid ptr_modulus Glob.mem_v (W64.to_uint (BArray32.get64 _in 3))
-   (W64.to_uint _len))))))))))))))))))))) ==>
+   (W64.to_uint _len)))) ==>
    ((BArray256.is_init res.`3 0 256) /\ (valid res.`4))].
 
 op a1____fill64_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
@@ -18667,24 +18321,13 @@ op a1____fill64_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
     ((_ms = ms) /\
     ((_n_ = n_) /\
     ((_off_ = off_) /\ ((_a = a) /\ ((_dst_ = dst_) /\ (_buf = buf)))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((_dst_ \ule (W64.of_int 64)) /\ (_n_ \ule (W64.of_int 64))) /\
        ((_dst_ + _n_) \ule (W64.of_int 64))) /\
       (BArray64.is_init _buf_init 0 (W64.to_uint _dst_))) /\
      (_off_ \ule (W64.of_int 1))) /\
     ((_off_ + _n_) \ule (W64.of_int 1))) /\
-   (BArray1.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))))))))))))) ==>
-   ((true /\
-    (true /\ (BArray64.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))))) /\
+   (BArray1.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))) ==>
+   ((BArray64.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))) /\
    (valid res.`4))].
 
 op a1____fill128_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
@@ -18694,24 +18337,13 @@ op a1____fill128_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
     ((_ms = ms) /\
     ((_n_ = n_) /\
     ((_off_ = off_) /\ ((_a = a) /\ ((_dst_ = dst_) /\ (_buf = buf)))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((_dst_ \ule (W64.of_int 128)) /\ (_n_ \ule (W64.of_int 128))) /\
        ((_dst_ + _n_) \ule (W64.of_int 128))) /\
       (BArray128.is_init _buf_init 0 (W64.to_uint _dst_))) /\
      (_off_ \ule (W64.of_int 1))) /\
     ((_off_ + _n_) \ule (W64.of_int 1))) /\
-   (BArray1.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))))))))))))) ==>
-   ((true /\
-    (true /\ (BArray128.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))))) /\
+   (BArray1.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))) ==>
+   ((BArray128.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))) /\
    (valid res.`4))].
 
 op a1___sha256_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_init _a_init =
@@ -18723,29 +18355,16 @@ op a1___sha256_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_in
     ((_len = len) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h)))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((BArray32.is_init _h_init 0 32) /\
        (BArray64.is_init _buf_init 0
        (W64.to_uint (_total \umod (W64.of_int 64))))) /\
       (_off \ule (W64.of_int 1))) /\
      (_len \ule (W64.of_int 1))) /\
     ((_off + _len) \ule (W64.of_int 1))) /\
-   (BArray1.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    (((BArray32.is_init res.`5 0 32) /\
+   (BArray1.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
+   ((((BArray32.is_init res.`5 0 32) /\
      (BArray64.is_init res.`6 0 (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
-    (res.`3 = (_total + _len)))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a1___sha512_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_init _a_init =
@@ -18757,30 +18376,17 @@ op a1___sha512_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_in
     ((_len = len) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h)))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((BArray64.is_init _h_init 0 64) /\
        (BArray128.is_init _buf_init 0
        (W64.to_uint (_total \umod (W64.of_int 128))))) /\
       (_off \ule (W64.of_int 1))) /\
      (_len \ule (W64.of_int 1))) /\
     ((_off + _len) \ule (W64.of_int 1))) /\
-   (BArray1.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    (((BArray64.is_init res.`5 0 64) /\
+   (BArray1.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
+   ((((BArray64.is_init res.`5 0 64) /\
      (BArray128.is_init res.`6 0
      (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
-    (res.`3 = (_total + _len)))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a1___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_init _buf_init _a_init =
@@ -18793,52 +18399,6 @@ op a1___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_i
     ((_stride = stride) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h))))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((((((((((((((((BArray256.is_init _h_init 0 256) /\
                       (BArray512.is_init _buf_init 0
                       (W64.to_uint (_total \umod (W64.of_int 64))))) /\
@@ -18877,27 +18437,8 @@ op a1___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_i
     (BArray1.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 6) * _stride))) (W64.to_uint _len))) /\
    (BArray1.is_init _a_init (W64.to_uint (_off + ((W64.of_int 7) * _stride)))
-   (W64.to_uint _len)))))))))))))))))))))))))))))))))))))))))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    ((((((((((BArray256.is_init res.`5 0 256) /\
+   (W64.to_uint _len)))) ==>
+   (((((((((((BArray256.is_init res.`5 0 256) /\
             (BArray512.is_init res.`6 0
             (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
            (BArray512.is_init res.`6 64
@@ -18914,7 +18455,7 @@ op a1___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_i
       (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
      (BArray512.is_init res.`6 448
      (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
-    (res.`3 = (_total + _len)))))))))))))))))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a1___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_init _buf_init _a_init =
@@ -18927,32 +18468,6 @@ op a1___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_i
     ((_stride = stride) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h))))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((((((((BArray256.is_init _h_init 0 256) /\
               (BArray512.is_init _buf_init 0
               (W64.to_uint (_total \umod (W64.of_int 128))))) /\
@@ -18973,19 +18488,8 @@ op a1___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_i
     (BArray1.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 2) * _stride))) (W64.to_uint _len))) /\
    (BArray1.is_init _a_init (W64.to_uint (_off + ((W64.of_int 3) * _stride)))
-   (W64.to_uint _len)))))))))))))))))))))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    ((((((BArray256.is_init res.`5 0 256) /\
+   (W64.to_uint _len)))) ==>
+   (((((((BArray256.is_init res.`5 0 256) /\
         (BArray512.is_init res.`6 0
         (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
        (BArray512.is_init res.`6 128
@@ -18994,7 +18498,7 @@ op a1___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_i
       (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
      (BArray512.is_init res.`6 384
      (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
-    (res.`3 = (_total + _len)))))))))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a1__sha256_spec _out _a _off _len _out_init _a_init =
@@ -19002,15 +18506,9 @@ op a1__sha256_spec _out _a _off _len _out_init _a_init =
    (((_a_init = a_init) /\
     ((_out_init = out_init) /\
     ((_len = len) /\ ((_off = off) /\ ((_a = a) /\ (_out = out)))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((_off \ule (W64.of_int 1)) /\ (_len \ule (W64.of_int 1))) /\
     ((_off + _len) \ule (W64.of_int 1))) /\
-   (BArray1.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))) ==>
+   (BArray1.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
    ((BArray32.is_init res.`2 0 32) /\ (valid res.`3))].
 
 op a1__sha512_spec _out _a _off _len _out_init _a_init =
@@ -19018,15 +18516,9 @@ op a1__sha512_spec _out _a _off _len _out_init _a_init =
    (((_a_init = a_init) /\
     ((_out_init = out_init) /\
     ((_len = len) /\ ((_off = off) /\ ((_a = a) /\ (_out = out)))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((_off \ule (W64.of_int 1)) /\ (_len \ule (W64.of_int 1))) /\
     ((_off + _len) \ule (W64.of_int 1))) /\
-   (BArray1.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))) ==>
+   (BArray1.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
    ((BArray64.is_init res.`2 0 64) /\ (valid res.`3))].
 
 op a1__sha256_x8_spec _out _a _off _stride _len _out_init _a_init =
@@ -19035,36 +18527,6 @@ op a1__sha256_x8_spec _out _a _off _stride _len _out_init _a_init =
     ((_out_init = out_init) /\
     ((_len = len) /\
     ((_stride = stride) /\ ((_off = off) /\ ((_a = a) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((((((((_off \ule (W64.of_int 1)) /\ (_stride \ule (W64.of_int 1))) /\
             (_len \ule (W64.of_int 1))) /\
            (((_off + ((W64.of_int 7) * _stride)) + _len) \ule (W64.of_int 1))) /\
@@ -19085,7 +18547,7 @@ op a1__sha256_x8_spec _out _a _off _stride _len _out_init _a_init =
     (BArray1.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 6) * _stride))) (W64.to_uint _len))) /\
    (BArray1.is_init _a_init (W64.to_uint (_off + ((W64.of_int 7) * _stride)))
-   (W64.to_uint _len)))))))))))))))))))))))))))))))))) ==>
+   (W64.to_uint _len)))) ==>
    ((BArray256.is_init res.`2 0 256) /\ (valid res.`3))].
 
 op a1__sha512_x4_spec _out _a _off _stride _len _out_init _a_init =
@@ -19094,24 +18556,6 @@ op a1__sha512_x4_spec _out _a _off _stride _len _out_init _a_init =
     ((_out_init = out_init) /\
     ((_len = len) /\
     ((_stride = stride) /\ ((_off = off) /\ ((_a = a) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((((_off \ule (W64.of_int 1)) /\ (_stride \ule (W64.of_int 1))) /\
         (_len \ule (W64.of_int 1))) /\
        (((_off + ((W64.of_int 3) * _stride)) + _len) \ule (W64.of_int 1))) /\
@@ -19122,7 +18566,7 @@ op a1__sha512_x4_spec _out _a _off _stride _len _out_init _a_init =
     (BArray1.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 2) * _stride))) (W64.to_uint _len))) /\
    (BArray1.is_init _a_init (W64.to_uint (_off + ((W64.of_int 3) * _stride)))
-   (W64.to_uint _len)))))))))))))))))))))) ==>
+   (W64.to_uint _len)))) ==>
    ((BArray256.is_init res.`2 0 256) /\ (valid res.`3))].
 
 op a64____fill64_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
@@ -19132,24 +18576,13 @@ op a64____fill64_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
     ((_ms = ms) /\
     ((_n_ = n_) /\
     ((_off_ = off_) /\ ((_a = a) /\ ((_dst_ = dst_) /\ (_buf = buf)))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((_dst_ \ule (W64.of_int 64)) /\ (_n_ \ule (W64.of_int 64))) /\
        ((_dst_ + _n_) \ule (W64.of_int 64))) /\
       (BArray64.is_init _buf_init 0 (W64.to_uint _dst_))) /\
      (_off_ \ule (W64.of_int 64))) /\
     ((_off_ + _n_) \ule (W64.of_int 64))) /\
-   (BArray64.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))))))))))))) ==>
-   ((true /\
-    (true /\ (BArray64.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))))) /\
+   (BArray64.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))) ==>
+   ((BArray64.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))) /\
    (valid res.`4))].
 
 op a64____fill128_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
@@ -19159,24 +18592,13 @@ op a64____fill128_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
     ((_ms = ms) /\
     ((_n_ = n_) /\
     ((_off_ = off_) /\ ((_a = a) /\ ((_dst_ = dst_) /\ (_buf = buf)))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((_dst_ \ule (W64.of_int 128)) /\ (_n_ \ule (W64.of_int 128))) /\
        ((_dst_ + _n_) \ule (W64.of_int 128))) /\
       (BArray128.is_init _buf_init 0 (W64.to_uint _dst_))) /\
      (_off_ \ule (W64.of_int 64))) /\
     ((_off_ + _n_) \ule (W64.of_int 64))) /\
-   (BArray64.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))))))))))))) ==>
-   ((true /\
-    (true /\ (BArray128.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))))) /\
+   (BArray64.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))) ==>
+   ((BArray128.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))) /\
    (valid res.`4))].
 
 op a64___sha256_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_init _a_init =
@@ -19188,29 +18610,16 @@ op a64___sha256_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_i
     ((_len = len) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h)))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((BArray32.is_init _h_init 0 32) /\
        (BArray64.is_init _buf_init 0
        (W64.to_uint (_total \umod (W64.of_int 64))))) /\
       (_off \ule (W64.of_int 64))) /\
      (_len \ule (W64.of_int 64))) /\
     ((_off + _len) \ule (W64.of_int 64))) /\
-   (BArray64.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    (((BArray32.is_init res.`5 0 32) /\
+   (BArray64.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
+   ((((BArray32.is_init res.`5 0 32) /\
      (BArray64.is_init res.`6 0 (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
-    (res.`3 = (_total + _len)))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a64___sha512_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_init _a_init =
@@ -19222,30 +18631,17 @@ op a64___sha512_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_i
     ((_len = len) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h)))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((BArray64.is_init _h_init 0 64) /\
        (BArray128.is_init _buf_init 0
        (W64.to_uint (_total \umod (W64.of_int 128))))) /\
       (_off \ule (W64.of_int 64))) /\
      (_len \ule (W64.of_int 64))) /\
     ((_off + _len) \ule (W64.of_int 64))) /\
-   (BArray64.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    (((BArray64.is_init res.`5 0 64) /\
+   (BArray64.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
+   ((((BArray64.is_init res.`5 0 64) /\
      (BArray128.is_init res.`6 0
      (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
-    (res.`3 = (_total + _len)))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a64___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_init _buf_init _a_init =
@@ -19258,52 +18654,6 @@ op a64___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_
     ((_stride = stride) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h))))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((((((((((((((((BArray256.is_init _h_init 0 256) /\
                       (BArray512.is_init _buf_init 0
                       (W64.to_uint (_total \umod (W64.of_int 64))))) /\
@@ -19343,27 +18693,8 @@ op a64___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_
     (BArray64.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 6) * _stride))) (W64.to_uint _len))) /\
    (BArray64.is_init _a_init
-   (W64.to_uint (_off + ((W64.of_int 7) * _stride))) (W64.to_uint _len)))))))))))))))))))))))))))))))))))))))))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    ((((((((((BArray256.is_init res.`5 0 256) /\
+   (W64.to_uint (_off + ((W64.of_int 7) * _stride))) (W64.to_uint _len)))) ==>
+   (((((((((((BArray256.is_init res.`5 0 256) /\
             (BArray512.is_init res.`6 0
             (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
            (BArray512.is_init res.`6 64
@@ -19380,7 +18711,7 @@ op a64___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_
       (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
      (BArray512.is_init res.`6 448
      (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
-    (res.`3 = (_total + _len)))))))))))))))))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a64___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_init _buf_init _a_init =
@@ -19393,32 +18724,6 @@ op a64___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_
     ((_stride = stride) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h))))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((((((((BArray256.is_init _h_init 0 256) /\
               (BArray512.is_init _buf_init 0
               (W64.to_uint (_total \umod (W64.of_int 128))))) /\
@@ -19439,19 +18744,8 @@ op a64___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_
     (BArray64.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 2) * _stride))) (W64.to_uint _len))) /\
    (BArray64.is_init _a_init
-   (W64.to_uint (_off + ((W64.of_int 3) * _stride))) (W64.to_uint _len)))))))))))))))))))))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    ((((((BArray256.is_init res.`5 0 256) /\
+   (W64.to_uint (_off + ((W64.of_int 3) * _stride))) (W64.to_uint _len)))) ==>
+   (((((((BArray256.is_init res.`5 0 256) /\
         (BArray512.is_init res.`6 0
         (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
        (BArray512.is_init res.`6 128
@@ -19460,7 +18754,7 @@ op a64___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_
       (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
      (BArray512.is_init res.`6 384
      (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
-    (res.`3 = (_total + _len)))))))))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a64__sha256_spec _out _a _off _len _out_init _a_init =
@@ -19468,15 +18762,9 @@ op a64__sha256_spec _out _a _off _len _out_init _a_init =
    (((_a_init = a_init) /\
     ((_out_init = out_init) /\
     ((_len = len) /\ ((_off = off) /\ ((_a = a) /\ (_out = out)))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((_off \ule (W64.of_int 64)) /\ (_len \ule (W64.of_int 64))) /\
     ((_off + _len) \ule (W64.of_int 64))) /\
-   (BArray64.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))) ==>
+   (BArray64.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
    ((BArray32.is_init res.`2 0 32) /\ (valid res.`3))].
 
 op a64__sha512_spec _out _a _off _len _out_init _a_init =
@@ -19484,15 +18772,9 @@ op a64__sha512_spec _out _a _off _len _out_init _a_init =
    (((_a_init = a_init) /\
     ((_out_init = out_init) /\
     ((_len = len) /\ ((_off = off) /\ ((_a = a) /\ (_out = out)))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((_off \ule (W64.of_int 64)) /\ (_len \ule (W64.of_int 64))) /\
     ((_off + _len) \ule (W64.of_int 64))) /\
-   (BArray64.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))) ==>
+   (BArray64.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
    ((BArray64.is_init res.`2 0 64) /\ (valid res.`3))].
 
 op a64__sha256_x8_spec _out _a _off _stride _len _out_init _a_init =
@@ -19501,36 +18783,6 @@ op a64__sha256_x8_spec _out _a _off _stride _len _out_init _a_init =
     ((_out_init = out_init) /\
     ((_len = len) /\
     ((_stride = stride) /\ ((_off = off) /\ ((_a = a) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((((((((_off \ule (W64.of_int 64)) /\ (_stride \ule (W64.of_int 64))) /\
             (_len \ule (W64.of_int 64))) /\
            (((_off + ((W64.of_int 7) * _stride)) + _len) \ule
@@ -19552,7 +18804,7 @@ op a64__sha256_x8_spec _out _a _off _stride _len _out_init _a_init =
     (BArray64.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 6) * _stride))) (W64.to_uint _len))) /\
    (BArray64.is_init _a_init
-   (W64.to_uint (_off + ((W64.of_int 7) * _stride))) (W64.to_uint _len)))))))))))))))))))))))))))))))))) ==>
+   (W64.to_uint (_off + ((W64.of_int 7) * _stride))) (W64.to_uint _len)))) ==>
    ((BArray256.is_init res.`2 0 256) /\ (valid res.`3))].
 
 op a64__sha512_x4_spec _out _a _off _stride _len _out_init _a_init =
@@ -19561,24 +18813,6 @@ op a64__sha512_x4_spec _out _a _off _stride _len _out_init _a_init =
     ((_out_init = out_init) /\
     ((_len = len) /\
     ((_stride = stride) /\ ((_off = off) /\ ((_a = a) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((((_off \ule (W64.of_int 64)) /\ (_stride \ule (W64.of_int 64))) /\
         (_len \ule (W64.of_int 64))) /\
        (((_off + ((W64.of_int 3) * _stride)) + _len) \ule (W64.of_int 64))) /\
@@ -19589,7 +18823,7 @@ op a64__sha512_x4_spec _out _a _off _stride _len _out_init _a_init =
     (BArray64.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 2) * _stride))) (W64.to_uint _len))) /\
    (BArray64.is_init _a_init
-   (W64.to_uint (_off + ((W64.of_int 3) * _stride))) (W64.to_uint _len)))))))))))))))))))))) ==>
+   (W64.to_uint (_off + ((W64.of_int 3) * _stride))) (W64.to_uint _len)))) ==>
    ((BArray256.is_init res.`2 0 256) /\ (valid res.`3))].
 
 op a128____fill64_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
@@ -19599,24 +18833,13 @@ op a128____fill64_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
     ((_ms = ms) /\
     ((_n_ = n_) /\
     ((_off_ = off_) /\ ((_a = a) /\ ((_dst_ = dst_) /\ (_buf = buf)))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((_dst_ \ule (W64.of_int 64)) /\ (_n_ \ule (W64.of_int 64))) /\
        ((_dst_ + _n_) \ule (W64.of_int 64))) /\
       (BArray64.is_init _buf_init 0 (W64.to_uint _dst_))) /\
      (_off_ \ule (W64.of_int 128))) /\
     ((_off_ + _n_) \ule (W64.of_int 128))) /\
-   (BArray128.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))))))))))))) ==>
-   ((true /\
-    (true /\ (BArray64.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))))) /\
+   (BArray128.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))) ==>
+   ((BArray64.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))) /\
    (valid res.`4))].
 
 op a128____fill128_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
@@ -19626,24 +18849,13 @@ op a128____fill128_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
     ((_ms = ms) /\
     ((_n_ = n_) /\
     ((_off_ = off_) /\ ((_a = a) /\ ((_dst_ = dst_) /\ (_buf = buf)))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((_dst_ \ule (W64.of_int 128)) /\ (_n_ \ule (W64.of_int 128))) /\
        ((_dst_ + _n_) \ule (W64.of_int 128))) /\
       (BArray128.is_init _buf_init 0 (W64.to_uint _dst_))) /\
      (_off_ \ule (W64.of_int 128))) /\
     ((_off_ + _n_) \ule (W64.of_int 128))) /\
-   (BArray128.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))))))))))))) ==>
-   ((true /\
-    (true /\ (BArray128.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))))) /\
+   (BArray128.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))) ==>
+   ((BArray128.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))) /\
    (valid res.`4))].
 
 op a128___sha256_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_init _a_init =
@@ -19655,29 +18867,16 @@ op a128___sha256_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_
     ((_len = len) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h)))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((BArray32.is_init _h_init 0 32) /\
        (BArray64.is_init _buf_init 0
        (W64.to_uint (_total \umod (W64.of_int 64))))) /\
       (_off \ule (W64.of_int 128))) /\
      (_len \ule (W64.of_int 128))) /\
     ((_off + _len) \ule (W64.of_int 128))) /\
-   (BArray128.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    (((BArray32.is_init res.`5 0 32) /\
+   (BArray128.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
+   ((((BArray32.is_init res.`5 0 32) /\
      (BArray64.is_init res.`6 0 (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
-    (res.`3 = (_total + _len)))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a128___sha512_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_init _a_init =
@@ -19689,30 +18888,17 @@ op a128___sha512_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_
     ((_len = len) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h)))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((BArray64.is_init _h_init 0 64) /\
        (BArray128.is_init _buf_init 0
        (W64.to_uint (_total \umod (W64.of_int 128))))) /\
       (_off \ule (W64.of_int 128))) /\
      (_len \ule (W64.of_int 128))) /\
     ((_off + _len) \ule (W64.of_int 128))) /\
-   (BArray128.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    (((BArray64.is_init res.`5 0 64) /\
+   (BArray128.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
+   ((((BArray64.is_init res.`5 0 64) /\
      (BArray128.is_init res.`6 0
      (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
-    (res.`3 = (_total + _len)))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a128___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_init _buf_init _a_init =
@@ -19725,52 +18911,6 @@ op a128___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h
     ((_stride = stride) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h))))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((((((((((((((((BArray256.is_init _h_init 0 256) /\
                       (BArray512.is_init _buf_init 0
                       (W64.to_uint (_total \umod (W64.of_int 64))))) /\
@@ -19810,27 +18950,8 @@ op a128___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h
     (BArray128.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 6) * _stride))) (W64.to_uint _len))) /\
    (BArray128.is_init _a_init
-   (W64.to_uint (_off + ((W64.of_int 7) * _stride))) (W64.to_uint _len)))))))))))))))))))))))))))))))))))))))))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    ((((((((((BArray256.is_init res.`5 0 256) /\
+   (W64.to_uint (_off + ((W64.of_int 7) * _stride))) (W64.to_uint _len)))) ==>
+   (((((((((((BArray256.is_init res.`5 0 256) /\
             (BArray512.is_init res.`6 0
             (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
            (BArray512.is_init res.`6 64
@@ -19847,7 +18968,7 @@ op a128___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h
       (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
      (BArray512.is_init res.`6 448
      (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
-    (res.`3 = (_total + _len)))))))))))))))))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a128___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_init _buf_init _a_init =
@@ -19860,32 +18981,6 @@ op a128___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h
     ((_stride = stride) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h))))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((((((((BArray256.is_init _h_init 0 256) /\
               (BArray512.is_init _buf_init 0
               (W64.to_uint (_total \umod (W64.of_int 128))))) /\
@@ -19906,19 +19001,8 @@ op a128___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h
     (BArray128.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 2) * _stride))) (W64.to_uint _len))) /\
    (BArray128.is_init _a_init
-   (W64.to_uint (_off + ((W64.of_int 3) * _stride))) (W64.to_uint _len)))))))))))))))))))))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    ((((((BArray256.is_init res.`5 0 256) /\
+   (W64.to_uint (_off + ((W64.of_int 3) * _stride))) (W64.to_uint _len)))) ==>
+   (((((((BArray256.is_init res.`5 0 256) /\
         (BArray512.is_init res.`6 0
         (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
        (BArray512.is_init res.`6 128
@@ -19927,7 +19011,7 @@ op a128___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h
       (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
      (BArray512.is_init res.`6 384
      (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
-    (res.`3 = (_total + _len)))))))))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a128__sha256_spec _out _a _off _len _out_init _a_init =
@@ -19935,15 +19019,9 @@ op a128__sha256_spec _out _a _off _len _out_init _a_init =
    (((_a_init = a_init) /\
     ((_out_init = out_init) /\
     ((_len = len) /\ ((_off = off) /\ ((_a = a) /\ (_out = out)))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((_off \ule (W64.of_int 128)) /\ (_len \ule (W64.of_int 128))) /\
     ((_off + _len) \ule (W64.of_int 128))) /\
-   (BArray128.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))) ==>
+   (BArray128.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
    ((BArray32.is_init res.`2 0 32) /\ (valid res.`3))].
 
 op a128__sha512_spec _out _a _off _len _out_init _a_init =
@@ -19951,15 +19029,9 @@ op a128__sha512_spec _out _a _off _len _out_init _a_init =
    (((_a_init = a_init) /\
     ((_out_init = out_init) /\
     ((_len = len) /\ ((_off = off) /\ ((_a = a) /\ (_out = out)))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((_off \ule (W64.of_int 128)) /\ (_len \ule (W64.of_int 128))) /\
     ((_off + _len) \ule (W64.of_int 128))) /\
-   (BArray128.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))) ==>
+   (BArray128.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
    ((BArray64.is_init res.`2 0 64) /\ (valid res.`3))].
 
 op a128__sha256_x8_spec _out _a _off _stride _len _out_init _a_init =
@@ -19968,36 +19040,6 @@ op a128__sha256_x8_spec _out _a _off _stride _len _out_init _a_init =
     ((_out_init = out_init) /\
     ((_len = len) /\
     ((_stride = stride) /\ ((_off = off) /\ ((_a = a) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((((((((_off \ule (W64.of_int 128)) /\
              (_stride \ule (W64.of_int 128))) /\
             (_len \ule (W64.of_int 128))) /\
@@ -20020,7 +19062,7 @@ op a128__sha256_x8_spec _out _a _off _stride _len _out_init _a_init =
     (BArray128.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 6) * _stride))) (W64.to_uint _len))) /\
    (BArray128.is_init _a_init
-   (W64.to_uint (_off + ((W64.of_int 7) * _stride))) (W64.to_uint _len)))))))))))))))))))))))))))))))))) ==>
+   (W64.to_uint (_off + ((W64.of_int 7) * _stride))) (W64.to_uint _len)))) ==>
    ((BArray256.is_init res.`2 0 256) /\ (valid res.`3))].
 
 op a128__sha512_x4_spec _out _a _off _stride _len _out_init _a_init =
@@ -20029,24 +19071,6 @@ op a128__sha512_x4_spec _out _a _off _stride _len _out_init _a_init =
     ((_out_init = out_init) /\
     ((_len = len) /\
     ((_stride = stride) /\ ((_off = off) /\ ((_a = a) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((((_off \ule (W64.of_int 128)) /\ (_stride \ule (W64.of_int 128))) /\
         (_len \ule (W64.of_int 128))) /\
        (((_off + ((W64.of_int 3) * _stride)) + _len) \ule (W64.of_int 128))) /\
@@ -20057,7 +19081,7 @@ op a128__sha512_x4_spec _out _a _off _stride _len _out_init _a_init =
     (BArray128.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 2) * _stride))) (W64.to_uint _len))) /\
    (BArray128.is_init _a_init
-   (W64.to_uint (_off + ((W64.of_int 3) * _stride))) (W64.to_uint _len)))))))))))))))))))))) ==>
+   (W64.to_uint (_off + ((W64.of_int 3) * _stride))) (W64.to_uint _len)))) ==>
    ((BArray256.is_init res.`2 0 256) /\ (valid res.`3))].
 
 op a333____fill64_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
@@ -20067,24 +19091,13 @@ op a333____fill64_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
     ((_ms = ms) /\
     ((_n_ = n_) /\
     ((_off_ = off_) /\ ((_a = a) /\ ((_dst_ = dst_) /\ (_buf = buf)))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((_dst_ \ule (W64.of_int 64)) /\ (_n_ \ule (W64.of_int 64))) /\
        ((_dst_ + _n_) \ule (W64.of_int 64))) /\
       (BArray64.is_init _buf_init 0 (W64.to_uint _dst_))) /\
      (_off_ \ule (W64.of_int 333))) /\
     ((_off_ + _n_) \ule (W64.of_int 333))) /\
-   (BArray333.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))))))))))))) ==>
-   ((true /\
-    (true /\ (BArray64.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))))) /\
+   (BArray333.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))) ==>
+   ((BArray64.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))) /\
    (valid res.`4))].
 
 op a333____fill128_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
@@ -20094,24 +19107,13 @@ op a333____fill128_array_spec _buf _dst_ _a _off_ _n_ _ms _buf_init _a_init =
     ((_ms = ms) /\
     ((_n_ = n_) /\
     ((_off_ = off_) /\ ((_a = a) /\ ((_dst_ = dst_) /\ (_buf = buf)))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((_dst_ \ule (W64.of_int 128)) /\ (_n_ \ule (W64.of_int 128))) /\
        ((_dst_ + _n_) \ule (W64.of_int 128))) /\
       (BArray128.is_init _buf_init 0 (W64.to_uint _dst_))) /\
      (_off_ \ule (W64.of_int 333))) /\
     ((_off_ + _n_) \ule (W64.of_int 333))) /\
-   (BArray333.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))))))))))))) ==>
-   ((true /\
-    (true /\ (BArray128.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))))) /\
+   (BArray333.is_init _a_init (W64.to_uint _off_) (W64.to_uint _n_)))) ==>
+   ((BArray128.is_init res.`3 0 (W64.to_uint (_dst_ + _n_))) /\
    (valid res.`4))].
 
 op a333___sha256_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_init _a_init =
@@ -20123,29 +19125,16 @@ op a333___sha256_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_
     ((_len = len) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h)))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((BArray32.is_init _h_init 0 32) /\
        (BArray64.is_init _buf_init 0
        (W64.to_uint (_total \umod (W64.of_int 64))))) /\
       (_off \ule (W64.of_int 333))) /\
      (_len \ule (W64.of_int 333))) /\
     ((_off + _len) \ule (W64.of_int 333))) /\
-   (BArray333.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    (((BArray32.is_init res.`5 0 32) /\
+   (BArray333.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
+   ((((BArray32.is_init res.`5 0 32) /\
      (BArray64.is_init res.`6 0 (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
-    (res.`3 = (_total + _len)))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a333___sha512_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_init _a_init =
@@ -20157,30 +19146,17 @@ op a333___sha512_absorb_array_spec _h _buf _total _a _off _len _ms _h_init _buf_
     ((_len = len) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h)))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((BArray64.is_init _h_init 0 64) /\
        (BArray128.is_init _buf_init 0
        (W64.to_uint (_total \umod (W64.of_int 128))))) /\
       (_off \ule (W64.of_int 333))) /\
      (_len \ule (W64.of_int 333))) /\
     ((_off + _len) \ule (W64.of_int 333))) /\
-   (BArray333.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    (((BArray64.is_init res.`5 0 64) /\
+   (BArray333.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
+   ((((BArray64.is_init res.`5 0 64) /\
      (BArray128.is_init res.`6 0
      (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
-    (res.`3 = (_total + _len)))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a333___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_init _buf_init _a_init =
@@ -20193,52 +19169,6 @@ op a333___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h
     ((_stride = stride) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h))))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 64)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((((((((((((((((BArray256.is_init _h_init 0 256) /\
                       (BArray512.is_init _buf_init 0
                       (W64.to_uint (_total \umod (W64.of_int 64))))) /\
@@ -20278,27 +19208,8 @@ op a333___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h
     (BArray333.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 6) * _stride))) (W64.to_uint _len))) /\
    (BArray333.is_init _a_init
-   (W64.to_uint (_off + ((W64.of_int 7) * _stride))) (W64.to_uint _len)))))))))))))))))))))))))))))))))))))))))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 64)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    ((((((((((BArray256.is_init res.`5 0 256) /\
+   (W64.to_uint (_off + ((W64.of_int 7) * _stride))) (W64.to_uint _len)))) ==>
+   (((((((((((BArray256.is_init res.`5 0 256) /\
             (BArray512.is_init res.`6 0
             (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
            (BArray512.is_init res.`6 64
@@ -20315,7 +19226,7 @@ op a333___sha256_x8_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h
       (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
      (BArray512.is_init res.`6 448
      (W64.to_uint (res.`3 \umod (W64.of_int 64))))) /\
-    (res.`3 = (_total + _len)))))))))))))))))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a333___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h_init _buf_init _a_init =
@@ -20328,32 +19239,6 @@ op a333___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h
     ((_stride = stride) /\
     ((_off = off) /\
     ((_a = a) /\ ((_total = total) /\ ((_buf = buf) /\ (_h = h))))))))))) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (((W64.to_uint (W64.of_int 128)) <> 0) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    (((((((((((((BArray256.is_init _h_init 0 256) /\
               (BArray512.is_init _buf_init 0
               (W64.to_uint (_total \umod (W64.of_int 128))))) /\
@@ -20374,19 +19259,8 @@ op a333___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h
     (BArray333.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 2) * _stride))) (W64.to_uint _len))) /\
    (BArray333.is_init _a_init
-   (W64.to_uint (_off + ((W64.of_int 3) * _stride))) (W64.to_uint _len)))))))))))))))))))))))))))))) ==>
-   ((true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (((W64.to_uint (W64.of_int 128)) <> 0) /\
-    (true /\
-    (true /\
-    (true /\
-    ((((((BArray256.is_init res.`5 0 256) /\
+   (W64.to_uint (_off + ((W64.of_int 3) * _stride))) (W64.to_uint _len)))) ==>
+   (((((((BArray256.is_init res.`5 0 256) /\
         (BArray512.is_init res.`6 0
         (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
        (BArray512.is_init res.`6 128
@@ -20395,7 +19269,7 @@ op a333___sha512_x4_absorb_array_spec _h _buf _total _a _off _stride _len _ms _h
       (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
      (BArray512.is_init res.`6 384
      (W64.to_uint (res.`3 \umod (W64.of_int 128))))) /\
-    (res.`3 = (_total + _len)))))))))))))) /\
+    (res.`3 = (_total + _len))) /\
    (valid res.`7))].
 
 op a333__sha256_spec _out _a _off _len _out_init _a_init =
@@ -20403,15 +19277,9 @@ op a333__sha256_spec _out _a _off _len _out_init _a_init =
    (((_a_init = a_init) /\
     ((_out_init = out_init) /\
     ((_len = len) /\ ((_off = off) /\ ((_a = a) /\ (_out = out)))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((_off \ule (W64.of_int 333)) /\ (_len \ule (W64.of_int 333))) /\
     ((_off + _len) \ule (W64.of_int 333))) /\
-   (BArray333.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))) ==>
+   (BArray333.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
    ((BArray32.is_init res.`2 0 32) /\ (valid res.`3))].
 
 op a333__sha512_spec _out _a _off _len _out_init _a_init =
@@ -20419,15 +19287,9 @@ op a333__sha512_spec _out _a _off _len _out_init _a_init =
    (((_a_init = a_init) /\
     ((_out_init = out_init) /\
     ((_len = len) /\ ((_off = off) /\ ((_a = a) /\ (_out = out)))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((_off \ule (W64.of_int 333)) /\ (_len \ule (W64.of_int 333))) /\
     ((_off + _len) \ule (W64.of_int 333))) /\
-   (BArray333.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))))))))) ==>
+   (BArray333.is_init _a_init (W64.to_uint _off) (W64.to_uint _len)))) ==>
    ((BArray64.is_init res.`2 0 64) /\ (valid res.`3))].
 
 op a333__sha256_x8_spec _out _a _off _stride _len _out_init _a_init =
@@ -20436,36 +19298,6 @@ op a333__sha256_x8_spec _out _a _off _stride _len _out_init _a_init =
     ((_out_init = out_init) /\
     ((_len = len) /\
     ((_stride = stride) /\ ((_off = off) /\ ((_a = a) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((((((((_off \ule (W64.of_int 333)) /\
              (_stride \ule (W64.of_int 333))) /\
             (_len \ule (W64.of_int 333))) /\
@@ -20488,7 +19320,7 @@ op a333__sha256_x8_spec _out _a _off _stride _len _out_init _a_init =
     (BArray333.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 6) * _stride))) (W64.to_uint _len))) /\
    (BArray333.is_init _a_init
-   (W64.to_uint (_off + ((W64.of_int 7) * _stride))) (W64.to_uint _len)))))))))))))))))))))))))))))))))) ==>
+   (W64.to_uint (_off + ((W64.of_int 7) * _stride))) (W64.to_uint _len)))) ==>
    ((BArray256.is_init res.`2 0 256) /\ (valid res.`3))].
 
 op a333__sha512_x4_spec _out _a _off _stride _len _out_init _a_init =
@@ -20497,24 +19329,6 @@ op a333__sha512_x4_spec _out _a _off _stride _len _out_init _a_init =
     ((_out_init = out_init) /\
     ((_len = len) /\
     ((_stride = stride) /\ ((_off = off) /\ ((_a = a) /\ (_out = out))))))) /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
-   (true /\
    ((((((((_off \ule (W64.of_int 333)) /\ (_stride \ule (W64.of_int 333))) /\
         (_len \ule (W64.of_int 333))) /\
        (((_off + ((W64.of_int 3) * _stride)) + _len) \ule (W64.of_int 333))) /\
@@ -20525,5 +19339,5 @@ op a333__sha512_x4_spec _out _a _off _stride _len _out_init _a_init =
     (BArray333.is_init _a_init
     (W64.to_uint (_off + ((W64.of_int 2) * _stride))) (W64.to_uint _len))) /\
    (BArray333.is_init _a_init
-   (W64.to_uint (_off + ((W64.of_int 3) * _stride))) (W64.to_uint _len)))))))))))))))))))))) ==>
+   (W64.to_uint (_off + ((W64.of_int 3) * _stride))) (W64.to_uint _len)))) ==>
    ((BArray256.is_init res.`2 0 256) /\ (valid res.`3))].

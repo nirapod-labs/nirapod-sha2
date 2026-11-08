@@ -224,7 +224,7 @@ proof.
 rewrite /_sha512_x4_compress_lanes_spec.
 conseq (_: in_0 = _in /\ off = _off /\ n = _n /\ h4_init = X256.full /\ in_init = X32.full /\
            lsafe Glob.mem_v _in _off _n _n ==> _).
-+ move=> &hr [[#] -> -> _ -> -> -> _] /= [#] _ _ _ _ hh hi hn _ v0 v1 v2 v3.
++ move=> &hr [[#] -> -> _ -> -> -> _] /= [#] hh hi hn _ v0 v1 v2 v3.
   rewrite (X256.is_init_full _ hh) (X32.is_init_full _ hi) /=; split; 1: done. split; 1: done.
   move=> L hL; rewrite -(mul128 _ hn).
   by have [->|[->|[->|->]]] : L = 0 \/ L = 1 \/ L = 2 \/ L = 3 by smt().

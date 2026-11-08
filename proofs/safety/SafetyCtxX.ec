@@ -188,10 +188,8 @@ seq 1 : (valid trace__sha256_x8_ctx_update /\ valid M.tmp__trace /\ ctx_init = f
          /\ in_init = full64 /\ ms_init /\ inlen_init
          /\ lanes_valid Glob.mem_v 8 (fun i => to_uint (BArray64.get64 in_0 i)) (to_uint inlen)).
 + ecall (__sha2_ctx_open_proof (SBArray784_16.get_sub8 ctx 0) ms (SBArray784_16.get_sub ctx_init 0)).
-  auto => /> &m hi0 hi1 hi2 hi3 hi4 hi5 hi6 hi7 hc hin.
-  move=> v00 v01 v02 v10 v11 v12 v20 v21 v22 v30 v31 v32 v40 v41 v42 v50 v51 v52.
-  move=> v60 v61 v62 v70 v71 v72.
-  rewrite (full784E _ hc) ctx784_head /= => r _; split; 1: exact (full64E _ hin).
+  auto => /> &m hc hin.
+  rewrite (full784E _ hc) ctx784_head /= => *; split; 1: exact (full64E _ hin).
   by apply lanes_valid8; rewrite /is_valid /=; do !split => //.
 sp; seq 1 : (valid trace__sha256_x8_ctx_update /\ valid M.tmp__trace /\ ctx_init = full784
              /\ in_init = full64 /\ ms_init /\ inlen_init
@@ -222,7 +220,7 @@ sp; seq 1 : (valid trace__sha256_x8_ctx_final /\ valid M.tmp__trace /\ ctx_init 
              /\ tag_init /\ total_init).
 + by ecall (__sha2_tag_proof 9); auto.
 sp; if; last by auto => />; smt(one_neq_zero full784_init).
-wp; while (valid trace__sha256_x8_ctx_final /\ i_init /\ z_init /\ inc = 98 /\ 0 <= i <= 98
+wp; while (valid trace__sha256_x8_ctx_final /\ i_init /\ z_init /\ 0 <= i <= 98
            /\ ctx_init = full784 /\ BArray256.is_init out_init 0 256).
 + by auto => /> &m *; rewrite full784_set64d; smt().
 wp; ecall (_sha256_x8_finalize_proof out (SBArray784_256.get_sub32 ctx 4)
@@ -337,9 +335,8 @@ seq 1 : (valid trace__sha512_x4_ctx_update /\ valid M.tmp__trace /\ ctx_init = f
          /\ in_init = full32 /\ ms_init /\ inlen_init
          /\ lanes_valid Glob.mem_v 4 (fun i => to_uint (BArray32.get64 in_0 i)) (to_uint inlen)).
 + ecall (__sha2_ctx_open_proof (SBArray784_16.get_sub8 ctx 0) ms (SBArray784_16.get_sub ctx_init 0)).
-  auto => /> &m hi0 hi1 hi2 hi3 hc hin.
-  move=> v00 v01 v02 v10 v11 v12 v20 v21 v22 v30 v31 v32.
-  rewrite (full784E _ hc) ctx784_head /= => r _; split; 1: exact (full32E _ hin).
+  auto => /> &m hc hin.
+  rewrite (full784E _ hc) ctx784_head /= => *; split; 1: exact (full32E _ hin).
   by apply lanes_valid4; rewrite /is_valid /=; do !split => //.
 sp; seq 1 : (valid trace__sha512_x4_ctx_update /\ valid M.tmp__trace /\ ctx_init = full784
              /\ in_init = full32 /\ ms_init /\ inlen_init
@@ -370,7 +367,7 @@ sp; seq 1 : (valid trace__sha512_x4_ctx_final /\ valid M.tmp__trace /\ ctx_init 
              /\ tag_init /\ total_init).
 + by ecall (__sha2_tag_proof 10); auto.
 sp; if; last by auto => />; smt(one_neq_zero full784_init).
-wp; while (valid trace__sha512_x4_ctx_final /\ i_init /\ z_init /\ inc = 98 /\ 0 <= i <= 98
+wp; while (valid trace__sha512_x4_ctx_final /\ i_init /\ z_init /\ 0 <= i <= 98
            /\ ctx_init = full784 /\ BArray256.is_init out_init 0 256).
 + by auto => /> &m *; rewrite full784_set64d; smt().
 wp; ecall (_sha512_x4_finalize_proof out (SBArray784_256.get_sub64 ctx 2)

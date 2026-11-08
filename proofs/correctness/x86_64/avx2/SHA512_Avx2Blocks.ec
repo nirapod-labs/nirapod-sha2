@@ -364,7 +364,7 @@ proof. by proc; auto. qed.
 lemma driver_ll : islossless M.__sha512_avx2.
 proof.
 proc.
-while (true) (inc - l).
+while (true) (nb - l).
 + move=> z.
   wp; while (true) (8 - i); 1: by move=> z'; auto => /#.
   wp; while (true) (80 - t).

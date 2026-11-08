@@ -206,8 +206,6 @@ wp; while (valid trace__sha256_x8_compress_lanes /\ 0 <= f <= 2 /\
   move=> h8i mi' r' tr' hr' [#] hv' _ _ hr0 hr1 hf' hri hoi' hni' hmi' -> _ _ _ _ _ _ hlv'.
   by rewrite /=; do !split => //; move: hf0 hf2; clear hlv hlv' hv hv'; smt().
 wp; skip => &hr [#] e1 e2 e3 e4 e5 e6 e7
-  _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-  _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
   hh hin hn hoff hv0 hv1 hv2 hv3 hv4 hv5 hv6 hv7.
 rewrite -e1 -e2 -e4 -e5 -e6 /= (K256.is_init_full _ hh) (K64.is_init_full _ hin) /=.
 have hn' : W64.to_uint _n < 288230376151711744.

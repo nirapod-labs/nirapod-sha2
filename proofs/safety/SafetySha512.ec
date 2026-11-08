@@ -229,11 +229,11 @@ seq 1 : (valid trace__sha512___sha512_finalize /\ total_init /\ fill_init /\ ms_
   rewrite W64.ultE e hf /= => h112.
   by do !split => //; smt(modz_cmp).
 wp; while (valid trace__sha512___sha512_finalize /\ i_init /\ ms_init /\ i = 8
-           /\ inc = 8 /\ h_init = full64 /\ buf_init = full128
+           /\ h_init = full64 /\ buf_init = full128
            /\ BArray64.is_init out_init 0 64).
 + by wp; ecall (__bswap32_proof y); auto => />.
 wp; while (valid trace__sha512___sha512_finalize /\ i_init /\ ms_init /\ 0 <= i <= 8
-           /\ inc = 8 /\ h_init = full64 /\ buf_init = full128
+           /\ h_init = full64 /\ buf_init = full128
            /\ BArray64.is_init out_init 0 (8 * i)).
 + wp; ecall (__bswap64_proof x); auto => /> &m _ _ _ hi0 hi8 ho hlt.
   have hm := mask64_set64 out_init{m} i{m} ho _ _; 1,2: smt().
@@ -276,11 +276,11 @@ seq 1 : (valid trace__sha384___sha512_finalize /\ total_init /\ fill_init /\ ms_
   rewrite W64.ultE e hf /= => h112.
   by do !split => //; smt(modz_cmp).
 wp; while (valid trace__sha384___sha512_finalize /\ i_init /\ ms_init /\ i = 6
-           /\ inc = 6 /\ h_init = full64 /\ buf_init = full128
+           /\ h_init = full64 /\ buf_init = full128
            /\ BArray48.is_init out_init 0 48).
 + by wp; ecall (__bswap32_proof y); auto => />.
 wp; while (valid trace__sha384___sha512_finalize /\ i_init /\ ms_init /\ 0 <= i <= 6
-           /\ inc = 6 /\ h_init = full64 /\ buf_init = full128
+           /\ h_init = full64 /\ buf_init = full128
            /\ BArray48.is_init out_init 0 (8 * i)).
 + wp; ecall (__bswap64_proof x); auto => /> &m _ _ _ hi0 hi8 ho hlt.
   have hm := mask48_set64 out_init{m} i{m} ho _ _; 1,2: smt().
@@ -323,11 +323,11 @@ seq 1 : (valid trace__sha512_256___sha512_finalize /\ total_init /\ fill_init /\
   rewrite W64.ultE e hf /= => h112.
   by do !split => //; smt(modz_cmp).
 wp; while (valid trace__sha512_256___sha512_finalize /\ i_init /\ ms_init /\ i = 4
-           /\ inc = 4 /\ h_init = full64 /\ buf_init = full128
+           /\ h_init = full64 /\ buf_init = full128
            /\ BArray32.is_init out_init 0 32).
 + by wp; ecall (__bswap32_proof y); auto => />.
 wp; while (valid trace__sha512_256___sha512_finalize /\ i_init /\ ms_init /\ 0 <= i <= 4
-           /\ inc = 4 /\ h_init = full64 /\ buf_init = full128
+           /\ h_init = full64 /\ buf_init = full128
            /\ BArray32.is_init out_init 0 (8 * i)).
 + wp; ecall (__bswap64_proof x); auto => /> &m _ _ _ hi0 hi8 ho hlt.
   have hm := mask32_set64 out_init{m} i{m} ho _ _; 1,2: smt().
@@ -371,7 +371,7 @@ seq 1 : (valid trace__sha512_224___sha512_finalize /\ total_init /\ fill_init /\
   rewrite W64.ultE e hf /= => h112.
   by do !split => //; smt(modz_cmp).
 wp; while (valid trace__sha512_224___sha512_finalize /\ i_init /\ ms_init /\ 3 <= i <= 4
-           /\ inc = 4 /\ h_init = full64 /\ buf_init = full128
+           /\ h_init = full64 /\ buf_init = full128
            /\ BArray28.is_init out_init 0 (if i = 3 then 24 else 28)).
 + wp; ecall (__bswap32_proof y); auto => /> &m _ _ _ hi3 hi4 ho hlt.
   have e3 : i{m} = 3 by smt().
@@ -379,7 +379,7 @@ wp; while (valid trace__sha512_224___sha512_finalize /\ i_init /\ ms_init /\ 3 <
   have hm := mask28_set32 out_init{m} 6 ho _ _ => //=.
   by rewrite full64_init hm.
 wp; while (valid trace__sha512_224___sha512_finalize /\ i_init /\ ms_init /\ 0 <= i <= 3
-           /\ inc = 3 /\ h_init = full64 /\ buf_init = full128
+           /\ h_init = full64 /\ buf_init = full128
            /\ BArray28.is_init out_init 0 (8 * i)).
 + wp; ecall (__bswap64_proof x); auto => /> &m _ _ _ hi0 hi8 ho hlt.
   have hm := mask28_set64 out_init{m} i{m} ho _ _; 1,2: smt().
