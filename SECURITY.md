@@ -13,8 +13,8 @@ In scope:
 - the Jasmin sources in `src/`
 - the C API in `include/` and `capi/`: argument checks, kernel selection,
   the timing mode set around each call and the register clearing after it
-- the toolchain patch series in `toolchain/`, where a defect could change
-  the generated code or weaken an analysis result
+- the toolchain pin in `toolchain/`, where a wrong pin could change the
+  generated code or weaken an analysis result
 - a proof, analysis or test whose stated scope is wrong, or one that passes
   when it should fail
 

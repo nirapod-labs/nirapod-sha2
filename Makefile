@@ -41,7 +41,7 @@
 # hardware; objects, libraries and tests are made for the host only.
 #
 # Tools: JASMINC and JASMIN_CT must be the Jasmin build that
-# toolchain/build.sh makes from the pins under toolchain/. CC must accept
+# toolchain/build.sh makes from the pin in toolchain/PIN. CC must accept
 # C99.
 
 .DEFAULT_GOAL := all

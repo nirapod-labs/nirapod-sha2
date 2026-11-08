@@ -46,7 +46,8 @@ drops out unnoticed. All pass.
 data-independent: Intel's DOIT list on x86-64, Arm's DIT list on AArch64.
 The Advanced SIMD and SHA-2 instructions that the toolchain adds are all on
 Arm's list except MOVI, which the toolchain accepts only as `MOVI Vd.2D, #0`
-and which therefore reads no data (`toolchain/jasmin/PATCHES-SIMD.md`).
+and which therefore reads no data (topic `feature/armv8a-simd` of the
+Jasmin fork, [TOOLCHAIN](TOOLCHAIN.md#the-jasmin-topics)).
 
 The checkers assume a safe program, so their results hold for executions
 that meet the `#[safety]` contracts; the EasyCrypt safety proofs supply that
