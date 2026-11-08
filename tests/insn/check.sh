@@ -24,7 +24,7 @@
 #      mutated copy of the EasyCrypt library. Before the mutants, every
 #      entry's cases must check against an unchanged copy.
 #
-# With INSN_RECORDED=DIR (tests/insn/aarch64), the processor is the one
+# With INSN_RECORDED=DIR (tests/insn/aarch64, tests/insn/x86_64), the processor is the one
 # DIR/host.txt names and the run of step 2 is the one recorded there: step
 # 1 compiles the program for each system DIR has an assembly file for and
 # requires it to equal that file byte for byte, step 2 takes DIR/vectors.txt

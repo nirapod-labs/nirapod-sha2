@@ -123,6 +123,14 @@ lemma packE (ws : @T@.Pack.pack_t) :
   = W@B@.of_int (Eval@B@.ev (fun i => ws.[i %/ @S@].[i %% @S@])).
 proof. by apply Eval@B@.ev_ext => i hi; rewrite @T@.pack@R@wE. qed.
 
+(* The lanes of a word as a list, which BSWAP reverses. *)
+lemma unpackE (w : W@B@.t) :
+  @T@.Pack.to_list (@T@.unpack@S@ w) = map (fun i => w \bits@S@ i) (iotared 0 @R@).
+proof.
+  rewrite @T@.Pack.to_listE @T@.unpack@S@E iotaredE /mkseq.
+  by apply eq_in_map => i; rewrite mem_iota => hi /=; rewrite @T@.Pack.initiE /#.
+qed.
+
 end Eval@T@.
 (* @end *)
 
@@ -140,8 +148,9 @@ hint simplify (Eval@N@.evE, Eval@N@.xorE, Eval@N@.andE, Eval@N@.orE, Eval@N@.inv
                Eval@N@.addE).
 (* @end *)
 (* @pack T S B R *)
-hint simplify (Eval@T@.bitsE, Eval@T@.packE).
+hint simplify (Eval@T@.bitsE, Eval@T@.packE, Eval@T@.unpackE).
 (* @end *)
 
-hint simplify (W8.of_intwE, W16.of_intwE, W32.of_intwE, W64.of_intwE, W128.of_intwE).
+hint simplify (W8.of_intwE, W16.of_intwE, W32.of_intwE, W64.of_intwE, W128.of_intwE,
+               W256.of_intwE).
 hint simplify iota_iotared.
