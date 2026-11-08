@@ -6,18 +6,18 @@ with it, and every comparison goes through the linked library: the public
 functions, and each kernel the machine can run through the testing library
 ([API](API.md#the-testing-interface)).
 
-The last full runs, October 2026:
+The runs at the 0.1.0 release revision, November 2026, with toolchain
+2026.11.1:
 
 | Platform | CPU | Jobs that passed |
 | --- | --- | --- |
-| macOS 27.0, AArch64, native | Apple M4 | build, tests, exports |
-| Ubuntu 24.04, AArch64, VM | Apple M4 | build, tests, exports |
-| Ubuntu 24.04.5 under WSL2, x86-64 | AMD Ryzen 7 7700X | toolchain, build, tests, exports, ct, extraction, insn |
+| macOS 27.0, AArch64, native | Apple M4 | toolchain, build, tests, exports, ct, extraction, insn, insn-vectors |
+| Ubuntu 24.04.5 under WSL2, x86-64 | AMD Ryzen 7 7700X | toolchain, build, tests, exports, ct, extraction, insn, insn-vectors, proofs |
 
-The analyses depend on the target, not the host, so the x86-64 machine ran
-them for both architectures, and the AArch64 runs used the assembly it
-produced. Execution is native everywhere: the two Linux systems are
-virtualised, the instructions are not. Nothing was emulated.
+Ubuntu 24.04 on AArch64, in a virtual machine on the M4, last passed build,
+tests and exports in October 2026 on an earlier revision. Execution is
+native everywhere: the Linux systems are virtualised, the instructions are
+not. Nothing was emulated.
 
 ## Oracles
 
