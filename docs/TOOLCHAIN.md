@@ -91,7 +91,7 @@ against hardware, which is what
 toolchain/build.sh [--no-easycrypt] [switch | jasmin | test | all]
 ```
 
-The script fetches the release at its pinned commit into `$WORK/src`,
+The script fetches the release at its pinned commit into `$WORK/src/toolchain`,
 checks that it pins the same Jasmin, EasyCrypt and coqword commits as
 `toolchain/PIN`, and runs the release's own `build.sh` with the same
 arguments. `switch` creates an opam switch that sees only the two pinned
