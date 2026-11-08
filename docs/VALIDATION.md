@@ -151,22 +151,21 @@ checked at all.
 ## The specification
 
 `proofs/spec/validation/` evaluates the EasyCrypt specification on CAVP
-vectors: 52 lemmas stating that the specification maps a given message to a
+vectors: 60 lemmas stating that the specification maps a given message to a
 given digest, each closed by `cbv delta` with the rewriting rules of
 `SpecEval.ec`, with no SMT call and no axiom.
 
 | Function | Vectors |
 | --- | --- |
 | SHA-224, SHA-256 | ShortMsg at 0, 1, 55, 56, 63, 64 bytes; the first LongMsg (163 bytes) |
-| SHA-384, SHA-512, SHA-512/224, SHA-512/256 | ShortMsg at 0, 1, 119, 120, 127, 128 bytes; the first LongMsg (227 bytes) |
+| SHA-384, SHA-512, SHA-512/224, SHA-512/256 | ShortMsg at 0, 1, 111, 112, 119, 120, 127, 128 bytes; the first LongMsg (227 bytes) |
 | HMAC-SHA-256 | 5 records of `HMAC.rsp`, keys of 40 to 74 bytes, full tags |
 | HMAC-SHA-512 | 5 records, keys of 100 to 142 bytes, full tags |
 
 For SHA-256, 55 and 56 bytes straddle the point where padding needs a second
 block. The SHA-512 length field is 16 bytes, so for that family the point is
-between 111 and 112, and these vectors miss it: 119 and 120 are $B - 9$ and
-$B - 8$, the boundary only for an 8-byte length field. Adding 111 and 112 is
-listed in [STATUS](STATUS.md#before-a-release).
+between 111 and 112. 119 and 120 sit where the point would be with an 8-byte
+length field; they stay as two-block cases.
 
 `proofs/tools/spec_vectors.py` generates the lemma files from the vector
 files, and `make -C proofs check-spec-exec` requires them to match a fresh

@@ -24,9 +24,14 @@
 # The selection, per function with input block size B (64 for SHA-224 and
 # SHA-256, 128 for the SHA-512 family):
 #
-#   ShortMsg: the messages of 0, 1, B - 9, B - 8, B - 1 and B bytes. B - 9
-#             bytes is the longest message whose padding fits in one block,
-#             B - 8 the shortest that needs a second one (section 5.1).
+#   ShortMsg: the messages of 0, 1, B - L - 1, B - L, B - 9, B - 8, B - 1
+#             and B bytes, where L is the size of the length field (8 bytes
+#             for SHA-224 and SHA-256, 16 for the SHA-512 family, sections
+#             5.1.1 and 5.1.2). B - L - 1 bytes is the longest message whose
+#             padding fits in one block, B - L the shortest that needs a
+#             second one. For SHA-256 that is B - 9 and B - 8; for the
+#             SHA-512 family it is 111 and 112, and 119 and 120 are kept as
+#             two-block cases.
 #   LongMsg:  the first vector, of several blocks (163 or 227 bytes).
 #   HMAC.rsp: for HMAC-SHA-256 ([L=32]) and HMAC-SHA-512 ([L=64]), the first
 #             vector with an untruncated tag (Tlen = L) for each key length
@@ -185,7 +190,9 @@ def header(fname, what, sources):
 def hash_lemmas(vectors, table, fname, what, op, prefix, rsp, block):
     short = read_rsp(vectors, rsp + "ShortMsg.rsp", table)
     long_ = read_rsp(vectors, rsp + "LongMsg.rsp", table)
-    want = [0, 1, block - 9, block - 8, block - 1, block]
+    lenfield = 8 if block == 64 else 16
+    want = sorted({0, 1, block - lenfield - 1, block - lenfield,
+                   block - 9, block - 8, block - 1, block})
     by_len = {}
     for _, r in short:
         if "Len" in r:
