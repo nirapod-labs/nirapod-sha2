@@ -76,3 +76,141 @@ mutant msg2-operand-order
   file     JModel_x86.ec
   from     = SHA.msg2 v1 v2.
   to       = SHA.msg2 v2 v1.
+
+# The vector and scalar models of JModel_x86.ec and JWord.ec. The AVX2
+# operators of the kernels are abbreviations of these (a +8u32 b is
+# VPADD_8u32 a b, a >>8u32 7 is VPSRL_8u32 a 7), so a change here reaches
+# them. XOR and AND on 256-bit words are the generic word operators that
+# WordEval.ec itself evaluates, so they get no wrong model.
+
+mutant pshufb-index
+  entries  vpshufb_128 vpshufb_256
+  file     JModel_x86.ec
+  from     w \bits8 (i %% 16)
+  to       w \bits8 (i %% 8)
+
+mutant pshufb-zero-bit
+  entries  vpshufb_128 vpshufb_256
+  file     JModel_x86.ec
+  from     if 128 <= i then W8.zero
+  to       if 64 <= i then W8.zero
+
+mutant pshufb256-lane
+  entries  vpshufb_256
+  file     JModel_x86.ec
+  from     map2 VPSHUFB_128 w m
+  to       W2u128.pack2 [VPSHUFB_128 (w \bits128 0) (m \bits128 0); VPSHUFB_128 (w \bits128 0) (m \bits128 1)]
+
+mutant pshufd-order
+  entries  vpshufd_128 vpshufd_128_dd vpshufd_128_more vpshufd_256 vpshufd_256_more
+  file     JModel_x86.ec
+  from     pack4 (map (VPSHUFD_128_B w m) (iotared 0 4))
+  to       pack4 (rev (map (VPSHUFD_128_B w m) (iotared 0 4)))
+
+mutant blendw-select
+  entries  vpblend_8u16 vpblend_8u16_more
+  file     JModel_x86.ec
+  from     let w = if i.[n] then w2 else w1 in\n    w \bits16 n in
+  to       let w = if i.[n] then w1 else w2 in\n    w \bits16 n in
+
+mutant palignr-offset
+  entries  vpalignr_128 vpalignr_128_more vpalignr_256 vpalignr_256_more
+  file     JModel_x86.ec
+  from     (to_uint m * 8)
+  to       (to_uint m * 4)
+
+mutant palignr-operand-order
+  entries  vpalignr_128 vpalignr_128_more vpalignr_256 vpalignr_256_more
+  file     JModel_x86.ec
+  from     pack2 [w2; w1]
+  to       pack2 [w1; w2]
+
+mutant unpckl-4u32-half
+  entries  vpunpckl_4u32 vpunpckl_8u32
+  file     JModel_x86.ec
+  from     get_lo_2u64 W2u32.to_list W4u32.pack4
+  to       get_hi_2u64 W2u32.to_list W4u32.pack4
+
+mutant unpckl-2u64-half
+  entries  vpunpckl_2u64 vpunpckl_4u64
+  file     JModel_x86.ec
+  from     get_lo_2u64 (fun x => [x]) W2u64.pack2
+  to       get_hi_2u64 (fun x => [x]) W2u64.pack2
+
+mutant unpckh-half
+  entries  vpunpckh_2u64 vpunpckh_4u32 vpunpckh_4u64 vpunpckh_8u32
+  file     JModel_x86.ec
+  from     w \bits64 1.
+  to       w \bits64 0.
+
+mutant perm2i128-zero-bit
+  entries  vperm2i128_more
+  file     JModel_x86.ec
+  from     if i.[n+3] then W128.zero
+  to       if i.[n+2] then W128.zero
+
+mutant perm2i128-lane
+  entries  vperm2i128 vperm2i128_more
+  file     JModel_x86.ec
+  from     b2i i.[n] in
+  to       b2i (!i.[n]) in
+
+mutant inserti128-lane
+  entries  vinserti128 vinserti128_more
+  file     JModel_x86.ec
+  from     W8.to_uint i %% 2
+  to       (W8.to_uint i + 1) %% 2
+
+mutant broadcast-lane
+  entries  vpbroadcast_2u128
+  file     JWord.ec
+  from     pack'R (map (fun i => w) (iota_ 0 r))
+  to       pack'R (map (fun i => w `>>>` i) (iota_ 0 r))
+
+mutant vmov64-lane
+  entries  vmov_64
+  file     JModel_x86.ec
+  from     pack2 [v; W64.zero]
+  to       pack2 [W64.zero; v]
+
+mutant vpadd-carry
+  entries  vpadd_4u32 add_8u32 add_4u64
+  file     JWord.ec
+  from     map2 WS.(+) w1 w2
+  to       map2 WS.(+^) w1 w2
+
+mutant vpsrl-arithmetic
+  entries  shr_8u32_1 shr_8u32_2 shr_8u32_3 shr_8u32_more shr_4u64_1 shr_4u64_2 shr_4u64_3 shr_4u64_4 shr_4u64_more
+  file     JWord.ec
+  from     map (fun (w:WS.t) => w `>>>` to_uint (W64.of_int (to_uint cnt))) w
+  to       map (fun (w:WS.t) => w `|>>>` to_uint (W64.of_int (to_uint cnt))) w
+
+mutant vpsll-rotate
+  entries  shl_8u32_1 shl_8u32_2 shl_8u32_3 shl_8u32_more shl_4u64_1 shl_4u64_2 shl_4u64_3 shl_4u64_more
+  file     JWord.ec
+  from     map (fun (w:WS.t) => w `<<<` to_uint (W64.of_int (to_uint cnt))) w
+  to       map (fun (w:WS.t) => w `|<<<|` to_uint (W64.of_int (to_uint cnt))) w
+
+mutant rorx-count
+  entries  rorx_32_1 rorx_32_2 rorx_32_more rorx_64_1 rorx_64_2 rorx_64_more
+  file     JWord.ec
+  from     v `|>>>|` shift_mask i
+  to       v `|>>>|` (shift_mask i + 1)
+
+mutant andn-operand
+  entries  andn_32 andn_64
+  file     JWord.ec
+  from     let w = (invw v1) `&` v2 in
+  to       let w = v1 `&` (invw v2) in
+
+mutant bswap32-order
+  entries  bswap_32
+  file     JModel_x86.ec
+  from     W4u8.pack4  \o rev \o
+  to       W4u8.pack4  \o
+
+mutant bswap64-order
+  entries  bswap_64
+  file     JModel_x86.ec
+  from     W8u8.pack8 \o rev \o
+  to       W8u8.pack8 \o

@@ -501,18 +501,20 @@ extraction-control: extract
 #
 #     make insn-check-recorded
 #                       the same for each recorded run tests/insn/<arch>/
-#                       (the Armv8-A instructions, run on an AArch64
-#                       processor): the recorded program must be what
-#                       JASMINC compiles now, and EasyCrypt must prove the
-#                       recorded vectors; on any host
+#                       (the Armv8-A instructions run on an AArch64
+#                       processor, the x86-64 ones on an x86-64 one): the
+#                       recorded program must be what JASMINC compiles now,
+#                       and EasyCrypt must prove the recorded vectors; on
+#                       any host
 #     make insn-vectors the recorded run of the host's architecture,
 #                       repeated on this processor: the vectors must be the
 #                       recorded ones; no Jasmin tool needed
 #
-# The x86-64 table lists the SHA-NI instructions, so insn-check runs on an
-# x86-64 processor with SHA-NI. insn-check and insn-check-recorded need
-# JASMINC, JASMIN2EC and EASYCRYPT of the pinned toolchain. INSN_SEED and
-# INSN_RANDOM choose the random vectors of insn-check.
+# The x86-64 table lists SHA-NI, AVX2, BMI1 and BMI2 instructions, so
+# insn-check runs on an x86-64 processor with all four. insn-check and
+# insn-check-recorded need JASMINC, JASMIN2EC and EASYCRYPT of the pinned
+# toolchain. INSN_SEED and INSN_RANDOM choose the random vectors of
+# insn-check.
 EASYCRYPT   ?= easycrypt
 INSN_SEED   ?= 1
 INSN_RANDOM ?= 256

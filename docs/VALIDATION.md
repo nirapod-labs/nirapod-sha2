@@ -102,11 +102,12 @@ suites fail, so the controls can fail.
 
 ## Instruction models
 
-The SHA-NI and Armv8-A kernels are proved against EasyCrypt models of their
-instructions, written by hand from the manuals. `tests/insn` checks those
-models against a processor.
+The SHA-NI, AVX2 and Armv8-A kernels are proved against EasyCrypt models of
+their instructions, written by hand from the manuals. `tests/insn` checks
+those models against a processor.
 
-`tests/insn/<arch>.insn` lists one instruction per line: a name, a Jasmin
+`tests/insn/<arch>.insn` lists one instruction per line: a name, the word
+types of its operands and results when they are not 128 bits, a Jasmin
 statement and the mnemonic it must compile to. `insn.py` turns each line
 into an export that loads its operands from a buffer, runs the statement and
 stores the result; the compiled program is checked to contain each
@@ -128,25 +129,42 @@ exchanged, and the affected cases under each wrong model of
 toolchain's EasyCrypt library. The wrong models change a rotation of
 $\Sigma_0$, $\Sigma_1$ or $\sigma_1$, the shift of $\sigma_0$, an argument
 of Ch, a term of Maj, the order of the output words, or the order of two
-operands.
+operands. On x86-64 they also index the wrong byte or ignore the zeroing
+bit in VPSHUFB, read the wrong 128-bit lane in VPSHUFB, VPERM2I128,
+VINSERTI128, VPBROADCAST and VMOV, reverse the dwords of VPSHUFD, swap the
+sources of VPBLENDW and VPALIGNR, halve the VPALIGNR offset, take the wrong
+half in VPUNPCKL and VPUNPCKH, drop the carry of a lane add, shift
+arithmetically or rotate in place of a logical shift, rotate RORX one bit
+too far, complement the wrong ANDN operand, and leave out the byte reversal
+of BSWAP. XOR and AND on 256-bit words are the generic word operators that
+`WordEval.ec` evaluates, so they have no wrong model.
 
 | Instructions | Run | Vectors | Controls rejected |
 | --- | --- | ---: | ---: |
-| SHA256RNDS2, SHA256MSG1, SHA256MSG2 | natively on the 7700X (`make insn-check`) | 888 | 18, of them 10 wrong models |
+| 62 entries of `x86_64.insn`: SHA-NI, the 128-bit and 256-bit vector instructions, the AVX2 lane operators, ANDN, RORX, BSWAP | recorded on the 7700X (`make insn-check-recorded`) | 17,732 | 164, of them 75 under 32 wrong models |
 | 18 entries of `aarch64.insn`, SHA-2 and Advanced SIMD | recorded on an Apple M4 (`make insn-check-recorded`) | 5,292 | 86, of them 44 under 40 wrong models |
 
-The proof tools run on x86-64, so the Armv8-A side is recorded in
-`tests/insn/aarch64/`: the compiled program, the seed and count, the vectors
-the M4 printed, and the host. `make insn-check-recorded` recompiles the
-program and requires it byte for byte before proving the recorded vectors;
-`make insn-vectors`, on any AArch64 machine, reruns it and requires the
-recorded vectors exactly. Three operand pairs the instructions are symmetric
-in cannot give an exchanged-operand control and are listed in
-`aarch64.symmetric`.
+The proof tools and the processors are not always on the same machine, so
+each side is recorded, in `tests/insn/aarch64/` and `tests/insn/x86_64/`:
+the compiled program, the seed and count, the vectors the processor printed,
+and the host. `make insn-check-recorded` recompiles each program and
+requires it byte for byte before proving the recorded vectors; `make
+insn-vectors`, on any machine of that architecture, reruns it and requires
+the recorded vectors exactly. That rerun passed on the 7700X for the x86-64
+run and on the M4 for the Armv8-A one. Operand pairs an instruction is
+symmetric in cannot give an exchanged-operand control and are listed in
+`<arch>.symmetric`: three on Armv8-A, five on x86-64 (the lane adds, XOR
+and AND).
+
+Every immediate the kernels pass to these instructions is tested, and the
+entries ending in `_more` add others: the zeroing and lane-select bits of
+VPERM2I128, VPALIGNR offsets past one lane, and shift and rotate counts at
+both ends of their range, including the counts of 32 and 64 that clear a
+vector lane. The x86-64 table uses 32-byte operand slots and the Armv8-A one
+16-byte slots, so the Armv8-A recorded vectors are unchanged.
 
 A pass is evidence on finitely many inputs, on the processor that ran them.
-The models stay in the trusted base. The AVX2, BMI1 and BMI2 models are not
-checked at all.
+The models stay in the trusted base.
 
 ## The specification
 
