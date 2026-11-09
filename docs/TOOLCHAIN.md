@@ -118,5 +118,8 @@ hashes.
 
 The `switch` and `jasmin` steps of release 2026.11.1 have run from scratch
 on macOS on AArch64, with every scan equal to its list, and every proof of
-the library checks with that build on all six units. The `test` step and
-the Linux builds have not run on this release yet.
+the library checks with that build on all six units. On Linux on x86-64, in
+a WSL2 virtual machine, all three steps have run from scratch, the
+compiler's test suites included, with the same scans. The `test` step has
+not run on macOS on this release, and the build has not run on Linux on
+AArch64.
