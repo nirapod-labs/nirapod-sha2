@@ -46,7 +46,7 @@ If you just want to build and test the library, here is a TL;DR:
 
 Questions and bug reports go to the
 [issue tracker](https://github.com/nirapod-labs/nirapod-sha2/issues).
-Security problems go privately, as [SECURITY.md](SECURITY.md) describes.
+Security problems go privately, as [security](SECURITY.md) describes.
 
 ## License
 
