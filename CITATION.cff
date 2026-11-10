@@ -17,9 +17,8 @@ authors:
   - given-names: "H. M. Yousuf"
     alias: "hm-yousuf"
     email: "hmyousuf@nirapod.org"
-  - given-names: "Rifat"
-    family-names: "Ahmed"
-    alias: "rifatweb3"
+  - given-names: "Rifat Ahmed"
+    alias: "rifat-ahmd"
     email: "rifatahmed@nirapod.org"
 license: Apache-2.0
 keywords:
